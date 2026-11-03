@@ -54,6 +54,9 @@ float scaleFor (juce::Rectangle<int> bounds) noexcept;
 /** Fonts may not shrink quite as far as geometry, so they stay legible. */
 float fontScaleFor (float uiScale) noexcept;
 
+/** Smallest readable font height on a 1x display. */
+inline constexpr float minimumTextHeight = 8.0f;
+
 // --- system fonts (resolved once, with graceful fallbacks) -------------------
 const juce::String& displayFamily();
 const juce::String& bodyFamily();
@@ -81,8 +84,12 @@ class CachedBackground
 public:
     virtual ~CachedBackground() = default;
 
-    /** Rebuild the cache if needed. Safe to call from paint(). */
-    void ensure (int logicalWidth, int logicalHeight, float scale);
+    /** Rebuild the cache if needed. Safe to call from paint().
+        If maxPixels > 0 the render scale is reduced just enough to keep the
+        cached image under that pixel budget.
+    */
+    void ensure (int logicalWidth, int logicalHeight, float scale,
+                 float maxPixels = 0.0f);
 
     /** Force a rebuild on the next ensure() (e.g. after a UI-scale change). */
     void invalidate();
@@ -108,7 +115,8 @@ void drawPanelPlate (juce::Graphics& g, juce::Rectangle<float> r, float scale,
 
 void drawHeader (juce::Graphics& g, juce::Rectangle<float> r, float scale,
                  const juce::String& index, const juce::String& title,
-                 const juce::String& right = {});
+                 const juce::String& right = {},
+                 Colour accent = muted);
 
 void drawMicroText (juce::Graphics& g, const juce::String& microText,
                     juce::Rectangle<float> r, juce::Font font, Colour colour,

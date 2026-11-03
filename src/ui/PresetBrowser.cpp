@@ -118,7 +118,7 @@ void PresetBrowser::paint (juce::Graphics& g)
 
     // Preset name.
     {
-        const auto nameFont = displayFont (16.5f * fs, juce::Font::bold, 0.02f);
+        const auto nameFont = displayFont (17.5f * fs, juce::Font::bold, 0.02f);
         const auto indexWidth = 42.0f * s;
         auto nameRect = area.withTrimmedRight (indexWidth).withHeight (area.getHeight() * 0.56f);
 
@@ -134,8 +134,8 @@ void PresetBrowser::paint (juce::Graphics& g)
         drawMicroText (g, indexText,
                        area.withTrimmedLeft (area.getWidth() - indexWidth)
                            .withHeight (area.getHeight() * 0.56f),
-                       monoFont (6.6f * fs, juce::Font::plain, 0.10f),
-                       copper.withAlpha (0.85f), juce::Justification::centredRight);
+                       monoFont (8.0f * fs, juce::Font::plain, 0.09f),
+                       muted.withAlpha (0.85f), juce::Justification::centredRight);
     }
 
     // Category chip + description.
@@ -143,23 +143,23 @@ void PresetBrowser::paint (juce::Graphics& g)
         const auto lineY = area.getY() + area.getHeight() * 0.58f;
         const auto lineH = area.getHeight() * 0.40f;
 
-        const auto chipFont = monoFont (6.1f * fs, juce::Font::plain, 0.14f);
+        const auto chipFont = monoFont (7.8f * fs, juce::Font::plain, 0.12f);
         const auto chipW = textWidth (chipFont, category) + 9.0f * s;
         juce::Rectangle<float> chip (area.getX(), lineY + (lineH - 10.0f * s) * 0.5f,
                                      chipW, 10.0f * s);
 
-        g.setColour (copper.withAlpha (0.10f));
+        g.setColour (lineSoft.withAlpha (0.55f));
         g.fillRoundedRectangle (chip, 1.5f * s);
-        g.setColour (copper.withAlpha (0.45f));
+        g.setColour (line.withAlpha (0.95f));
         g.drawRoundedRectangle (chip, 1.5f * s, 0.7f * s);
-        drawMicroText (g, category, chip, chipFont, copper.withAlpha (0.95f),
+        drawMicroText (g, category, chip, chipFont, muted.withAlpha (0.95f),
                        juce::Justification::centred);
 
         auto descRect = juce::Rectangle<float> (chip.getRight() + 8.0f * s, lineY,
                                                 area.getRight() - chip.getRight() - 10.0f * s,
                                                 lineH);
 
-        g.setFont (monoFont (6.5f * fs, juce::Font::plain, 0.03f));
+        g.setFont (monoFont (8.0f * fs, juce::Font::plain, 0.03f));
         g.setColour (muted.withAlpha (0.88f));
         g.drawText (description.isNotEmpty() ? description : utf8 ("—"), descRect,
                     juce::Justification::centredLeft, true);
@@ -188,6 +188,15 @@ void PresetBrowser::mouseMove (const juce::MouseEvent& e)
     if (mousePosition != e.position)
     {
         mousePosition = e.position;
+        repaint();
+    }
+}
+
+void PresetBrowser::mouseExit (const juce::MouseEvent&)
+{
+    if (mousePosition.x > -1000.0f)
+    {
+        mousePosition = { -10000.0f, -10000.0f };
         repaint();
     }
 }

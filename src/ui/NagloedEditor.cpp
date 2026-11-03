@@ -1,6 +1,7 @@
 #include "NagloedEditor.h"
 
 #include <cmath>
+#include <cstdio>
 
 #include "core/Version.h"
 
@@ -8,6 +9,83 @@ namespace nagloed::ui
 {
 
 using namespace theme;
+
+namespace
+{
+// Shown only when a parameter in the APVTS has no attached control. This is a
+// release-build failure state, not a debug-only assertion.
+class CornerResizeGrip final : public juce::Component,
+                               public juce::SettableTooltipClient
+{
+public:
+    explicit CornerResizeGrip (juce::Component& editorToResize)
+        : editor (editorToResize)
+    {
+        setOpaque (false);
+        setMouseCursor (juce::MouseCursor::BottomRightCornerResizeCursor);
+        setTitle ("Resize editor");
+        setTooltip ("Drag to resize the editor");
+    }
+
+    void paint (juce::Graphics& g) override
+    {
+        const auto b = getLocalBounds().toFloat();
+        const auto s = juce::jmin (b.getWidth(), b.getHeight());
+        g.setColour (theme::muted.withAlpha (0.55f));
+
+        for (int i = 0; i < 3; ++i)
+        {
+            const auto offset = (float) i * 4.5f * (s / 22.0f);
+            g.drawLine (b.getRight() - 5.0f - offset, b.getBottom() - 2.0f,
+                        b.getRight() - 2.0f, b.getBottom() - 5.0f - offset,
+                        1.0f * (s / 22.0f));
+        }
+    }
+
+    void mouseDown (const juce::MouseEvent& e) override
+    {
+        startSize = { editor.getWidth(), editor.getHeight() };
+        startScreenPosition = e.getScreenPosition();
+    }
+
+    void mouseDrag (const juce::MouseEvent& e) override
+    {
+        const auto delta = e.getScreenPosition() - startScreenPosition;
+        const auto w = juce::jlimit (960, 2400, startSize.x + delta.x);
+        const auto h = juce::jlimit (560, 1500, startSize.y + delta.y);
+        editor.setSize (w, h);
+    }
+
+private:
+    juce::Component& editor;
+    juce::Point<int> startSize, startScreenPosition;
+};
+
+class CoverageErrorBanner final : public juce::Component
+{
+public:
+    explicit CoverageErrorBanner (juce::String message)
+        : text (std::move (message))
+    {
+        setOpaque (false);
+        setInterceptsMouseClicks (false, false);
+        setAlwaysOnTop (true);
+    }
+
+    void paint (juce::Graphics& g) override
+    {
+        const auto b = getLocalBounds().toFloat();
+        g.setColour (warning.withAlpha (0.92f));
+        g.fillRect (b);
+        g.setColour (paleEmber);
+        g.setFont (monoFont (9.0f, juce::Font::bold, 0.02f));
+        g.drawFittedText (text, b.toNearestInt().reduced (10, 2), juce::Justification::centredLeft, 1);
+    }
+
+private:
+    juce::String text;
+};
+} // namespace
 
 NagloedEditor::NagloedEditor (juce::AudioProcessor& audioProcessor,
                               juce::AudioProcessorValueTreeState& state,
@@ -29,7 +107,7 @@ NagloedEditor::NagloedEditor (juce::AudioProcessor& audioProcessor,
 
     setOpaque (true);
     setWantsKeyboardFocus (true);
-    setResizable (true, true);
+    setResizable (true, false);
     setResizeLimits (960, 560, 2400, 1500);
     setSize (1180, 680);
 
@@ -38,6 +116,9 @@ NagloedEditor::NagloedEditor (juce::AudioProcessor& audioProcessor,
     addAndMakeVisible (sintelPanel);
     addAndMakeVisible (earPanel);
     addAndMakeVisible (bottomPanel);
+
+    resizeGrip = std::make_unique<CornerResizeGrip> (*this);
+    addAndMakeVisible (*resizeGrip);
 
     refreshOnce();
     verifyParameterCoverage();
@@ -76,12 +157,41 @@ void NagloedEditor::verifyParameterCoverage()
         }
     }
 
+    const auto total = covered.size();
+    juce::ignoreUnused (total);
     jassert (missing.isEmpty());
 
     if (missing.isEmpty())
-        DBG ("NAGLOED UI: all " << covered.size() << " parameters are attached");
+    {
+        coverageError.clear();
+
+        if (errorBanner != nullptr)
+        {
+            removeChildComponent (errorBanner.get());
+            errorBanner.reset();
+        }
+
+        DBG ("NAGLOED UI: all " << total << " parameters are attached");
+        return;
+    }
+
+    // Hard failure in release builds too: visible banner + clear stderr line.
+    coverageError = utf8 ("UI PARAMETER COVERAGE ERROR — unattached: ")
+                    + missing.joinIntoString (", ");
+    std::fprintf (stderr, "NAGLOED UI ERROR: %s\n", coverageError.toRawUTF8());
+
+    if (errorBanner == nullptr)
+    {
+        errorBanner = std::make_unique<CoverageErrorBanner> (coverageError);
+        addAndMakeVisible (*errorBanner);
+    }
     else
-        DBG ("NAGLOED UI: unattached parameters: " << missing.joinIntoString (", "));
+    {
+        errorBanner->repaint();
+    }
+
+    errorBanner->toFront (false);
+    resized();
 }
 
 // -----------------------------------------------------------------------------
@@ -96,6 +206,20 @@ void NagloedEditor::refreshOnce()
     bottomPanel.tick (snapshot, dt);
     topBar.setStatus (snapshot.grainRate, snapshot.numGrains, snapshot.numGrains > 0);
     topBar.refreshPresets();
+}
+
+void NagloedEditor::visibilityChanged()
+{
+    // Don't keep animating (or reading snapshots) while the window is hidden.
+    if (isShowing())
+    {
+        if (! isTimerRunning())
+            startTimerHz (60);
+    }
+    else
+    {
+        stopTimer();
+    }
 }
 
 void NagloedEditor::timerCallback()
@@ -193,6 +317,17 @@ void NagloedEditor::layoutAtScale()
 
     topBar.setBounds (topRect);
     bottomPanel.setBounds (bottomRect);
+
+    if (errorBanner != nullptr)
+        errorBanner->setBounds (juce::Rectangle<int> (margin, margin,
+                                                      innerW, juce::roundToInt (24.0f * s)));
+
+    if (resizeGrip != nullptr)
+    {
+        const auto grip = juce::roundToInt (22.0f * s);
+        resizeGrip->setBounds (getWidth() - grip - 2, getHeight() - grip - 2, grip, grip);
+        resizeGrip->toFront (false);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -219,10 +354,10 @@ void NagloedEditor::renderPage (juce::Graphics& g, juce::Rectangle<float> bounds
 
     // A hairline frame and four registration ticks.
     {
-        g.setColour (copper.withAlpha (0.16f));
+        g.setColour (muted.withAlpha (0.16f));
         g.drawRect (bounds.reduced (0.5f * s), juce::jmax (0.8f, 0.8f * s));
 
-        g.setColour (copper.withAlpha (0.30f));
+        g.setColour (muted.withAlpha (0.28f));
         const auto inset = 7.0f * s;
         const auto len = 10.0f * s;
         const auto pen = 0.9f * s;
@@ -253,7 +388,7 @@ void NagloedEditor::renderPage (juce::Graphics& g, juce::Rectangle<float> bounds
         const auto numPresets = presets.getNumPresets();
 
         const auto footer = footerRect.toFloat();
-        const auto font = monoFont (5.9f * fs, juce::Font::plain, 0.13f);
+        const auto font = monoFont (7.6f * fs, juce::Font::plain, 0.11f);
 
         drawMicroText (g, juce::String ("NAGLOED ") + kVersion + utf8 ("  ·  UNLIKENOISE LABS"),
                        footer.withTrimmedRight (footer.getWidth() * 0.66f),
@@ -269,18 +404,38 @@ void NagloedEditor::renderPage (juce::Graphics& g, juce::Rectangle<float> bounds
         drawMicroText (g, utf8 ("EINDHOVEN · NL"),
                        footer.withTrimmedLeft (footer.getWidth() * 0.30f)
                              .withTrimmedRight (footer.getWidth() * 0.50f),
-                       font, copper.withAlpha (0.55f), juce::Justification::centred);
+                       font, muted.withAlpha (0.75f), juce::Justification::centred);
 
         drawFadeRule (g, { footer.getX(), footer.getY() - 2.0f * s,
                            footer.getWidth(), juce::jmax (0.7f, 0.8f * s) },
-                      copper, 0.18f);
+                      muted, 0.18f);
     }
 }
 
 void NagloedEditor::paint (juce::Graphics& g)
 {
+    // The page texture is comparatively expensive. When a child repaints inside
+    // the panel area the expensive atmospheric layer never shows through, so
+    // skip it and just fill the base colour.
+    const auto clip = g.getClipBounds();
+
+    // Opaque panel children paint over these regions; the page texture and the
+    // base fill are invisible there. Skipping them keeps the 60 Hz cloud
+    // repaint cheap on large, high-DPI windows.
+    if (sintelPanel.getBounds().contains (clip)
+        || grainCloud.getBounds().contains (clip)
+        || earPanel.getBounds().contains (clip)
+        || bottomPanel.getBounds().contains (clip))
+        return;
+
+    g.fillAll (pageBottom);
+
+    const auto coveredByPanels = mainRect.contains (clip) || bottomRect.contains (clip);
+    if (coveredByPanels)
+        return;
+
     const auto scale = g.getInternalContext().getPhysicalPixelScaleFactor();
-    pageCache.ensure (getWidth(), getHeight(), scale);
+    pageCache.ensure (getWidth(), getHeight(), scale, 6.0e6f);
     drawCached (g, pageCache.getImage(), getLocalBounds());
 }
 

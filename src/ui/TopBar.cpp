@@ -25,8 +25,12 @@ TopBar::TopBar (juce::AudioProcessorValueTreeState& state, PresetAccess& presets
     freezeButton.setDescription ("Freeze the capture buffer so the current grains become a held afterglow.");
     freezeButton.setTooltip (utf8 ("FREEZE — hold the capture buffer; the ember field keeps glowing"));
 
-    freezeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (
-        apvts, pid::freeze, freezeButton);
+    if (apvts.getParameter (pid::freeze) != nullptr)
+    {
+        freezeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (
+            apvts, pid::freeze, freezeButton);
+        freezeAttached = (freezeAttachment != nullptr);
+    }
 
     addAndMakeVisible (browser);
     addAndMakeVisible (freezeButton);
@@ -125,7 +129,7 @@ void TopBar::renderBackground (juce::Graphics& g, juce::Rectangle<float> bounds)
 
         drawGlowDot (g, cx, cy, 1.9f * s, ember, 0.95f, s);
 
-        g.setColour (copper.withAlpha (0.30f));
+        g.setColour (gold.withAlpha (0.28f));
         g.drawEllipse (cx - 7.2f * s, cy - 7.2f * s, 14.4f * s, 14.4f * s, 0.7f * s);
     }
 
@@ -140,7 +144,7 @@ void TopBar::renderBackground (juce::Graphics& g, juce::Rectangle<float> bounds)
 
         const auto pathBounds = wordmark.getBounds();
         const auto x = bounds.getX() + 33.0f * s;
-        const auto cy = bounds.getY() + h * 0.44f;
+        const auto cy = bounds.getY() + h * 0.40f;
         wordmark.applyTransform (juce::AffineTransform::translation (
             x - pathBounds.getX(), cy - pathBounds.getCentreY()));
 
@@ -162,39 +166,32 @@ void TopBar::renderBackground (juce::Graphics& g, juce::Rectangle<float> bounds)
         g.fillPath (wordmark);
     }
 
-    // --- tagline ------------------------------------------------------------
+    // --- tagline: the brand sentence, then the Eindhoven line ---------------
     {
-        const auto font = monoFont (6.3f * fs, juce::Font::plain, 0.22f);
-        const auto taglineText = juce::String ("GRANULAR AFTERGLOW INSTRUMENT");
         const auto x = bounds.getX() + 34.0f * s;
-        const auto y = bounds.getY() + h * 0.60f;
-        const auto width = textWidth (font, taglineText) + 2.0f * s;
 
-        g.setFont (font);
-        g.setColour (muted.withAlpha (0.95f));
-        g.drawText (taglineText, juce::Rectangle<float> (x, y, width + 4.0f * s, 11.0f * s),
-                    juce::Justification::centredLeft, false);
+        drawMicroText (g, "THE SOUND AFTER THE SOUND",
+                       { x, bounds.getY() + h * 0.55f, 300.0f * s, 10.0f * s },
+                       monoFont (7.4f * fs, juce::Font::plain, 0.22f),
+                       paleEmber.withAlpha (0.78f));
 
-        g.setColour (copper.withAlpha (0.55f));
-        g.fillRect (x + width + 6.0f * s, y + 5.0f * s, 2.4f * s, 2.4f * s);
-
-        drawMicroText (g, utf8 ("UNLIKENOISE · EINDHOVEN NL"),
-                       { x + width + 12.0f * s, y, 190.0f * s, 11.0f * s },
-                       monoFont (6.1f * fs, juce::Font::plain, 0.16f),
-                       copper.withAlpha (0.6f));
+        drawMicroText (g, utf8 ("UNLIKENOISE · GRANULAR AFTERGLOW · EINDHOVEN NL"),
+                       { x, bounds.getY() + h * 0.72f, 330.0f * s, 10.0f * s },
+                       monoFont (6.4f * fs, juce::Font::plain, 0.14f),
+                       muted.withAlpha (0.75f));
     }
 
     // --- status captions ----------------------------------------------------
     {
         drawMicroText (g, "ENGINE",
                        { statusArea.getX(), statusArea.getY(), statusArea.getWidth(), 14.0f * s },
-                       monoFont (5.8f * fs, juce::Font::plain, 0.16f),
+                       monoFont (6.8f * fs, juce::Font::plain, 0.16f),
                        dim.withAlpha (0.95f));
 
         drawMicroText (g, "GRAIN RATE",
                        { statusArea.getX(), statusArea.getY() + 15.0f * s,
                          statusArea.getWidth(), 14.0f * s },
-                       monoFont (5.8f * fs, juce::Font::plain, 0.16f),
+                       monoFont (6.8f * fs, juce::Font::plain, 0.16f),
                        dim.withAlpha (0.95f));
     }
 
@@ -202,25 +199,25 @@ void TopBar::renderBackground (juce::Graphics& g, juce::Rectangle<float> bounds)
     {
         drawMicroText (g, "PRESET",
                        browserCaptionRect,
-                       monoFont (5.5f * fs, juce::Font::plain, 0.22f),
-                       copper.withAlpha (0.55f));
+                       monoFont (6.4f * fs, juce::Font::plain, 0.20f),
+                       muted.withAlpha (0.7f));
 
         drawMicroText (g, "CAPTURE",
                        freezeCaptionRect,
                        monoFont (5.5f * fs, juce::Font::plain, 0.22f),
-                       copper.withAlpha (0.55f), juce::Justification::centredRight);
+                       muted.withAlpha (0.65f), juce::Justification::centredRight);
     }
 
     // --- ruler and bottom rule ---------------------------------------------
     {
         const auto y = bounds.getBottom() - 1.0f * s;
         drawFadeRule (g, { bounds.getX(), y, bounds.getWidth(), juce::jmax (0.7f, 0.8f * s) },
-                      copper, 0.45f);
+                      muted, 0.35f);
 
         for (float x = bounds.getX(); x < bounds.getRight(); x += 9.0f * s)
         {
             const auto major = std::fmod (x, 45.0f * s) < 0.5f;
-            g.setColour (copper.withAlpha (major ? 0.28f : 0.12f));
+            g.setColour (muted.withAlpha (major ? 0.30f : 0.13f));
             g.fillRect (x, bounds.getBottom() - (major ? 4.0f : 2.0f) * s,
                         0.6f * s, (major ? 3.0f : 1.5f) * s);
         }
@@ -230,7 +227,7 @@ void TopBar::renderBackground (juce::Graphics& g, juce::Rectangle<float> bounds)
 void TopBar::paint (juce::Graphics& g)
 {
     const auto scale = g.getInternalContext().getPhysicalPixelScaleFactor();
-    background.ensure (getWidth(), getHeight(), scale);
+    background.ensure (getWidth(), getHeight(), scale, 4.0e6f);
     drawCached (g, background.getImage(), getLocalBounds());
 
     const auto s = uiScale;
@@ -240,21 +237,21 @@ void TopBar::paint (juce::Graphics& g)
 
     // Live / idle state.
     {
-        const auto dotColour = live ? mint : copper;
+        const auto dotColour = live ? gold : muted;
         drawGlowDot (g, statusArea.getX() + 3.0f * s, row1.getCentreY(), 1.3f * s,
                      dotColour, live ? 0.9f : 0.45f, s);
 
         drawMicroText (g, live ? "LIVE" : "IDLE",
                        row1.withTrimmedLeft (8.0f * s),
-                       monoFont (6.4f * fs, juce::Font::plain, 0.16f),
-                       live ? mint.withAlpha (0.95f) : copper.withAlpha (0.85f),
+                       monoFont (7.2f * fs, juce::Font::plain, 0.16f),
+                       live ? gold.withAlpha (0.95f) : muted.withAlpha (0.9f),
                        juce::Justification::centredRight);
     }
 
     // Grain rate.
     drawMicroText (g, juce::String (grainRate, 1) + " G/S",
                    row2,
-                   monoFont (6.4f * fs, juce::Font::plain, 0.06f),
+                   monoFont (7.2f * fs, juce::Font::plain, 0.06f),
                    muted.withAlpha (0.9f), juce::Justification::centredRight);
 }
 
@@ -290,7 +287,8 @@ void TopBar::refreshPresets()
 
 void TopBar::collectParameterIds (juce::StringArray& ids) const
 {
-    ids.addIfNotAlreadyThere (pid::freeze);
+    if (freezeAttached)
+        ids.addIfNotAlreadyThere (pid::freeze);
 }
 
 } // namespace nagloed::ui

@@ -41,6 +41,7 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    void visibilityChanged() override;
 
 private:
     class PageCache final : public theme::CachedBackground
@@ -79,6 +80,9 @@ private:
     float uiScale = 1.0f;
 
     juce::Rectangle<int> topRect, mainRect, bottomRect, footerRect;
+    juce::String coverageError;
+    std::unique_ptr<juce::Component> errorBanner;
+    std::unique_ptr<juce::Component> resizeGrip;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NagloedEditor)
 };

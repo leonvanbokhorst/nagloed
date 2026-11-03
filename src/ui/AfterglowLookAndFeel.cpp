@@ -102,7 +102,7 @@ AfterglowLookAndFeel::AfterglowLookAndFeel()
     setColour (juce::PopupMenu::textColourId, theme::text);
     setColour (juce::PopupMenu::highlightedBackgroundColourId, theme::ember.withAlpha (0.16f));
     setColour (juce::PopupMenu::highlightedTextColourId, theme::paleEmber);
-    setColour (juce::PopupMenu::headerTextColourId, theme::copper);
+    setColour (juce::PopupMenu::headerTextColourId, theme::muted);
 
     // Combo boxes.
     setColour (juce::ComboBox::backgroundColourId, juce::Colours::transparentBlack);
@@ -134,7 +134,7 @@ AfterglowLookAndFeel::AfterglowLookAndFeel()
     // Tooltips.
     setColour (juce::TooltipWindow::backgroundColourId, juce::Colour (0xff0d1119));
     setColour (juce::TooltipWindow::textColourId, theme::text);
-    setColour (juce::TooltipWindow::outlineColourId, theme::copper.withAlpha (0.45f));
+    setColour (juce::TooltipWindow::outlineColourId, theme::line.withAlpha (0.9f));
 
     rebuildFonts();
 }
@@ -155,15 +155,15 @@ void AfterglowLookAndFeel::rebuildFonts()
     const auto s = uiScale;
     const auto fs = fontScaleFor (s);
 
-    knobLabelFont   = monoFont (7.4f * fs, juce::Font::plain, 0.13f);
-    knobValueFont   = monoFont (8.2f * fs, juce::Font::plain, 0.03f);
-    comboCaptionFont = monoFont (6.8f * fs, juce::Font::plain, 0.16f);
-    comboValueFont  = monoFont (8.1f * fs, juce::Font::plain, 0.04f);
-    buttonFont      = monoFont (8.2f * fs, juce::Font::plain, 0.18f);
-    menuFont        = monoFont (8.5f * fs, juce::Font::plain, 0.04f);
-    tooltipFont     = monoFont (7.9f * fs, juce::Font::plain, 0.05f);
-    labelFont       = monoFont (7.9f * fs, juce::Font::plain, 0.05f);
-    tickFont        = monoFont (6.4f * fs, juce::Font::plain, 0.08f);
+    knobLabelFont   = monoFont (9.6f * fs, juce::Font::plain, 0.11f);
+    knobValueFont   = monoFont (10.0f * fs, juce::Font::plain, 0.02f);
+    comboCaptionFont = monoFont (8.2f * fs, juce::Font::plain, 0.13f);
+    comboValueFont  = monoFont (9.4f * fs, juce::Font::plain, 0.02f);
+    buttonFont      = monoFont (10.0f * fs, juce::Font::plain, 0.15f);
+    menuFont        = monoFont (10.0f * fs, juce::Font::plain, 0.02f);
+    tooltipFont     = monoFont (9.6f * fs, juce::Font::plain, 0.03f);
+    labelFont       = monoFont (9.6f * fs, juce::Font::plain, 0.03f);
+    tickFont        = monoFont (8.2f * fs, juce::Font::plain, 0.05f);
 }
 
 // =============================================================================
@@ -223,7 +223,7 @@ void AfterglowLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, in
             const auto inRange = bipolar ? (a >= zeroAngle ? a <= angle : a >= angle)
                                          : a <= angle;
             const auto col = inRange ? accent.withAlpha (major ? 0.9f : 0.55f)
-                                     : theme::copperDim.withAlpha (major ? 0.55f : 0.32f);
+                                     : theme::lineSoft.withAlpha (major ? 0.95f : 0.6f);
 
             g.setColour (col);
             const auto inner = tickInner;
@@ -345,7 +345,7 @@ void AfterglowLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, in
             g.setColour (juce::Colour (0xff0d1118));
             g.fillEllipse (cx - radius * 0.20f, cy - radius * 0.20f,
                            radius * 0.40f, radius * 0.40f);
-            g.setColour (theme::copper.withAlpha (0.30f));
+            g.setColour (theme::line.withAlpha (0.9f));
             g.drawEllipse (cx - radius * 0.20f, cy - radius * 0.20f,
                            radius * 0.40f, radius * 0.40f, 0.8f * s);
             g.setColour (theme::ember.withAlpha (0.35f));
@@ -442,7 +442,7 @@ void AfterglowLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, in
     const auto fillTo = juce::jmax (zeroX, thumbX);
     if (fillTo - fillFrom > 0.5f)
     {
-        juce::ColourGradient fill (theme::copper.withAlpha (0.5f), fillFrom, rail.getCentreY(),
+        juce::ColourGradient fill (theme::emberDeep.withAlpha (0.55f), fillFrom, rail.getCentreY(),
                                    theme::ember, fillTo, rail.getCentreY(), false);
         g.setGradientFill (fill);
         g.fillRoundedRectangle ({ fillFrom, rail.getY(), fillTo - fillFrom, rail.getHeight() },
@@ -453,7 +453,7 @@ void AfterglowLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, in
 
     if (bipolar)
     {
-        g.setColour (theme::copper.withAlpha (0.5f));
+        g.setColour (theme::muted.withAlpha (0.6f));
         g.fillRect (rail.getCentreX() - 0.5f * s, rail.getCentreY() - 3.0f * s,
                     1.0f * s, 6.0f * s);
     }
@@ -497,6 +497,13 @@ void AfterglowLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button
     const auto bounds = button.getLocalBounds().toFloat().reduced (0.5f * s);
     const auto radius = 3.0f * s;
 
+    if (button.hasKeyboardFocus (false))
+    {
+        g.setColour (theme::ember.withAlpha (0.65f));
+        g.drawRoundedRectangle (button.getLocalBounds().toFloat().reduced (1.0f * s),
+                                3.0f * s, 1.2f * s);
+    }
+
     if (role == "glyph")
     {
         if (highlighted || down)
@@ -533,7 +540,7 @@ void AfterglowLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button
         g.fillRoundedRectangle (bounds, radius);
 
         g.setColour (on ? theme::gold.withAlpha (0.75f + 0.15f * pulse)
-                        : theme::copper.withAlpha (0.35f + 0.2f * hot));
+                        : theme::line.withAlpha (0.9f + 0.05f * hot));
         g.drawRoundedRectangle (bounds, radius, 1.0f * s);
 
         g.setColour (theme::paleEmber.withAlpha (0.05f));
@@ -618,7 +625,7 @@ void AfterglowLookAndFeel::drawToggleButton (juce::Graphics& g, juce::ToggleButt
 
     g.setColour (on ? theme::ember.withAlpha (0.22f) : theme::lineSoft);
     g.fillRoundedRectangle (bounds, 2.0f * s);
-    g.setColour (on ? theme::ember : theme::copper.withAlpha (0.5f));
+    g.setColour (on ? theme::ember : theme::line.withAlpha (0.9f));
     g.drawRoundedRectangle (bounds, 2.0f * s, 1.0f * s);
     g.setFont (buttonFont);
     g.setColour (on ? theme::paleEmber : theme::muted);
@@ -657,9 +664,15 @@ void AfterglowLookAndFeel::drawComboBox (juce::Graphics& g, int width, int heigh
     if (caption.isNotEmpty())
     {
         g.setFont (comboCaptionFont);
-        g.setColour (theme::copper.withAlpha (0.9f));
+        g.setColour (theme::muted.withAlpha (0.95f));
         g.drawText (caption, bounds.withTrimmedLeft (6.0f * s).withTrimmedRight (14.0f * s),
                     juce::Justification::centredLeft, false);
+    }
+
+    if (box.hasKeyboardFocus (false))
+    {
+        g.setColour (theme::ember.withAlpha (0.7f));
+        g.drawRoundedRectangle (bounds.expanded (1.0f * s), radius + 1.0f * s, 1.2f * s);
     }
 
     // Procedural chevron.
@@ -747,7 +760,7 @@ void AfterglowLookAndFeel::drawPopupMenuBackground (juce::Graphics& g, int width
 
     g.setColour (juce::Colour (0xff0c1017));
     g.fillRoundedRectangle (bounds.reduced (0.5f * s), radius);
-    g.setColour (theme::copper.withAlpha (0.4f));
+    g.setColour (theme::muted.withAlpha (0.45f));
     g.drawRoundedRectangle (bounds.reduced (0.5f * s), radius, 1.0f * s);
     g.setColour (theme::paleEmber.withAlpha (0.05f));
     g.fillRect (4.0f * s, 1.0f * s, (float) width - 8.0f * s, 0.8f * s);
@@ -817,7 +830,7 @@ void AfterglowLookAndFeel::drawTooltip (juce::Graphics& g, const juce::String& t
 
     g.setColour (juce::Colour (0xff0c1017).withAlpha (0.97f));
     g.fillRoundedRectangle (bounds, 3.0f * s);
-    g.setColour (theme::copper.withAlpha (0.45f));
+    g.setColour (theme::line.withAlpha (0.9f));
     g.drawRoundedRectangle (bounds, 3.0f * s, 1.0f * s);
     g.setColour (theme::paleEmber.withAlpha (0.05f));
     g.fillRect (bounds.getX() + 5.0f * s, bounds.getY() + 1.0f * s,

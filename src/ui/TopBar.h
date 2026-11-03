@@ -56,6 +56,7 @@ private:
     PresetBrowser browser;
     juce::TextButton freezeButton;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> freezeAttachment;
+    bool freezeAttached = false;
 
     BackgroundCache background;
 

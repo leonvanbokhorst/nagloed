@@ -165,7 +165,7 @@ void AnalogueMeter::paint (juce::Graphics& g)
     {
         juce::Path arc;
         arc.addCentredArc (pivot.x, pivot.y, rx, ry, 0.0f, kSweepStart, kSweepEnd, true);
-        g.setColour (copper.withAlpha (0.60f));
+        g.setColour (muted.withAlpha (0.55f));
         g.strokePath (arc, juce::PathStrokeType (0.8f * s));
 
         juce::Path red;
@@ -180,7 +180,7 @@ void AnalogueMeter::paint (juce::Graphics& g)
             const auto major = (i % 5 == 0);
             const auto inner = pointOnArc (angle, major ? 0.955f : 0.975f);
             const auto outer = pointOnArc (angle, 1.005f);
-            g.setColour (major ? copper.withAlpha (0.95f) : copperDim.withAlpha (0.6f));
+            g.setColour (major ? gold.withAlpha (0.85f) : muted.withAlpha (0.55f));
             g.drawLine ({ inner, outer }, (major ? 0.9f : 0.55f) * s);
         }
 
@@ -188,7 +188,7 @@ void AnalogueMeter::paint (juce::Graphics& g)
         {
             const auto angle = angleForDb (db);
             const auto p = pointOnArc (angle, 0.86f);
-            g.setFont (monoFont (5.4f * fs, juce::Font::plain, 0.02f));
+            g.setFont (monoFont (6.8f * fs, juce::Font::plain, 0.02f));
             g.setColour (db >= 0.0f ? warning.withAlpha (0.95f) : muted.withAlpha (0.9f));
             g.drawText (juce::String ((int) db),
                         juce::Rectangle<float> (p.x - 8.0f * s, p.y - 4.0f * s,
@@ -225,7 +225,7 @@ void AnalogueMeter::paint (juce::Graphics& g)
     {
         g.setColour (juce::Colour (0xff13181f));
         g.fillEllipse (pivot.x - 4.2f * s, pivot.y - 4.2f * s, 8.4f * s, 8.4f * s);
-        g.setColour (copper.withAlpha (0.6f));
+        g.setColour (line.withAlpha (0.9f));
         g.drawEllipse (pivot.x - 4.2f * s, pivot.y - 4.2f * s, 8.4f * s, 8.4f * s, 0.9f * s);
         g.setColour (ember.withAlpha (0.45f));
         g.fillEllipse (pivot.x - 1.1f * s, pivot.y - 1.1f * s, 2.2f * s, 2.2f * s);
@@ -246,19 +246,19 @@ void AnalogueMeter::paint (juce::Graphics& g)
         drawMicroText (g, label,
                        { b.getX() + 6.0f * s, b.getY() + 4.0f * s,
                          b.getWidth() * 0.5f, 10.0f * s },
-                       monoFont (6.9f * fs, juce::Font::plain, 0.20f),
-                       inputMeter ? copper.withAlpha (0.95f) : gold.withAlpha (0.95f));
+                       monoFont (8.4f * fs, juce::Font::plain, 0.16f),
+                       gold.withAlpha (0.95f));
 
         drawMicroText (g, "VU",
                        { b.getCentreX(), b.getY() + 4.0f * s,
                          b.getWidth() * 0.5f - 6.0f * s, 10.0f * s },
-                       monoFont (5.6f * fs, juce::Font::plain, 0.14f),
+                       monoFont (7.0f * fs, juce::Font::plain, 0.13f),
                        dim.withAlpha (0.9f), juce::Justification::centredRight);
 
         drawMicroText (g, formatDb (left.db) + " dB",
                        { b.getX() + 5.0f * s, pivot.y - 13.0f * s,
                          b.getWidth() * 0.55f, 9.0f * s },
-                       monoFont (5.6f * fs, juce::Font::plain, 0.02f),
+                       monoFont (7.0f * fs, juce::Font::plain, 0.02f),
                        muted.withAlpha (0.85f));
 
         // L/R needle legend.
@@ -267,7 +267,7 @@ void AnalogueMeter::paint (juce::Graphics& g)
         g.fillRect (b.getX() + b.getWidth() * 0.62f, legendY + 3.0f * s, 5.0f * s, 0.9f * s);
         g.setColour (gold.withAlpha (0.8f));
         g.fillRect (b.getX() + b.getWidth() * 0.62f, legendY + 5.5f * s, 5.0f * s, 0.9f * s);
-        g.setFont (monoFont (5.0f * fs, juce::Font::plain, 0.02f));
+        g.setFont (monoFont (6.4f * fs, juce::Font::plain, 0.02f));
         g.setColour (dim.withAlpha (0.9f));
         g.drawText ("L R", juce::Rectangle<float> (b.getX() + b.getWidth() * 0.68f, legendY,
                                                    18.0f * s, 10.0f * s),
@@ -438,7 +438,7 @@ void FilterCurve::paint (juce::Graphics& g)
     drawMicroText (g, readout,
                    { b.getX() + 4.0f * s, b.getBottom() - 10.0f * s,
                      b.getWidth() - 8.0f * s, 9.0f * s },
-                   monoFont (5.7f * fs, juce::Font::plain, 0.03f),
+                   monoFont (7.2f * fs, juce::Font::plain, 0.03f),
                    muted.withAlpha (0.9f), juce::Justification::bottomRight);
 }
 
@@ -572,13 +572,13 @@ void LfoVisual::paint (juce::Graphics& g)
     // Readout.
     drawMicroText (g, juce::String (rate, rate < 1.0f ? 2 : 1) + " HZ",
                    { plot.getX(), plot.getBottom() - 8.0f * s, plot.getWidth() * 0.5f, 8.0f * s },
-                   monoFont (5.4f * fs, juce::Font::plain, 0.06f),
+                   monoFont (7.0f * fs, juce::Font::plain, 0.05f),
                    dim.withAlpha (0.9f));
 
     drawMicroText (g, "LFO",
                    { plot.getX() + plot.getWidth() * 0.5f, plot.getBottom() - 8.0f * s,
                      plot.getWidth() * 0.5f, 8.0f * s },
-                   monoFont (5.4f * fs, juce::Font::plain, 0.16f),
+                   monoFont (7.0f * fs, juce::Font::plain, 0.15f),
                    mint.withAlpha (0.7f), juce::Justification::centredRight);
 }
 
@@ -671,7 +671,7 @@ void SpaceVisual::paint (juce::Graphics& g)
 
     // Room axis and reflection ticks.
     {
-        g.setColour (copper.withAlpha (0.28f));
+        g.setColour (muted.withAlpha (0.35f));
         g.fillRect (cx - maxW * depth, cy - 0.3f * s, maxW * depth * 2.0f, 0.6f * s);
 
         for (int i = -2; i <= 2; ++i)
@@ -679,7 +679,7 @@ void SpaceVisual::paint (juce::Graphics& g)
             if (i == 0)
                 continue;
             const auto x = cx + (float) i * maxW * 0.34f * depth;
-            g.setColour (copperDim.withAlpha (0.32f));
+            g.setColour (muted.withAlpha (0.35f));
             g.fillRect (x, cy - 3.0f * s, 0.5f * s, 6.0f * s);
         }
     }

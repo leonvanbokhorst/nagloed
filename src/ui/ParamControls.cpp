@@ -157,12 +157,16 @@ ParamSlider& ParamControlSet::addKnob (juce::Component& parent, const char* para
     {
         auto attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
             apvts, paramId, s);
-        sliderAttachments.push_back (std::move (attachment));
+
+        if (attachment != nullptr)
+        {
+            sliderAttachments.push_back (std::move (attachment));
+            attachedIds.add (paramId);
+        }
     }
 
     parent.addAndMakeVisible (s);
     controls.push_back (std::move (slider));
-    attachedIds.add (paramId);
 
     return s;
 }
@@ -204,12 +208,16 @@ juce::Slider& ParamControlSet::addRibbon (juce::Component& parent, const char* p
     {
         auto attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
             apvts, paramId, s);
-        sliderAttachments.push_back (std::move (attachment));
+
+        if (attachment != nullptr)
+        {
+            sliderAttachments.push_back (std::move (attachment));
+            attachedIds.add (paramId);
+        }
     }
 
     parent.addAndMakeVisible (s);
     controls.push_back (std::move (slider));
-    attachedIds.add (paramId);
 
     return s;
 }
@@ -244,12 +252,16 @@ juce::ComboBox& ParamControlSet::addChoice (juce::Component& parent, const char*
     {
         auto attachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
             apvts, paramId, c);
-        comboAttachments.push_back (std::move (attachment));
+
+        if (attachment != nullptr)
+        {
+            comboAttachments.push_back (std::move (attachment));
+            attachedIds.add (paramId);
+        }
     }
 
     parent.addAndMakeVisible (c);
     controls.push_back (std::move (combo));
-    attachedIds.add (paramId);
 
     return c;
 }

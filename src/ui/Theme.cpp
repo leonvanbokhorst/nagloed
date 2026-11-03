@@ -123,16 +123,26 @@ float scaleFor (juce::Rectangle<int> bounds) noexcept
 
 float fontScaleFor (float uiScale) noexcept
 {
-    return juce::jlimit (0.88f, 2.15f, uiScale);
+    // Never shrink type below its design size: at 960x560 on a 1x screen the
+    // micro-labels stay legible instead of melting into the plate.
+    return juce::jlimit (1.0f, 2.15f, uiScale);
 }
 
 // -----------------------------------------------------------------------------
-void CachedBackground::ensure (int logicalWidth, int logicalHeight, float scale)
+void CachedBackground::ensure (int logicalWidth, int logicalHeight, float scale,
+                               float maxPixels)
 {
     if (logicalWidth <= 0 || logicalHeight <= 0)
         return;
 
     scale = juce::jmax (0.5f, scale);
+
+    if (maxPixels > 0.0f)
+    {
+        const auto logicalPixels = (float) logicalWidth * (float) logicalHeight;
+        if (logicalPixels * scale * scale > maxPixels)
+            scale = juce::jmax (0.5f, std::sqrt (maxPixels / juce::jmax (1.0f, logicalPixels)));
+    }
 
     if (logicalWidth == logicalW && logicalHeight == logicalH
         && std::abs (scale - renderedScale) < 0.01f && image.isValid())
@@ -271,7 +281,7 @@ void drawPanelPlate (juce::Graphics& g, juce::Rectangle<float> r, float scale,
     const auto tick = 7.0f * s;
     const auto inset = 5.0f * s;
     const auto pen = juce::jmax (0.9f, 0.9f * s);
-    g.setColour (copperDim.withAlpha (0.65f));
+    g.setColour (panelEdge.withAlpha (0.75f));
 
     const auto tl = rr.getTopLeft() + juce::Point<float> (inset, inset);
     g.fillRect (tl.x, tl.y, tick, pen);
@@ -284,7 +294,7 @@ void drawPanelPlate (juce::Graphics& g, juce::Rectangle<float> r, float scale,
 
 void drawHeader (juce::Graphics& g, juce::Rectangle<float> r, float scale,
                  const juce::String& index, const juce::String& title,
-                 const juce::String& right)
+                 const juce::String& right, Colour accent)
 {
     const auto s = juce::jmax (0.5f, scale);
     const auto fs = fontScaleFor (scale);
@@ -292,8 +302,8 @@ void drawHeader (juce::Graphics& g, juce::Rectangle<float> r, float scale,
 
     if (index.isNotEmpty())
     {
-        drawMicroText (g, index, area.removeFromLeft (16.0f * s), monoFont (7.2f * fs, juce::Font::plain, 0.14f),
-                       copper.withAlpha (0.8f));
+        drawMicroText (g, index, area.removeFromLeft (16.0f * s), monoFont (8.6f * fs, juce::Font::plain, 0.13f),
+                       muted.withAlpha (0.95f));
     }
 
     // Tiny ember tick after the index.
@@ -303,20 +313,20 @@ void drawHeader (juce::Graphics& g, juce::Rectangle<float> r, float scale,
 
     area.removeFromLeft (8.0f * s);
 
-    const auto titleFont = monoFont (8.1f * fs, juce::Font::plain, 0.17f);
+    const auto titleFont = monoFont (9.4f * fs, juce::Font::plain, 0.16f);
     const auto titleWidth = juce::jmin (area.getWidth() - 6.0f * s,
                                         textWidth (titleFont, title) + 10.0f * s);
 
     drawMicroText (g, title, area.removeFromLeft (titleWidth), titleFont, muted.withAlpha (0.95f));
 
     if (right.isNotEmpty())
-        drawMicroText (g, right, area, monoFont (6.8f * fs, juce::Font::plain, 0.12f),
-                       dim.withAlpha (0.9f), juce::Justification::centredRight);
+        drawMicroText (g, right, area, monoFont (8.2f * fs, juce::Font::plain, 0.11f),
+                       dim.withAlpha (0.95f), juce::Justification::centredRight);
 
     // Hairline under the header.
     const auto y = r.getBottom() - 1.0f * s;
     drawFadeRule (g, { r.getX(), y, r.getWidth(), juce::jmax (0.8f, 0.8f * s) },
-                  copper.withAlpha (0.5f), 0.30f);
+                  accent, 0.30f);
 }
 
 void drawMicroText (juce::Graphics& g, const juce::String& microText,
@@ -390,7 +400,7 @@ Colour emberRamp (float t)
     t = juce::jlimit (0.0f, 1.0f, t);
 
     if (t < 0.35f)
-        return copper.interpolatedWith (ember, t / 0.35f);
+        return emberDeep.interpolatedWith (ember, t / 0.35f);
     if (t < 0.68f)
         return ember.interpolatedWith (gold, (t - 0.35f) / 0.33f);
     if (t < 0.88f)

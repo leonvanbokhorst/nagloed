@@ -157,8 +157,8 @@ void SintelPanel::renderBackground (juce::Graphics& g, juce::Rectangle<float> bo
 
         drawMicroText (g, "BUFFER",
                        row1.withWidth (38.0f * s),
-                       monoFont (5.8f * fs, juce::Font::plain, 0.14f),
-                       copper.withAlpha (0.7f));
+                       monoFont (6.6f * fs, juce::Font::plain, 0.14f),
+                       muted.withAlpha (0.85f));
 
         g.setColour (juce::Colour (0xff070a0e));
         g.fillRoundedRectangle (bar, 2.0f * s);
@@ -167,20 +167,20 @@ void SintelPanel::renderBackground (juce::Graphics& g, juce::Rectangle<float> bo
 
         drawMicroText (g, "RATE",
                        row2.withWidth (38.0f * s),
-                       monoFont (5.8f * fs, juce::Font::plain, 0.14f),
-                       copper.withAlpha (0.6f));
+                       monoFont (6.6f * fs, juce::Font::plain, 0.14f),
+                       muted.withAlpha (0.8f));
 
         drawMicroText (g, "ACTIVE",
                        row3.withWidth (38.0f * s),
-                       monoFont (5.8f * fs, juce::Font::plain, 0.14f),
-                       copper.withAlpha (0.6f));
+                       monoFont (6.6f * fs, juce::Font::plain, 0.14f),
+                       muted.withAlpha (0.8f));
     }
 }
 
 void SintelPanel::paint (juce::Graphics& g)
 {
     const auto scale = g.getInternalContext().getPhysicalPixelScaleFactor();
-    background.ensure (getWidth(), getHeight(), scale);
+    background.ensure (getWidth(), getHeight(), scale, 4.0e6f);
     drawCached (g, background.getImage(), getLocalBounds());
 
     const auto s = uiScale;
@@ -200,7 +200,7 @@ void SintelPanel::paint (juce::Graphics& g)
         if (fill > 0.001f)
         {
             juce::Rectangle<float> area (bar.getX(), bar.getY(), bar.getWidth() * fill, bar.getHeight());
-            juce::ColourGradient grad (copper.withAlpha (0.6f), bar.getX(), bar.getY(),
+            juce::ColourGradient grad (emberDeep.withAlpha (0.55f), bar.getX(), bar.getY(),
                                        ember.withAlpha (0.95f), bar.getRight(), bar.getY(), false);
             g.setGradientFill (grad);
             g.fillRoundedRectangle (area, 2.0f * s);
@@ -214,12 +214,12 @@ void SintelPanel::paint (juce::Graphics& g)
 
     drawMicroText (g, juce::String (grainRate, 1) + " G/S",
                    row2.withTrimmedLeft (38.0f * s),
-                   monoFont (6.0f * fs, juce::Font::plain, 0.03f),
+                   monoFont (6.8f * fs, juce::Font::plain, 0.03f),
                    muted.withAlpha (0.9f));
 
     drawMicroText (g, juce::String (activeNotes),
                    row3.withTrimmedLeft (38.0f * s),
-                   monoFont (6.0f * fs, juce::Font::plain, 0.03f),
+                   monoFont (6.8f * fs, juce::Font::plain, 0.03f),
                    muted.withAlpha (0.9f));
 }
 
@@ -377,7 +377,7 @@ void EarPanel::renderBackground (juce::Graphics& g, juce::Rectangle<float> bound
 void EarPanel::paint (juce::Graphics& g)
 {
     const auto scale = g.getInternalContext().getPhysicalPixelScaleFactor();
-    background.ensure (getWidth(), getHeight(), scale);
+    background.ensure (getWidth(), getHeight(), scale, 4.0e6f);
     drawCached (g, background.getImage(), getLocalBounds());
 }
 
@@ -412,7 +412,7 @@ BottomPanel::BottomPanel (juce::AudioProcessorValueTreeState& state, AfterglowLo
         ruimteKnobs[i] = &controls.addKnob (*this, ruimteIds[i], ruimteCaptions[i]);
 
     modKnobs[0] = &controls.addKnob (*this, pid::lfoRate, "RATE");
-    modKnobs[1] = &controls.addKnob (*this, pid::lfoAmount, "AMOUNT");
+    modKnobs[1] = &controls.addKnob (*this, pid::lfoAmount, "AMT");
     modKnobs[2] = &controls.addKnob (*this, pid::autoMotion, "AUTO");
     modKnobs[3] = &controls.addKnob (*this, pid::expression, "EXPR");
 
@@ -457,15 +457,16 @@ void BottomPanel::layoutControls()
     const auto b = getLocalBounds().toFloat();
     const auto gap = 8.0f * s;
 
-    // Base widths in design units; any extra width is shared by the flexible
-    // sections so the strip looks right from 960 to 2400 px.
-    const auto baseW = (400.0f + 230.0f + 320.0f + 190.0f) * s + gap * 3.0f;
-    const auto extra = juce::jmax (0.0f, b.getWidth() - baseW);
+    // Derive the section widths from the space that actually exists. The
+    // weights are proportional, so the row always fits exactly: 3 VU pixels
+    // never spill over the right edge at any editor size.
+    const auto available = juce::jmax (0.0f, b.getWidth() - gap * 3.0f);
+    const auto unit = available / 1140.0f;   // sum of the four weights
 
-    const auto w0 = 400.0f * s + extra * 0.55f;
-    const auto w1 = 230.0f * s + extra * 0.15f;
-    const auto w2 = 320.0f * s + extra * 0.30f;
-    const auto w3 = 190.0f * s;
+    const auto w0 = 400.0f * unit;
+    const auto w1 = 230.0f * unit;
+    const auto w2 = 320.0f * unit;
+    const auto w3 = available - w0 - w1 - w2;   // absorb rounding in the last section
 
     gestureArea = { b.getX(), b.getY(), w0, b.getHeight() };
     ruimteArea = { gestureArea.getRight() + gap, b.getY(), w1, b.getHeight() };
@@ -631,7 +632,7 @@ void BottomPanel::renderBackground (juce::Graphics& g, juce::Rectangle<float> bo
 void BottomPanel::paint (juce::Graphics& g)
 {
     const auto scale = g.getInternalContext().getPhysicalPixelScaleFactor();
-    background.ensure (getWidth(), getHeight(), scale);
+    background.ensure (getWidth(), getHeight(), scale, 4.0e6f);
     drawCached (g, background.getImage(), getLocalBounds());
 }
 

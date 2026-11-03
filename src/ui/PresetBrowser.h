@@ -26,6 +26,7 @@ public:
     void resized() override;
     void mouseDown (const juce::MouseEvent&) override;
     void mouseMove (const juce::MouseEvent&) override;
+    void mouseExit (const juce::MouseEvent&) override;
     bool keyPressed (const juce::KeyPress&) override;
 
 private:
