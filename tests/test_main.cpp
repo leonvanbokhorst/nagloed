@@ -37,6 +37,17 @@ int main()
         check (processor.getAPVTS().getParameter (id) != nullptr,
                std::string ("parameter resolves: ") + id);
 
+    // --- Parameter display strings -------------------------------------------
+    if (auto* lfo = processor.getAPVTS().getParameter (nagloed::pid::lfoRate))
+    {
+        const auto text = lfo->getCurrentValueAsText();
+        check (text.contains ("0.") && text.contains ("Hz"),
+               "lfoRate default displays a sub-1 Hz value, got: " + text.toStdString());
+    }
+    if (auto* cutoff = processor.getAPVTS().getParameter (nagloed::pid::cutoff))
+        check (cutoff->getCurrentValueAsText().contains ("kHz"),
+               "cutoff default displays in kHz, got: " + cutoff->getCurrentValueAsText().toStdString());
+
     // --- Presets -------------------------------------------------------------
     check (nagloed::presets::count() >= 1, "at least the Init preset exists");
     check (nagloed::presets::info (0).name == "Init", "preset 0 is Init");

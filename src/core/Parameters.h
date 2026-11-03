@@ -119,8 +119,15 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
             juce::ParameterID { id, kVersionHint }, name, choices, def));
     };
 
-    const auto hz = [] (float v, int) { return v >= 1000.0f ? juce::String (v / 1000.0f, 2) + " kHz"
-                                                                : juce::String (v, 0) + " Hz"; };
+    const auto hz = [] (float v, int)
+    {
+        // Sub-10 Hz values (LFO rate) must not read "0 Hz"; the same formatter
+        // is shared with cutoff, where the sub-100 Hz range also benefits.
+        if (v < 10.0f)   return juce::String (v, 2) + " Hz";
+        if (v < 100.0f)  return juce::String (v, 1) + " Hz";
+        if (v < 1000.0f) return juce::String (v, 0) + " Hz";
+        return juce::String (v / 1000.0f, 2) + " kHz";
+    };
     const auto ms = [] (float v, int) { return juce::String (v, v < 10.0f ? 1 : 0) + " ms"; };
     const auto st = [] (float v, int) { return (v >= 0.0f ? "+" : "") + juce::String (v, 2) + " st"; };
     const auto db = [] (float v, int) { return (v >= 0.0f ? "+" : "") + juce::String (v, 1) + " dB"; };
