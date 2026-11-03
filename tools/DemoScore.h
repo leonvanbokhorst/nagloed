@@ -14,7 +14,8 @@
 //
 // automation() lists parameter moves in real-world units, e.g.
 //   { 6.0f, "grain.density", 80.0f }
-// Times outside the score are ignored. Short fades are applied by the renderer.
+// Times outside the score are ignored. The score is 84 s long and fades itself
+// in and out inside renderInput(); the renderer applies no extra fades.
 // -----------------------------------------------------------------------------
 namespace demo
 {
