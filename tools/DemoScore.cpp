@@ -21,6 +21,9 @@ namespace
 {
 constexpr float kTwoPi = 6.28318530718f;
 constexpr float kLength = 84.0f;
+// Source trim: the raw performance peaks around -11 dBFS, and the demo feeds
+// roughly -6 dBFS into the EAR stage (hot tape, never clipping the converter).
+constexpr float kSourceGain = 1.80f;
 
 // --- Deterministic, stateless noise -----------------------------------------
 inline std::uint32_t hash32 (std::uint32_t x)
@@ -230,7 +233,24 @@ const std::vector<AutomationPoint>& automation()
     static const std::vector<AutomationPoint> points {
         // --- 0 s: open dry, tap in ---------------------------------------
         { 0.0f,  "ear.mix",         0.0f  },
-        { 0.0f,  "ear.output",      0.0f  },
+        { 0.0f,  "ear.output",      6.0f  },
+
+        // ear.input is the demo's section gain: the dry intro stays gentle, the
+        // grain sections are pushed hot into the EAR saturation, the drone dive
+        // drops back for weight, and the return lifts again before the fade.
+        { 0.0f,  "ear.input",       20.0f },
+        { 9.0f,  "ear.input",       22.0f },
+        { 19.5f, "ear.input",       24.0f },
+        { 30.0f, "ear.input",       24.0f },
+        { 44.0f, "ear.input",       24.0f },
+        { 45.0f, "ear.input",       14.0f },
+        { 56.0f, "ear.input",       14.0f },
+        { 57.0f, "ear.input",       12.0f },
+        { 66.0f, "ear.input",       12.0f },
+        { 69.0f, "ear.input",       19.0f },
+        { 71.0f, "ear.input",       21.0f },
+        { 75.0f, "ear.input",       19.0f },
+        { 79.0f, "ear.input",       17.0f },
         { 0.0f,  "space.mix",       0.15f },
         { 0.0f,  "macro.glow",      0.15f },
         { 0.0f,  "macro.space",     0.20f },
@@ -384,12 +404,12 @@ const std::vector<AutomationPoint>& automation()
         { 78.0f, "space.mix",       0.28f },
         { 79.5f, "ear.mix",         0.20f },
         { 79.5f, "macro.space",     0.25f },
-        { 80.5f, "ear.output",      -6.0f },
-        { 80.5f, "ear.input",       -3.0f },
-        { 81.5f, "ear.output",      -13.0f},
-        { 81.5f, "ear.input",       -8.0f },
-        { 82.5f, "ear.output",      -22.0f},
-        { 82.5f, "ear.input",       -16.0f},
+        { 80.5f, "ear.output",      0.0f  },
+        { 80.5f, "ear.input",       -6.0f },
+        { 81.5f, "ear.output",      -8.0f },
+        { 81.5f, "ear.input",       -12.0f},
+        { 82.5f, "ear.output",      -17.0f},
+        { 82.5f, "ear.input",       -18.0f},
         { 83.2f, "ear.mix",         0.0f  },
         { 83.5f, "ear.output",      -24.0f},
         { 83.5f, "ear.input",       -24.0f},
@@ -411,7 +431,7 @@ void renderInput (float t0, double sampleRate, int numSamples,
         addPad (t, l, r);
         addFieldBed (t, base + i, l, r);
 
-        const float fade = masterFade (t);
+        const float fade = masterFade (t) * kSourceGain;
         left[i]  = std::fmax (-0.95f, std::fmin (0.95f, l * fade));
         right[i] = std::fmax (-0.95f, std::fmin (0.95f, r * fade));
     }

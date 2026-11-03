@@ -75,12 +75,10 @@ their own material and sound immediately, whatever the freeze state.
    Songs are input-driven on purpose: their `ear.mix` keeps the dry source
    audible, and they want you to play into them.
 6. **Check the demo.** `Demo/Nagloed-Demo.wav` is an 84-second performance
-   rendered through the plugin with `nagl_render`; the score moves through dry
-   tap-in → frozen chord → shimmer octave → dust → drone dive → open space →
-   return, and all five macros are automated. Use it as a reference for the
-   arc. Note: if you are running a build whose engine is still the pass-through
-   scaffold, the file is the dry score with only input/output gain moves
-   audible; it is re-rendered through the full engine before release.
+   rendered through the full engine with `nagl_render` (48 kHz / 24-bit stereo,
+   peaking around −2.1 dBFS); the score moves through dry tap-in → frozen chord
+   → shimmer octave → dust → drone dive → open space → return, and all five
+   macros are automated. Use it as a reference for the arc.
 
 ### Quick macro glossary
 

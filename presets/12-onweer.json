@@ -1,7 +1,7 @@
 {
   "name": "Onweer",
   "category": "Dust & Noise",
-  "description": "A storm rolling in: pitched-down noise grains under a dark resonant filter and a vast space. Let a low note thunder and ride Space for the rain tail.",
+  "description": "A storm rolling in: pitched-down noise grains under a dark resonant filter and a vast space. No input needed — let it thunder and ride Space for the rain tail.",
   "params": {
     "grain.density": 12,
     "grain.size": 320,
