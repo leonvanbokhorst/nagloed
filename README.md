@@ -91,8 +91,11 @@ cp -R build/NAGLOED_artefacts/Release/AU/NAGLOED.component ~/Library/Audio/Plug-
 cp -R build/NAGLOED_artefacts/Release/VST3/NAGLOED.vst3      ~/Library/Audio/Plug-Ins/VST3/
 ```
 
-Local builds are unsigned. macOS may ask you to confirm the standalone app the
-first time it runs.
+**Signed builds:** the 1.0.0 bundles are signed ad hoc, not notarised. If macOS
+quarantines a downloaded zip, right-click → Open once, or run
+`xattr -dr com.apple.quarantine NAGLOED.component` (or `.vst3`, `.app`) before
+copying it into the plug-in folder, then rescan in your host. The standalone app
+may also need approval in System Settings → Privacy & Security.
 
 ## Build from source
 
@@ -112,7 +115,7 @@ xcode-select --install
 
 # every build
 ./scripts/build.sh               # plugin + dev tools
-./scripts/build.sh NAGLOED       # just the plug-in
+./scripts/build.sh NAGLOED       # plug-in bundles (AU/VST3/Standalone)
 ./scripts/build.sh nagl_tests    # just the test runner
 ```
 
@@ -137,11 +140,12 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 
 | Check | Command | Status |
 |---|---|---|
-| DSP + unit tests (164 checks) | `./build/nagl_tests_artefacts/Release/nagl_tests` | PASS |
+| DSP + unit tests (167 checks) | `./build/nagl_tests_artefacts/Release/nagl_tests` | PASS |
 | AU validation | `auval -v aufx Nagl UnlN` | PASS |
 | pluginval, strictness 10 (VST3 + AU) | `pluginval --strictness-level 10 --validate …` | PASS |
 | Offline render | `./build/nagl_render_artefacts/Release/nagl_render` | PASS — writes `Demo/Nagloed-Demo.wav` |
 | Offscreen editor snapshot | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — writes `docs/ui-preview.png` |
+| GitHub Actions CI (macOS) | `.github/workflows/ci.yml` | PASS — run `41698856335` |
 
 The full evidence (commands, observed output, CPU/latency figures) is in
 [docs/VALIDATION.md](docs/VALIDATION.md).

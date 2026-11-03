@@ -87,7 +87,10 @@ PresetInfo NagloedProcessor::getPresetInfo (int index) const { return presets::i
 
 void NagloedProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    auto state = apvts.state.createCopy();
+    // copyState() flushes the APVTS parameter timer first. createCopy() can
+    // serialise stale values when the host saves right after a parameter change
+    // (caught by pluginval's setStateInformation test).
+    auto state = apvts.copyState();
     state.setProperty ("currentPreset", currentPreset, nullptr);
     if (auto xml = state.createXml())
         copyXmlToBinary (*xml, destData);
@@ -101,6 +104,31 @@ void NagloedProcessor::setStateInformation (const void* data, int sizeInBytes)
         if (tree.isValid())
         {
             apvts.replaceState (tree);
+
+            // Push every restored value out to the host explicitly. A VST3 host
+            // can cache an odd normalised value for a discrete parameter that it
+            // previously sent; APVTS then skips notifying because its own cached
+            // value already matches the restored one, leaving the host stuck on
+            // the odd value (pluginval "Freeze not restored on setStateInformation").
+            // APVTS stores parameters as <PARAM id="..." value="..."/> children.
+            static const juce::Identifier paramType ("PARAM");
+            static const juce::Identifier idProperty ("id");
+            static const juce::Identifier valueProperty ("value");
+
+            for (const auto& child : tree)
+            {
+                if (! child.hasType (paramType))
+                    continue;
+
+                auto* param = apvts.getParameter (child.getProperty (idProperty).toString());
+                if (param == nullptr)
+                    continue;
+
+                const auto denormalised = (float) (double) child.getProperty (
+                    valueProperty, param->getDefaultValue());
+                param->setValueNotifyingHost (param->convertTo0to1 (denormalised));
+            }
+
             currentPreset = juce::jlimit (0, presets::count() - 1,
                                           (int) tree.getProperty ("currentPreset", 0));
         }

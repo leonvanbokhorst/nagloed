@@ -65,6 +65,35 @@ int main()
     juce::MemoryBlock state;
     processor.getStateInformation (state);
     check (state.getSize() > 0, "state serialises");
+
+    // Recall, not just serialisation: change values, save, change them again,
+    // restore and check the values come back. This is the bug pluginval caught
+    // when the APVTS timer had not flushed before serialisation.
+    {
+        auto& apvts = processor.getAPVTS();
+        auto setReal = [&apvts] (const char* id, float value)
+        {
+            if (auto* p = apvts.getParameter (id))
+                p->setValueNotifyingHost (p->convertTo0to1 (value));
+        };
+
+        setReal (nagloed::pid::density, 123.0f);
+        setReal (nagloed::pid::freeze,  1.0f);
+
+        juce::MemoryBlock saved;
+        processor.getStateInformation (saved);
+        check (saved.getSize() > 0, "state saves after a parameter change");
+
+        setReal (nagloed::pid::density, 30.0f);
+        setReal (nagloed::pid::freeze,  0.0f);
+
+        processor.setStateInformation (saved.getData(), (int) saved.getSize());
+        const float restoredDensity = apvts.getRawParameterValue (nagloed::pid::density)->load();
+        const float restoredFreeze  = apvts.getRawParameterValue (nagloed::pid::freeze)->load();
+        check (std::abs (restoredDensity - 123.0f) < 0.5f, "density is recalled from saved state");
+        check (restoredFreeze > 0.5f, "freeze is recalled from saved state");
+    }
+
     processor.setStateInformation (state.getData(), (int) state.getSize());
 
     // --- DSP suite -----------------------------------------------------------

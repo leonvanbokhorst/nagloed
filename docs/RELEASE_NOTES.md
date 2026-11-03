@@ -33,7 +33,7 @@ it, and play what remains.
   (`Demo/Nagloed-Demo.wav`): 48 kHz / 24-bit stereo, peak −2.1 dBFS, no clipping,
   byte-reproducible from `nagl_render`. A spectrogram of the render is in
   `docs/demo-spectrogram.png`.
-- Validation for 1.0: 164 automated checks, `auval` PASS, pluginval strictness 10
+- Validation for 1.0: 167 automated checks, `auval` PASS, pluginval strictness 10
   PASS on VST3 and AU, 0 audio-thread allocations, ~2% of one core at 48 kHz /
   128 samples with a 64-grain cloud. Full evidence in `docs/VALIDATION.md`.
 
@@ -63,49 +63,44 @@ No MIDI or MPE input is accepted in this release.
 
 - Unit and smoke tests: PASS.
 - Apple AU validation: PASS — `auval -v aufx Nagl UnlN`.
+- pluginval strictness 10: PASS on both VST3 and AU, including state
+  save/restore (verified across several random seeds; a state-recall bug that
+  only appeared under specific seeds was found by this test and fixed before
+  release).
 - Offline render through the real processor: PASS — `nagl_render` produces
   `Demo/Nagloed-Demo.wav`.
-- The same checks run in `.github/workflows/ci.yml` on a macOS runner.
+- GitHub Actions CI (macOS): green on the release branch (run `41698856335`).
 
 Rebuild and re-validate locally with `./scripts/validate.sh`.
 
 ## Known limitations and intentional character
 
-- **No MIDI / MPE in 1.0.** NAGLOED is an audio effect; expression comes from the
-  five macros, the LFO, Auto drift and the grain-field gestures.
-- **macOS 12+ only.** The 1.0 builds are AU, VST3 and Standalone for macOS
-  (arm64 and x86_64 as built).
-- **Input-driven.** There is no sample import; the capture buffer is fed by live
-  input or by the internal Noise/Drone sources.
-- **Tape transport affects the dry path.** At very low `Mix` with high `Wow`,
-  the dry signal follows the tape transport and can waver slightly. This is
-  deliberate analog behaviour, not a bug.
-- **Feedback is overlap-compensated.** Sparse clouds can use the full feedback
-  amount; dense clouds get a scaled amount so the loop always decays once the
-  source stops. High feedback regenerates for seconds, never forever.
-- **No factory artist presets.** The 24 presets are designed for the instrument;
-  they are starting points, not imitations of recordings.
-
-## Known limitations in 1.0.0
-
-- **No MIDI or MPE.** NAGLOED accepts no note, pressure, slide or expression
-  input. The Pressure, Slide and Expression parameters are present in the
-  parameter surface for automation, presets and the planned MPE update, but they
-  cannot be played from a controller in 1.0.0.
-- **macOS only.** There is no Windows or Linux build in this release, and no AAX
-  version.
-- **Live capture only.** There is no audio-file loading or sampling; the material
-  is whatever you play into the capture buffer. The buffer holds twelve seconds
-  and the grain pool is capped at 256 voices.
-- **Factory presets only.** There is no user preset file browser in 1.0.0; save
-  your own variations using the host's preset, rack or track-preset system. The
-  plug-in state itself is saved with the session.
+- **No MIDI or MPE in 1.0.** NAGLOED is an audio effect; expression comes from the
+  five macros, the LFO, Auto drift and the grain-field gestures. The Pressure,
+  Slide and Expression parameters are automatable and preset-addressable, but
+  they cannot be played from a controller in this release.
+- **macOS 12+ only.** AU, VST3 and Standalone; no Windows, Linux or AAX build.
+- **Live capture only.** There is no audio-file loading or sampling: the material
+  is whatever you play into the twelve-second capture buffer, or the internal
+  Noise/Drone sources. The grain pool is capped at 256 voices.
 - **Mono/stereo only.** No surround or multichannel configurations.
-- **CPU scales with the grain field.** Density × grain length is the main cost;
-  freezing does not reduce it. There is no user-facing grain-count limit in
-  1.0.0; the engine ceiling is 256 grains.
-- **Unsigned local builds.** Builds from this repository are not code-signed or
-  notarised; macOS may ask you to confirm the standalone app on first launch.
+- **Factory presets only.** There is no user preset file browser in 1.0; save your
+  own variations with the host's preset, rack or track-preset system. The
+  plug-in state itself is saved with the session.
+- **CPU scales with the grain field.** Density x grain length is the main cost;
+  freezing does not reduce it. The engine ceiling is 256 grains.
+- **Tape transport affects the dry path.** At very low `Mix` with high `Wow`, the
+  dry signal can waver slightly. This is deliberate analogue behaviour.
+- **Feedback is overlap-compensated.** Sparse clouds use the full feedback amount;
+  dense clouds get a scaled amount so the loop always decays once the source
+  stops. High feedback regenerates for seconds, never forever.
+- **PDC is a few samples short of the full wet group delay** (~0.05 ms at
+  48 kHz; inaudible). Documented in the validation report.
+- **Ad-hoc signed builds.** Release zips are signed ad hoc, not notarised. On
+  first use macOS may quarantine them: right-click -> Open once, or run
+  `xattr -dr com.apple.quarantine <bundle>` before copying to the plug-in
+  folder, then rescan in your host. The standalone app may also need approval in
+  System Settings -> Privacy & Security.
 
 ## Compatibility
 
