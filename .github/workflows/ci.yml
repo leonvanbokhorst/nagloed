@@ -1,0 +1,75 @@
+name: CI (macOS build + AU validation)
+
+# Local-first project: this workflow is manual / release-only to keep macOS
+# runner minutes predictable. Run it from the Actions tab or via `gh workflow run`.
+on:
+  workflow_dispatch:
+  push:
+    tags: [ "v*" ]
+  # macOS runner minutes are scarce on private repos: PR runs are label-gated.
+  # Add the "ci" label to a PR to trigger the full matrix.
+  pull_request:
+    types: [ labeled ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-validate:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci')
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch JUCE 9.0.5
+        run: ./scripts/fetch-juce.sh
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G "Unix Makefiles"
+          -DCMAKE_BUILD_TYPE=Release
+          -DNAGLOED_JUCE_DIR="$PWD/.deps/JUCE"
+
+      # Build the format targets explicitly: the bare `NAGLOED` target only
+      # produces the shared-code library, not the AU/VST3/Standalone bundles.
+      - name: Build plugin + tools
+        run: >
+          cmake --build build -j 3 --target
+          NAGLOED_AU NAGLOED_VST3 NAGLOED_Standalone
+          nagl_tests nagl_render nagl_preview
+
+      - name: Unit tests
+        run: ./build/nagl_tests_artefacts/Release/nagl_tests
+
+      - name: AU validation (auval)
+        run: |
+          COMPONENTS="$HOME/Library/Audio/Plug-Ins/Components"
+          mkdir -p "$COMPONENTS"
+          rm -rf "$COMPONENTS/NAGLOED.component"
+          cp -R build/NAGLOED_artefacts/Release/AU/NAGLOED.component "$COMPONENTS/"
+          killall -9 AudioComponentRegistrar || true
+          for attempt in 1 2 3; do
+            sleep 2
+            auval -v aufx Nagl UnlN && exit 0
+          done
+          exit 1
+
+      - name: Offline render (smoke)
+        run: ./build/nagl_render_artefacts/Release/nagl_render
+
+      - name: Offscreen UI snapshot
+        run: ./build/nagl_preview_artefacts/Release/nagl_preview
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nagloed-macos
+          if-no-files-found: warn
+          path: |
+            build/NAGLOED_artefacts/Release/VST3/NAGLOED.vst3
+            build/NAGLOED_artefacts/Release/AU/NAGLOED.component
+            build/NAGLOED_artefacts/Release/Standalone/NAGLOED.app
+            docs/ui-preview.png
+            Demo/Nagloed-Demo.wav
