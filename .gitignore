@@ -1,0 +1,12 @@
+# Build + dependencies
+build/
+.deps/
+.worktrees/
+*.o
+*.dSYM/
+.DS_Store
+*.log
+
+# Local tooling
+__pycache__/
+*.pyc
