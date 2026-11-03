@@ -33,9 +33,12 @@
 //    material — which is what lets the demo score scrub backwards while
 //    frozen.
 //  * grain.feedback feeds the summed grain output back into the capture buffer
-//    through a damped, softly clipped path so clouds can regenerate themselves;
-//    the feedback is additionally tamed by the pitch ratio so upward pitch
-//    shifts can never turn the loop into a scream.
+//    through a damped, softly clipped path so clouds can regenerate themselves.
+//    EngineDSP scales the regeneration by the inverse of the worst-case
+//    overlap gain, so the loop gain stays below unity at every density: with
+//    the source silent the cloud always decays, while sparse clouds still get
+//    the full feedback amount. The pitch ratio additionally tames feedback for
+//    upward pitch shifts (reading faster amplifies more energy per pass).
 //
 // Realtime contract
 //  * prepare() allocates; process() only reads/writes preallocated memory.

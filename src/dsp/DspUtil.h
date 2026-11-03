@@ -422,7 +422,15 @@ inline int scaleDegrees (int mode, const int*& degrees) noexcept
     }
 }
 
-// Nearest pitch in the selected scale, searched over +/-3 octaves.
+// The grain engine clamps its summed pitch to these bounds. The quantiser uses
+// the same limits so scale folding cannot produce an octave error at the edge.
+inline constexpr float kMinGrainSemitones = -48.0f;
+inline constexpr float kMaxGrainSemitones =  48.0f;
+
+// Nearest pitch in the selected scale. The requested pitch is clamped to the
+// grain range first, then the whole +/-4 octave span is searched so that the
+// boundaries (-48 / +48 st) quantise correctly instead of folding into the
+// wrong octave.
 inline float quantisePitch (int mode, float semitones) noexcept
 {
     if (mode <= tuneFree || mode >= kNumTuneModes)
@@ -433,17 +441,19 @@ inline float quantisePitch (int mode, float semitones) noexcept
     if (degrees == nullptr || count <= 0)
         return semitones;
 
-    float best     = semitones;
+    const float pitch = clamp (semitones, kMinGrainSemitones, kMaxGrainSemitones);
+
+    float best     = pitch;
     float bestDist = 1.0e9f;
 
-    // -3..+3 octaves covers the full -24..+48 semitone grain range with room
-    // for the spread parameter on top.
-    for (int octave = -3; octave <= 3; ++octave)
+    // Searches every scale degree in -4..+4 octaves, which covers the full
+    // clamped +/-48 semitone range (-48 ... +59) with margin.
+    for (int octave = -4; octave <= 4; ++octave)
     {
         for (int d = 0; d < count; ++d)
         {
             const float candidate = (float) (degrees[d] + 12 * octave);
-            const float dist      = std::abs (candidate - semitones);
+            const float dist      = std::abs (candidate - pitch);
             if (dist < bestDist)
             {
                 bestDist = dist;

@@ -46,21 +46,10 @@ void AnalogChain::prepare (double sr, int maxBlockSize)
     // --- scratch buffers -----------------------------------------------------
     osInput.setSize (2, maxBlock, false, true, true);
     osOutput.setSize (2, maxBlock, false, true, true);
-    dryAlignedL.assign ((size_t) maxBlock, 0.0f);
-    dryAlignedR.assign ((size_t) maxBlock, 0.0f);
 
     // --- oversampled nonlinear stages ---------------------------------------
     oversampler.initProcessing ((size_t) maxBlock);
-    latency = (int) std::lround (oversampler.getLatencyInSamples());
-
-    // --- dry-path latency compensation --------------------------------------
-    {
-        const int length = nextPowerOfTwo (std::max (8, latency + 2));
-        dryDelayL.assign ((size_t) length, 0.0f);
-        dryDelayR.assign ((size_t) length, 0.0f);
-        dryMask  = (std::uint32_t) (length - 1);
-        dryWrite = 0;
-    }
+    oversamplerLatency = (int) std::lround (oversampler.getLatencyInSamples());
 
     // --- filters -------------------------------------------------------------
     // The tone tilt is applied inside the oversampled nonlinear loop (between
@@ -83,6 +72,20 @@ void AnalogChain::prepare (double sr, int maxBlockSize)
         tapeWrite = 0;
     }
 
+    // --- latency and dry-path compensation ----------------------------------
+    // The wet path is delayed by the oversampler plus the tape transport. The
+    // reported latency uses the mean tape delay (the wow/flutter modulation
+    // averages out), while the dry path below tracks the instantaneous delay so
+    // the blend never combs.
+    latency = oversamplerLatency + (int) std::lround (tapeBaseDelay);
+    {
+        const int length = nextPowerOfTwo (oversamplerLatency + (int) tapeL.size() + 8);
+        dryDelayL.assign ((size_t) length, 0.0f);
+        dryDelayR.assign ((size_t) length, 0.0f);
+        dryMask  = (std::uint32_t) (length - 1);
+        dryWrite = 0;
+    }
+
     wowInc     = (float) (kWowHz / sampleRate);
     flutterInc = (float) (kFlutterHz / sampleRate);
 
@@ -96,8 +99,6 @@ void AnalogChain::reset() noexcept
 
     std::fill (dryDelayL.begin(), dryDelayL.end(), 0.0f);
     std::fill (dryDelayR.begin(), dryDelayR.end(), 0.0f);
-    std::fill (dryAlignedL.begin(), dryAlignedL.end(), 0.0f);
-    std::fill (dryAlignedR.begin(), dryAlignedR.end(), 0.0f);
     dryWrite = 0;
 
     std::fill (tapeL.begin(), tapeL.end(), 0.0f);
@@ -180,8 +181,7 @@ void AnalogChain::process (float* wetL, float* wetR,
         return;
 
     // -------------------------------------------------------------------------
-    // 1. Pre stage: input gain + tone tilt -> oversampler input; align the dry
-    //    path by the oversampler latency.
+    // 1. Pre stage: input gain + drive gain -> oversampler input.
     // -------------------------------------------------------------------------
     float* osInL = osInput.getWritePointer (0);
     float* osInR = osInput.getWritePointer (1);
@@ -200,14 +200,6 @@ void AnalogChain::process (float* wetL, float* wetR,
             const float gain = c.inputGain * c.driveGain;
             osInL[i] = sanitiseInput (wetL[i]) * gain;
             osInR[i] = sanitiseInput (wetR[i]) * gain;
-
-            dryWrite = (dryWrite + 1) & dryMask;
-            dryDelayL[(size_t) dryWrite] = dryL[i];
-            dryDelayR[(size_t) dryWrite] = dryR[i];
-
-            const std::uint32_t readIndex = (dryWrite - (std::uint32_t) latency) & dryMask;
-            dryAlignedL[(size_t) i] = dryDelayL[(size_t) readIndex];
-            dryAlignedR[(size_t) i] = dryDelayR[(size_t) readIndex];
         }
     }
 
@@ -234,13 +226,13 @@ void AnalogChain::process (float* wetL, float* wetR,
         // again so the stage does not inject DC into the ladder.
         const float bias      = clamp (c.bias, 0.0f, 1.0f) * 1.2f;
         const float biasShift = fastTanh (bias);
-        const float ladderG   = clamp (c.ladderG, 0.0f, 0.99f);
+        const float ladderG   = clamp (c.ladderG, 0.0f, 8.0f);   // prewarped tan(pi*fc/fs)
         const float ladderK   = clamp (c.ladderK, 0.0f, 4.0f);
 
         for (int i = s0; i < s1; ++i)
         {
-            // Asymmetric saturation -> tone tilt -> 24 dB ladder, exactly the
-            // EAR chain order documented in AnalogChain.h.
+            // Asymmetric saturation -> tone tilt -> 24 dB ladder (the EAR
+            // chain order documented in AnalogChain.h and the PR description).
             const float satL = fastTanh (upL[i] + bias) - biasShift;
             const float satR = fastTanh (upR[i] + bias) - biasShift;
 
@@ -351,8 +343,27 @@ void AnalogChain::process (float* wetL, float* wetR,
             r = softLimitOutput (r * outputGain);
 
             // --- dry/wet blend at the end of the chain ---------------------
-            const float dryLAligned = dryAlignedL[(size_t) i];
-            const float dryRAligned = dryAlignedR[(size_t) i];
+            // The dry signal is delayed by the oversampler latency plus the
+            // *same* instantaneous tape delay (including wow/flutter/drift) the
+            // wet path just went through. This keeps a 50/50 blend perfectly
+            // phase-coherent; delaying by a fixed integer only would comb-filter
+            // against the ~48-sample tape base delay.
+            dryWrite = (dryWrite + 1) & dryMask;
+            dryDelayL[(size_t) dryWrite] = flushDenormal (dryL[i]);
+            dryDelayR[(size_t) dryWrite] = flushDenormal (dryR[i]);
+
+            const float dryDelayTotal = (float) oversamplerLatency + delay;
+            const float dryReadPos    = (float) dryWrite - dryDelayTotal;
+            const int   dryBase       = (int) std::floor (dryReadPos);
+            const float dryFrac       = dryReadPos - (float) dryBase;
+
+            const std::uint32_t d0 = (std::uint32_t) dryBase & dryMask;
+            const std::uint32_t d1 = (std::uint32_t) (dryBase + 1) & dryMask;
+
+            const float dryLAligned = dryDelayL[(size_t) d0]
+                                    + (dryDelayL[(size_t) d1] - dryDelayL[(size_t) d0]) * dryFrac;
+            const float dryRAligned = dryDelayR[(size_t) d0]
+                                    + (dryDelayR[(size_t) d1] - dryDelayR[(size_t) d0]) * dryFrac;
 
             wetL[i] = dryLAligned + (l - dryLAligned) * mix;
             wetR[i] = dryRAligned + (r - dryRAligned) * mix;

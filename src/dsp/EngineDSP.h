@@ -59,6 +59,16 @@ public:
     void getVisual (VisualState&) const noexcept;
     int  getLatencySamples() const noexcept;
 
+    // -------------------------------------------------------------------------
+    // QA probes for the safety net. The public output is always finite and
+    // clamped to +/-6 dBFS; these expose the signal *before* that final safety
+    // stage so tests can prove the engine itself never diverges or produces
+    // NaN/Inf (rather than testing the clamp).
+    // -------------------------------------------------------------------------
+    float getPreLimiterPeak() const noexcept { return preLimiterPeak; }
+    bool  hadNonFiniteOutput() const noexcept { return nonFiniteOutput; }
+    float getEffectiveFeedback() const noexcept { return effectiveFeedback; }
+
 private:
     static constexpr int kControlInterval = 16;
 
@@ -128,6 +138,11 @@ private:
     // --- meters for the current process() call -------------------------------
     double accumInL = 0.0, accumInR = 0.0, accumOutL = 0.0, accumOutR = 0.0;
     int    accumSamples = 0;
+
+    // --- pre-safety-limiter QA probes (reset at the start of process()) ------
+    float preLimiterPeak = 0.0f;
+    bool  nonFiniteOutput = false;
+    float effectiveFeedback = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (EngineDSP)
 };

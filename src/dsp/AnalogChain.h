@@ -14,16 +14,18 @@
 // sounds like it has been through a valve desk and a tape machine:
 //
 //   input gain -> asymmetric saturation (2x oversampled)
-//              -> 4-pole resonant ladder lowpass (2x oversampled, self-oscillating
-//                 but always tamed by a tanh in the feedback path)
-//              -> tone tilt -> wow & flutter tape delay -> tape saturation
+//              -> tone tilt -> 4-pole resonant ladder lowpass (2x oversampled,
+//                 self-oscillating but always tamed by a tanh in the loop)
+//              -> wow & flutter tape delay -> tape saturation
 //              -> LoFi sample-rate/bit reduction -> hiss -> DC blocker
 //              -> output soft limiter -> dry/wet mix
 //
 // Every stage is smoothed upstream (EngineDSP's control frames), so automating
 // any knob of the character chain never zippers. The dry/wet mix happens at the
-// very end, against a latency-compensated dry signal (the oversampler's
-// reported latency is compensated here and reported to the host).
+// very end, against a dry signal delayed by the *exact* wet-path latency
+// (oversampler latency + the current tape delay including wow/flutter), so a
+// 50/50 blend stays phase-coherent instead of comb-filtering. That total
+// latency is reported to the host.
 // -----------------------------------------------------------------------------
 namespace nagloed::dsp
 {
@@ -88,9 +90,10 @@ private:
     };
 
     static float processLadder (LadderState& state, float x, float g, float k) noexcept;
-    double sampleRate = 48000.0;
-    int    maxBlock   = 512;
-    int    latency    = 0;
+    double sampleRate         = 48000.0;
+    int    maxBlock           = 512;
+    int    oversamplerLatency = 0;
+    int    latency            = 0;   // reported host latency: oversampler + tape base delay
 
     // 2x oversampled nonlinear stages (saturation + ladder).
     // factor = 2^1 = 2, polyphase IIR halfband (low latency, adequate
@@ -103,13 +106,14 @@ private:
     juce::AudioBuffer<float> osInput;
     juce::AudioBuffer<float> osOutput;
 
-    // Dry-path latency compensation.
+    // Dry-path latency compensation. The delay line is read with the same
+    // fractional delay as the wet tape path (oversampler latency + tape delay),
+    // so dry and wet always align sample-for-sample.
     std::vector<float> dryDelayL, dryDelayR;
     std::uint32_t dryMask = 0;
     std::uint32_t dryWrite = 0;
-    std::vector<float> dryAlignedL, dryAlignedR;
 
-    // Tone tilt (base rate, before the oversampled stages).
+    // Tone tilt, applied at the oversampled rate between saturation and ladder.
     OnePole toneLpL, toneLpR;
 
     // Ladder state per channel (operating at the oversampled rate).

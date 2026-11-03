@@ -206,8 +206,10 @@ void EngineDSP::prepare (double sr, int maxBlockSize, int numChannels)
 {
     sampleRate = (sr > 0.0 ? sr : 48000.0);
     maxBlock   = std::max (1, std::min (maxBlockSize, 8192));
-    // The channel count of the actual buffer is taken at process() time; the
-    // engine always runs a stereo internal graph so mono/stereo swaps are safe.
+    // The internal graph is always stereo. The host channel count is taken from
+    // the buffer at process() time: mono buffers are explicitly folded into the
+    // stereo graph on input and downmixed on output, so prepare() has nothing
+    // channel-dependent to do.
     (void) numChannels;
 
     dsp::prepareSharedTables();
@@ -362,21 +364,36 @@ void EngineDSP::updateControlFrame() noexcept
                                       -48.0f, 48.0f);
     const float feedback = dsp::clamp (smooth.feedback.value(), 0.0f, 0.95f);
 
-    // Feedback stability: reading the buffer faster than real time multiplies
-    // the energy that the feedback loop sees, so upward pitch scales the
-    // feedback down (1/sqrt(pitchRatio)).
+    // Feedback stability, part 1: reading the buffer faster than real time
+    // multiplies the energy that the feedback loop sees, so upward pitch scales
+    // the feedback down (1/sqrt(pitchRatio)).
     const float maxUpPitch = dsp::clamp (pitch + spread * 0.5f
                                              + (macroShimmer > 0.02f ? 12.0f : 0.0f),
                                          -48.0f, 48.0f);
-    const float feedbackScale = maxUpPitch <= 0.0f
-                                    ? 1.0f
-                                    : std::pow (2.0f, -0.5f * maxUpPitch / 12.0f);
+    const float feedbackPitchScale = maxUpPitch <= 0.0f
+                                         ? 1.0f
+                                         : std::pow (2.0f, -0.5f * maxUpPitch / 12.0f);
 
     // Automatic level compensation for the cloud: keep the summed level roughly
     // constant as density/size change. The soft limiter downstream handles the
     // residual peaks.
     const float activeEstimate = std::max (density * grainSeconds, 0.6f);
     const float grainGain = dsp::clamp (1.6f / std::sqrt (activeEstimate), 0.05f, 1.3f);
+
+    // Feedback stability, part 2: when grains are correlated (same pitch, no
+    // spray/scatter) their windows add up, so the summed bus can amplify the
+    // capture buffer by roughly (overlap * grain gain * average window value),
+    // folded to mono by the equal-power pan (~0.71). Scaling the regeneration
+    // by the inverse of that worst case keeps the loop gain below unity at every
+    // density and every window shape, so the cloud decays once the source
+    // stops — while sparse/dense clouds still receive a musical amount.
+    const float shapePos = clamp01 (smooth.shape.value()) * 2.0f;
+    const float windowMean = shapePos <= 1.0f
+                                 ? 0.50f + 0.25f * shapePos          // Hann -> Tukey
+                                 : 0.75f - 0.45f * (shapePos - 1.0f); // Tukey -> expodec
+    const float worstCaseLoopGain = activeEstimate * grainGain * windowMean * 0.80f;
+    const float feedbackLoopScale = dsp::clamp (1.0f / (worstCaseLoopGain * 1.10f),
+                                                0.02f, 1.0f);
 
     grainControls.densityHz     = density;
     grainControls.grainSeconds  = grainSeconds;
@@ -393,7 +410,8 @@ void EngineDSP::updateControlFrame() noexcept
     grainControls.panOffset     = dsp::clamp (panLfo + mod.panDrift, -1.0f, 1.0f);
     grainControls.shimmer       = clamp01 (macroShimmer);
     grainControls.gain          = grainGain;
-    grainControls.feedbackScale = feedbackScale;
+    grainControls.feedbackScale = feedbackPitchScale * feedbackLoopScale;
+    effectiveFeedback = feedback * grainControls.feedbackScale;
     grainControls.freeze        = p.freeze;
     grainControls.tuneMode      = (p.tuneMode > 0 && p.tuneMode < dsp::kNumTuneModes) ? p.tuneMode : 0;
     grainControls.sourceMode    = (p.sourceMode >= 0 && p.sourceMode <= 2) ? p.sourceMode : 0;
@@ -511,6 +529,8 @@ void EngineDSP::process (juce::AudioBuffer<float>& io, const juce::MidiBuffer& m
     accumSamples = 0;
     visualInPeak = 0.0f;
     visualOutPeak = 0.0f;
+    preLimiterPeak = 0.0f;
+    nonFiniteOutput = false;
 
     int offset = 0;
     while (offset < numSamples)
@@ -602,10 +622,26 @@ void EngineDSP::processChunk (float* ioL, float* ioR, int numSamples, bool mono)
         float l = earL[(size_t) i];
         float r = earR[(size_t) i];
 
-        // Belt and braces: nothing non-finite or above +6 dBFS may ever leave
-        // the engine, whatever combination of parameters the user dials in.
-        l = (l == l) ? dsp::clamp (l, -2.0f, 2.0f) : 0.0f;
-        r = (r == r) ? dsp::clamp (r, -2.0f, 2.0f) : 0.0f;
+        // QA probe: record the signal *before* the final safety stage. Tests
+        // assert on this, so "finite/loudness" checks cannot be satisfied by
+        // the clamp hiding a diverging engine.
+        const auto probe = [this] (float v) noexcept
+        {
+            if (v == v && std::abs (v) < 1.0e12f)
+                preLimiterPeak = std::max (preLimiterPeak, std::abs (v));
+            else
+                nonFiniteOutput = true;
+        };
+        probe (l);
+        probe (r);
+
+        // Final safety stage: a soft analog-style limiter on the *post-mix*
+        // signal (so the dry side is limited too), then a hard +/-6 dBFS
+        // guarantee, and NaN/Inf neutralisation as the last line of defence.
+        l = (l == l) ? dsp::softLimitOutput (l) : 0.0f;
+        r = (r == r) ? dsp::softLimitOutput (r) : 0.0f;
+        l = dsp::clamp (l, -2.0f, 2.0f);
+        r = dsp::clamp (r, -2.0f, 2.0f);
 
         if (mono)
         {

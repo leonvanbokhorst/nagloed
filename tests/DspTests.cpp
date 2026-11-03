@@ -17,6 +17,7 @@
 #include "dsp/AnalogChain.h"
 #include "dsp/DspUtil.h"
 #include "dsp/Engine.h"
+#include "dsp/EngineDSP.h"
 
 // =============================================================================
 // Helpers
@@ -69,8 +70,8 @@ struct Stats
     bool   finite = true;
 };
 
-template <typename Generator>
-Stats render (nagloed::Engine& engine, long long totalSamples, int blockSize, int channels,
+template <typename Processor, typename Generator>
+Stats render (Processor& engine, long long totalSamples, int blockSize, int channels,
               Generator generator)
 {
     Stats stats;
@@ -120,6 +121,60 @@ Stats render (nagloed::Engine& engine, long long totalSamples, int blockSize, in
     stats.rms  = std::sqrt (energy / (sampleCount * (double) std::max (1, channels)));
     stats.rmsL = std::sqrt (energyL / sampleCount);
     stats.rmsR = std::sqrt (energyR / sampleCount);
+    return stats;
+}
+
+// Renders through EngineDSP while checking the *pre-safety-limiter* signal on
+// every block. "Finite"/"peak" assertions on this data cannot be satisfied by
+// the engine's final output clamp hiding a diverging graph.
+template <typename Generator>
+Stats renderProbed (nagloed::EngineDSP& engine, long long totalSamples, int blockSize, int channels,
+                    Generator generator, float& maxPreLimiterPeak, bool& anyNonFinite)
+{
+    Stats stats;
+    juce::MidiBuffer midi;
+
+    double energy = 0.0;
+    long long position = 0;
+
+    while (position < totalSamples)
+    {
+        const int n = (int) std::min<long long> (blockSize, totalSamples - position);
+
+        juce::AudioBuffer<float> buffer (channels, n);
+        for (int ch = 0; ch < channels; ++ch)
+        {
+            float* data = buffer.getWritePointer (ch);
+            for (int i = 0; i < n; ++i)
+                data[i] = generator (ch, position + i);
+        }
+
+        engine.process (buffer, midi);
+
+        if (engine.hadNonFiniteOutput())
+            anyNonFinite = true;
+
+        maxPreLimiterPeak = std::max (maxPreLimiterPeak, engine.getPreLimiterPeak());
+
+        for (int ch = 0; ch < channels; ++ch)
+        {
+            const float* data = buffer.getReadPointer (ch);
+            for (int i = 0; i < n; ++i)
+            {
+                const float v = data[i];
+                if (! std::isfinite (v))
+                    stats.finite = false;
+
+                stats.peak = std::max (stats.peak, std::abs (v));
+                energy += (double) v * (double) v;
+            }
+        }
+
+        position += n;
+    }
+
+    stats.rms = std::sqrt (energy / ((double) std::max<long long> (1, totalSamples)
+                                     * (double) std::max (1, channels)));
     return stats;
 }
 
@@ -269,8 +324,9 @@ void testSelfGeneratingSources()
 
     auto drone = cleanParams();
     drone.sourceMode = 2;   // Drone
-    drone.density = 50.0f;
-    drone.sizeMs = 140.0f;
+    drone.density = 80.0f;
+    drone.sizeMs = 100.0f;
+    drone.pitchSemis = 12.0f;   // the cluster (and therefore the visual pitch) is up an octave
     engine.setParams (drone);
 
     const auto droneStats = render (engine, 96000, 512, 2, silence);
@@ -278,6 +334,20 @@ void testSelfGeneratingSources()
     check (droneStats.rms > 1.0e-3, "drone source generates material with a silent input");
     check (droneStats.peak <= 2.0f, "drone source: output stays within the safety ceiling");
     info (fmt ("drone source: rms %.4f", droneStats.rms));
+
+    nagloed::VisualState droneVisual;
+    engine.getVisual (droneVisual);
+    double pitchSum = 0.0;
+    int pitchCount = 0;
+    for (int g = 0; g < droneVisual.numGrains; ++g)
+    {
+        pitchSum += droneVisual.grains[(size_t) g].pitch;
+        ++pitchCount;
+    }
+    const double meanPitch = pitchCount > 0 ? pitchSum / pitchCount : 0.0;
+    check (pitchCount > 0, "drone source: grain views are visible");
+    check (std::abs (meanPitch - 12.0) < 1.0,
+           fmt ("drone source: grain views include the cluster pitch (mean %.2f st)", meanPitch));
 }
 
 void testFreezeKeepsGrainsAlive()
@@ -373,6 +443,21 @@ void testTuningQuantisation()
     // Free mode is a pass-through.
     checkNear (quantisePitch (tuneFree, 1.37f), 1.37, 1.0e-6, "free tuning leaves pitch untouched");
 
+    // Boundaries: the grain range is +/-4 octaves, and the quantiser must cover
+    // it instead of folding the edges into the wrong octave.
+    checkNear (quantisePitch (tuneChromatic, -48.0f), -48.0, 1.0e-4,
+               "quantiser keeps the -48 st boundary");
+    checkNear (quantisePitch (tuneChromatic, 48.0f), 48.0, 1.0e-4,
+               "quantiser keeps the +48 st boundary");
+    checkNear (quantisePitch (tuneChromatic, -55.0f), -48.0, 1.0e-4,
+               "quantiser clamps pitches below -48 st before folding");
+    checkNear (quantisePitch (tuneChromatic, 55.0f), 48.0, 1.0e-4,
+               "quantiser clamps pitches above +48 st before folding");
+    checkNear (quantisePitch (tuneMajor, -47.5f), -48.0, 1.0e-4,
+               "major tuning folds near the bottom boundary");
+    checkNear (quantisePitch (tuneMajor, 47.5f), 47.0, 1.0e-4,
+               "major tuning folds near the top boundary (B is in the scale)");
+
     // The visualiser must report the quantised pitch for every live grain.
     nagloed::Engine engine;
     engine.prepare (kSampleRate, 512, 2);
@@ -424,55 +509,99 @@ void testTuningQuantisation()
 
 void testFeedbackStability()
 {
-    nagloed::Engine engine;
-    engine.prepare (kSampleRate, 512, 2);
-    engine.reset();
+    // Case A: sparse cloud -> the overlap compensation is 1.0, so the capture
+    // path really receives the full 0.95 feedback. This is the configuration the
+    // old test never reached (it used +24 st, which scaled feedback to ~0.25).
+    {
+        nagloed::EngineDSP engine;
+        engine.prepare (kSampleRate, 512, 2);
+        engine.reset();
 
-    // Deliberately hostile: maximum feedback, maximum upward pitch, dense cloud,
-    // self-oscillating filter, full space, LoFi and heavy saturation.
-    auto p = cleanParams();
-    p.density = 180.0f;
-    p.sizeMs = 400.0f;
-    p.feedback = 0.95f;
-    p.pitchSemis = 24.0f;
-    p.pitchSpread = 6.0f;
-    p.reverse = 0.5f;
-    p.jitter = 0.6f;
-    p.sourceMode = 1;          // noise bed keeps the loop fed
-    p.driveDb = 24.0f;
-    p.bias = 0.8f;
-    p.reso = 0.95f;
-    p.cutoffHz = 4000.0f;
-    p.spaceMix = 1.0f;
-    p.spaceSize = 1.0f;
-    p.spaceDamp = 0.0f;
-    p.spaceMod = 1.0f;
-    p.lofi = 0.7f;
-    p.tape = 1.0f;
-    p.wow = 1.0f;
-    p.drift = 1.0f;
-    p.mix = 1.0f;
-    p.macroGlow = 1.0f;
-    p.macroDrift = 1.0f;
-    p.macroSpace = 1.0f;
-    p.macroShimmer = 1.0f;
-    p.feedback = 0.95f;
-    p.autoMotion = 1.0f;
-    p.lfoAmount = 1.0f;
-    p.lfoDest = 2;             // pitch
-    engine.setParams (p);
+        auto p = cleanParams();
+        p.density = 1.0f;
+        p.sizeMs = 500.0f;
+        p.feedback = 0.95f;
+        p.jitter = 0.0f;
+        p.spray = 0.0f;
+        p.pitchSemis = 0.0f;
+        p.sourceMode = 1;      // noise bed: keeps feeding the loop
+        engine.setParams (p);
 
-    const auto stats = render (engine, 288000, 512, 2, sineStereo);   // 6 s
+        float maxPre = 0.0f;
+        bool nonFinite = false;
+        const auto stats = renderProbed (engine, 288000, 512, 2, sineStereo, maxPre, nonFinite);
 
-    info (fmt ("feedback stress: rms %.4f, peak %.4f", stats.rms, (double) stats.peak));
-    check (stats.finite, "feedback stress: output is finite");
-    check (stats.peak <= 2.0f, "feedback stress: output stays below +6 dBFS");
-    check (stats.rms < 2.0, "feedback stress: no runaway energy");
+        const float effective = engine.getEffectiveFeedback();
+        info (fmt ("feedback 0.95 (sparse, full path): effective %.3f, pre-limiter peak %.3f, out rms %.4f",
+                   (double) effective, (double) maxPre, stats.rms));
+
+        check (effective > 0.90f, "feedback stress: sparse cloud reaches the full 0.95 feedback");
+        check (! nonFinite, "feedback stress: pre-limiter signal never becomes NaN/Inf");
+        check (maxPre <= 4.0f, "feedback stress: pre-limiter peak stays bounded");
+        check (stats.finite, "feedback stress: output is finite");
+        check (stats.peak <= 2.0f, "feedback stress: output stays below +6 dBFS");
+    }
+
+    // Case B: hostile chain — dense cloud, self-oscillating ladder, full space,
+    // LoFi, maximum drive/drift. Must stay finite and bounded.
+    {
+        nagloed::EngineDSP engine;
+        engine.prepare (kSampleRate, 512, 2);
+        engine.reset();
+
+        auto p = cleanParams();
+        p.density = 180.0f;
+        p.sizeMs = 400.0f;
+        p.feedback = 0.95f;
+        p.pitchSemis = 0.0f;
+        p.pitchSpread = 6.0f;
+        p.reverse = 0.5f;
+        p.jitter = 0.0f;
+        p.spray = 0.0f;
+        p.shape = 1.0f;
+        p.sourceMode = 1;      // noise bed keeps the loop fed
+        p.driveDb = 24.0f;
+        p.bias = 0.8f;
+        p.reso = 0.95f;
+        p.cutoffHz = 4000.0f;
+        p.spaceMix = 1.0f;
+        p.spaceSize = 1.0f;
+        p.spaceDamp = 0.0f;
+        p.spaceMod = 1.0f;
+        p.lofi = 0.7f;
+        p.tape = 1.0f;
+        p.wow = 1.0f;
+        p.drift = 1.0f;
+        p.mix = 1.0f;
+        p.macroGlow = 1.0f;
+        p.macroDrift = 1.0f;
+        p.macroSpace = 1.0f;
+        p.macroShimmer = 1.0f;
+        p.autoMotion = 1.0f;
+        p.lfoAmount = 1.0f;
+        p.lfoDest = 2;         // pitch
+        engine.setParams (p);
+
+        float maxPre = 0.0f;
+        bool nonFinite = false;
+        const auto stats = renderProbed (engine, 288000, 512, 2, sineStereo, maxPre, nonFinite);
+
+        info (fmt ("feedback stress (hostile): effective %.3f, pre-limiter peak %.3f, rms %.4f, peak %.3f",
+                   (double) engine.getEffectiveFeedback(), (double) maxPre,
+                   stats.rms, (double) stats.peak));
+
+        check (! nonFinite, "hostile stress: pre-limiter signal never becomes NaN/Inf");
+        check (maxPre <= 4.0f, "hostile stress: pre-limiter peak stays bounded");
+        check (stats.finite, "hostile stress: output is finite");
+        check (stats.peak <= 2.0f, "hostile stress: output stays below +6 dBFS");
+        check (stats.rms < 2.0, "hostile stress: no runaway energy");
+    }
 }
 
 void testMonoAndStereo()
 {
-    // 1) stereo engine, stereo buffer
+    // The engine graph is stereo; mono buffers are explicitly folded in/out.
+    // 1) stereo buffer
     {
         nagloed::Engine engine;
         engine.prepare (kSampleRate, 512, 2);
@@ -480,15 +609,16 @@ void testMonoAndStereo()
         engine.setParams (musicalParams());
 
         const auto stats = render (engine, 96000, 512, 2, sineStereo);
-        info (fmt ("stereo: rmsL %.4f rmsR %.4f peak %.3f", stats.rmsL, stats.rmsR, (double) stats.peak));
+        info (fmt ("stereo: rmsL %.4f rmsR %.4f peak %.3f latency %d",
+                   stats.rmsL, stats.rmsR, (double) stats.peak, engine.getLatencySamples()));
         check (stats.finite, "stereo: output is finite");
         check (stats.peak <= 2.0f, "stereo: output stays below +6 dBFS");
         check (stats.rmsL > 1.0e-4 && stats.rmsR > 1.0e-4, "stereo: both channels carry audio");
-        check (engine.getLatencySamples() >= 0 && engine.getLatencySamples() < 64,
-               "stereo: reported latency is sane");
+        check (engine.getLatencySamples() > 0 && engine.getLatencySamples() < 256,
+               "stereo: reported latency includes the tape transport and is sane");
     }
 
-    // 2) stereo engine, mono buffer (host can hand us mono in stereo mode)
+    // 2) mono buffer: mono input is folded into the stereo graph
     {
         nagloed::Engine engine;
         engine.prepare (kSampleRate, 512, 2);
@@ -502,7 +632,58 @@ void testMonoAndStereo()
         check (stats.rms > 1.0e-4, "mono buffer: audio is produced");
     }
 
-    // 3) mono engine, stereo buffer (defensive: host mismatch)
+    // 3) mono output is exactly the explicit 0.5*(L+R) fold of the stereo run
+    {
+        auto params = musicalParams();
+        params.mix = 0.8f;
+
+        nagloed::Engine stereoEngine;
+        stereoEngine.prepare (kSampleRate, 512, 2);
+        stereoEngine.reset();
+        stereoEngine.setParams (params);
+
+        nagloed::Engine monoEngine;
+        monoEngine.prepare (kSampleRate, 512, 2);
+        monoEngine.reset();
+        monoEngine.setParams (params);
+
+        juce::MidiBuffer midi;
+        constexpr int block = 256;
+        float maxDifference = 0.0f;
+        bool finite = true;
+
+        for (int b = 0; b < 128; ++b)
+        {
+            juce::AudioBuffer<float> stereoBuffer (2, block);
+            juce::AudioBuffer<float> monoBuffer (1, block);
+            for (int i = 0; i < block; ++i)
+            {
+                const float s = 0.2f * (float) std::sin (kTwoPi * 220.0 * (double) (b * block + i) / kSampleRate);
+                stereoBuffer.setSample (0, i, s);
+                stereoBuffer.setSample (1, i, s);
+                monoBuffer.setSample (0, i, s);
+            }
+
+            stereoEngine.process (stereoBuffer, midi);
+            monoEngine.process (monoBuffer, midi);
+
+            for (int i = 0; i < block; ++i)
+            {
+                const float l = stereoBuffer.getSample (0, i);
+                const float r = stereoBuffer.getSample (1, i);
+                const float mono = monoBuffer.getSample (0, i);
+                if (! std::isfinite (mono) || ! std::isfinite (l) || ! std::isfinite (r))
+                    finite = false;
+                maxDifference = std::max (maxDifference, std::abs (mono - 0.5f * (l + r)));
+            }
+        }
+
+        info (fmt ("mono downmix: max |mono - 0.5*(L+R)| = %.3e", (double) maxDifference));
+        check (finite, "mono downmix: all outputs finite");
+        check (maxDifference < 1.0e-6f, "mono downmix equals the explicit stereo fold");
+    }
+
+    // 4) defensive: engine prepared for 1 channel but handed a stereo buffer
     {
         nagloed::Engine engine;
         engine.prepare (kSampleRate, 512, 1);
@@ -510,8 +691,8 @@ void testMonoAndStereo()
         engine.setParams (musicalParams());
 
         const auto stats = render (engine, 96000, 512, 2, sineStereo);
-        check (stats.finite, "mono engine + stereo buffer: output is finite");
-        check (stats.peak <= 2.0f, "mono engine + stereo buffer: output stays below +6 dBFS");
+        check (stats.finite, "channel mismatch: output is finite");
+        check (stats.peak <= 2.0f, "channel mismatch: output stays below +6 dBFS");
     }
 }
 
@@ -525,10 +706,14 @@ void testBlockSizeInvariance()
     p.lofi = 0.0f;       // keep the comparison free of sample-and-hold aliasing
     p.hiss = 0.0f;
 
+    // Prepare once for the largest block and vary only the host block size, so
+    // this really tests the control-rate/chunking logic rather than re-preparing
+    // different engines.
+    nagloed::Engine engine;
+    engine.prepare (kSampleRate, 4096, 2);
+
     for (int i = 0; i < 3; ++i)
     {
-        nagloed::Engine engine;
-        engine.prepare (kSampleRate, blockSizes[i], 2);
         engine.reset();
         engine.setParams (p);
 
@@ -544,75 +729,102 @@ void testBlockSizeInvariance()
     check (minRms > 1.0e-4, "block size invariance: audio is present in all runs");
     check (maxRms <= minRms * 1.02,
            fmt ("block size invariance: 128/512/4096 rms within 2%% (%.6f vs %.6f)", minRms, maxRms));
+
+    // The host may hand us a block larger than prepare()'s maximum: the engine
+    // must chunk internally and produce the same result.
+    nagloed::Engine chunked;
+    chunked.prepare (kSampleRate, 128, 2);
+    chunked.reset();
+    chunked.setParams (p);
+
+    const auto chunkedStats = render (chunked, totalSamples, 4096, 2, sineStereo);
+    info (fmt ("oversized 4096 block with 128-sample prepare: rms %.6f", chunkedStats.rms));
+    check (chunkedStats.finite, "oversized block: output is finite");
+    check (std::abs (chunkedStats.rms - rmsResults[0]) <= rmsResults[0] * 1.0e-4,
+           "oversized block: internal chunking matches the 128-sample result");
 }
 
 void testExtremeRandomParameters()
 {
+    // Drives EngineDSP directly so the assertions run on the *pre-safety-limiter*
+    // signal: a diverging graph or a NaN cannot be hidden by the output clamp.
     TestRng rng;
-    nagloed::Engine engine;
+    nagloed::EngineDSP engine;
     engine.prepare (kSampleRate, 512, 2);
 
-    bool allFinite = true;
-    bool allBounded = true;
+    bool allPreFinite  = true;
+    bool allOutFinite  = true;
+    bool allOutBounded = true;
+    float worstPrePeak = 0.0f;
 
-    for (int trial = 0; trial < 24; ++trial)
+    for (int trial = 0; trial < 32; ++trial)
     {
         engine.reset();
 
         nagloed::EngineParams p;
-        p.density       = rng.range (0.5f, 200.0f);
-        p.sizeMs        = rng.range (5.0f, 500.0f);
-        p.spray         = rng.range (0.0f, 1.0f);
-        p.scan          = rng.range (-1.0f, 1.0f);
-        p.pitchSemis    = rng.range (-24.0f, 24.0f);
-        p.pitchSpread   = rng.range (0.0f, 24.0f);
-        p.reverse       = rng.range (0.0f, 1.0f);
-        p.jitter        = rng.range (0.0f, 1.0f);
-        p.shape         = rng.range (0.0f, 1.0f);
-        p.width         = rng.range (0.0f, 1.0f);
-        p.feedback      = rng.range (0.0f, 0.95f);
-        p.focus         = rng.range (0.0f, 1.0f);
+        // Values deliberately overshoot the documented ranges to exercise the
+        // engine's own clamping as well.
+        p.density       = rng.range (-100.0f, 520.0f);
+        p.sizeMs        = rng.range (-100.0f, 900.0f);
+        p.spray         = rng.range (-0.5f, 1.5f);
+        p.scan          = rng.range (-2.0f, 2.0f);
+        p.pitchSemis    = rng.range (-40.0f, 40.0f);
+        p.pitchSpread   = rng.range (-5.0f, 30.0f);
+        p.reverse       = rng.range (-0.5f, 1.5f);
+        p.jitter        = rng.range (-0.5f, 1.5f);
+        p.shape         = rng.range (-0.5f, 1.5f);
+        p.width         = rng.range (-0.5f, 1.5f);
+        p.feedback      = rng.range (-0.5f, 1.2f);
+        p.focus         = rng.range (-0.5f, 1.5f);
         p.freeze        = rng.uniform() < 0.2f;
-        p.tuneMode      = rng.intRange (0, 7);
-        p.sourceMode    = rng.intRange (0, 2);
-        p.spaceMix      = rng.range (0.0f, 1.0f);
-        p.spaceSize     = rng.range (0.0f, 1.0f);
-        p.spaceDamp     = rng.range (0.0f, 1.0f);
-        p.spaceMod      = rng.range (0.0f, 1.0f);
-        p.driveDb       = rng.range (0.0f, 30.0f);
-        p.bias          = rng.range (0.0f, 1.0f);
-        p.tone          = rng.range (0.0f, 1.0f);
-        p.cutoffHz      = rng.range (20.0f, 20000.0f);
-        p.reso          = rng.range (0.0f, 1.0f);
-        p.drift         = rng.range (0.0f, 1.0f);
-        p.wow           = rng.range (0.0f, 1.0f);
-        p.tape          = rng.range (0.0f, 1.0f);
-        p.lofi          = rng.range (0.0f, 1.0f);
-        p.hiss          = rng.range (0.0f, 1.0f);
-        p.inputDb       = rng.range (-24.0f, 24.0f);
-        p.outputDb      = rng.range (-24.0f, 6.0f);
-        p.mix           = rng.range (0.0f, 1.0f);
-        p.macroGlow     = rng.range (0.0f, 1.0f);
-        p.macroDrift    = rng.range (0.0f, 1.0f);
-        p.macroGrain    = rng.range (0.0f, 1.0f);
-        p.macroSpace    = rng.range (0.0f, 1.0f);
-        p.macroShimmer  = rng.range (0.0f, 1.0f);
-        p.lfoRate       = rng.range (0.01f, 20.0f);
-        p.lfoShape      = rng.intRange (0, 5);
-        p.lfoDest       = rng.intRange (0, 6);
-        p.lfoAmount     = rng.range (-1.0f, 1.0f);
-        p.autoMotion    = rng.range (0.0f, 1.0f);
+        p.tuneMode      = rng.intRange (0, 8);
+        p.sourceMode    = rng.intRange (0, 3);
+        p.spaceMix      = rng.range (-0.5f, 1.5f);
+        p.spaceSize     = rng.range (-0.5f, 1.5f);
+        p.spaceDamp     = rng.range (-0.5f, 1.5f);
+        p.spaceMod      = rng.range (-0.5f, 1.5f);
+        p.driveDb       = rng.range (-10.0f, 45.0f);
+        p.bias          = rng.range (-0.5f, 1.5f);
+        p.tone          = rng.range (-0.5f, 1.5f);
+        p.cutoffHz      = rng.range (-100.0f, 40000.0f);
+        p.reso          = rng.range (-0.5f, 1.5f);
+        p.drift         = rng.range (-0.5f, 1.5f);
+        p.wow           = rng.range (-0.5f, 1.5f);
+        p.tape          = rng.range (-0.5f, 1.5f);
+        p.lofi          = rng.range (-0.5f, 1.5f);
+        p.hiss          = rng.range (-0.5f, 1.5f);
+        p.inputDb       = rng.range (-40.0f, 40.0f);
+        p.outputDb      = rng.range (-40.0f, 12.0f);
+        p.mix           = rng.range (-0.5f, 1.5f);
+        p.macroGlow     = rng.range (-0.5f, 1.5f);
+        p.macroDrift    = rng.range (-0.5f, 1.5f);
+        p.macroGrain    = rng.range (-0.5f, 1.5f);
+        p.macroSpace    = rng.range (-0.5f, 1.5f);
+        p.macroShimmer  = rng.range (-0.5f, 1.5f);
+        p.lfoRate       = rng.range (0.001f, 40.0f);
+        p.lfoShape      = rng.intRange (0, 6);
+        p.lfoDest       = rng.intRange (0, 8);
+        p.lfoAmount     = rng.range (-2.0f, 2.0f);
+        p.autoMotion    = rng.range (-0.5f, 1.5f);
 
         engine.setParams (p);
 
-        const auto stats = render (engine, 24000, 512, 2, sineStereo);
-        allFinite  = allFinite && stats.finite;
-        allBounded = allBounded && stats.peak <= 2.0f;
+        float maxPre = 0.0f;
+        bool nonFinite = false;
+        const auto stats = renderProbed (engine, 24000, 512, 2, sineStereo, maxPre, nonFinite);
+
+        allPreFinite  = allPreFinite && ! nonFinite;
+        allOutFinite  = allOutFinite && stats.finite;
+        allOutBounded = allOutBounded && stats.peak <= 2.0f;
+        worstPrePeak  = std::max (worstPrePeak, maxPre);
     }
 
-    check (allFinite, "random extreme parameters: output always finite");
-    check (allBounded, "random extreme parameters: output always within +6 dBFS");
-    info ("random extreme parameters: 24 hostile configurations rendered");
+    info (fmt ("random extreme parameters: 32 hostile configs, worst pre-limiter peak %.3f",
+               (double) worstPrePeak));
+    check (allPreFinite, "random extreme parameters: pre-limiter signal never NaN/Inf");
+    check (worstPrePeak <= 4.0f, "random extreme parameters: pre-limiter peak stays bounded");
+    check (allOutFinite, "random extreme parameters: output always finite");
+    check (allOutBounded, "random extreme parameters: output always within +6 dBFS");
 }
 
 void testVisualState()
@@ -871,14 +1083,30 @@ void testNoAllocationOnAudioThread()
     nagl_test::setAllocationTracking (true);
     nagl_test::resetAllocationCount();
 
-    for (int b = 0; b < 128; ++b)
+    // Cover automation, discrete-parameter switches, freeze toggles and source
+    // switches, not just a static run. (The counter wraps the global C++
+    // operator new; JUCE's own heap paths go through it as well. Direct libc
+    // malloc calls are not intercepted — the engine does not use any.)
+    auto frozen = p;
+    frozen.freeze = true;
+
+    auto tuned = p;
+    tuned.tuneMode = 5;
+
+    for (int b = 0; b < 512; ++b)
     {
         for (int ch = 0; ch < 2; ++ch)
             for (int i = 0; i < 128; ++i)
                 buffer.setSample (ch, i, 0.1f * std::sin (0.02f * (float) (b * 128 + i)));
 
+        if (b == 64)  { engine.setParams (frozen);      }
+        if (b == 128) { engine.setParams (p);           }
+        if (b == 192) { auto q = p; q.sourceMode = 1; engine.setParams (q); }
+        if (b == 256) { engine.setParams (tuned);       }
+        if (b == 320) { auto q = p; q.freeze = true; q.density = 200.0f; engine.setParams (q); }
+        if (b == 448) { engine.setParams (p);           }
+
         engine.process (buffer, midi);
-        engine.setParams (p);
 
         nagloed::VisualState visual;
         engine.getVisual (visual);
@@ -961,6 +1189,290 @@ void testLadderSelfOscillation()
     check (lateRms < 2.0, "ladder: self-oscillation is amplitude-limited");
 }
 
+
+void testFocusMapping()
+{
+    // Focus must map linearly onto the readable part of the capture window:
+    // 0 = oldest, 0.5 = middle, 1 = newest (previously focus 1.0 wrapped to the
+    // oldest edge because the position was fmod-wrapped over the whole ring).
+    nagloed::Engine engine;
+    engine.prepare (kSampleRate, 512, 2);
+    engine.reset();
+
+    auto p = cleanParams();
+    p.density = 200.0f;
+    p.sizeMs = 50.0f;
+    p.spray = 0.0f;
+    p.scan = 0.0f;
+    p.jitter = 0.0f;
+    p.width = 0.0f;
+    p.pitchSemis = 0.0f;
+    p.focus = 0.5f;
+    engine.setParams (p);
+
+    // Fill the 12 s capture window.
+    render (engine, (long long) (13.0 * kSampleRate), 512, 2, sine220);
+
+    const auto measureMeanPosition = [&] (float focus)
+    {
+        auto q = p;
+        q.focus = focus;
+        engine.setParams (q);
+
+        render (engine, 96000, 512, 2, sine220);   // settle: smoothing + old grains
+
+        double sum = 0.0;
+        int count = 0;
+        juce::MidiBuffer midi;
+        constexpr int block = 512;
+
+        for (int b = 0; b < 16; ++b)
+        {
+            juce::AudioBuffer<float> buffer (2, block);
+            for (int ch = 0; ch < 2; ++ch)
+                for (int i = 0; i < block; ++i)
+                    buffer.setSample (ch, i, 0.2f * (float) std::sin (
+                        kTwoPi * 220.0 * (double) (b * block + i) / kSampleRate));
+
+            engine.process (buffer, midi);
+
+            nagloed::VisualState v;
+            engine.getVisual (v);
+            for (int g = 0; g < v.numGrains; ++g)
+            {
+                sum += v.grains[(size_t) g].pos;
+                ++count;
+            }
+        }
+
+        return count > 0 ? sum / (double) count : -1.0;
+    };
+
+    const double mean0  = measureMeanPosition (0.0f);
+    const double mean05 = measureMeanPosition (0.5f);
+    const double mean1  = measureMeanPosition (1.0f);
+
+    info (fmt ("focus mean grain position: 0 -> %.3f, 0.5 -> %.3f, 1 -> %.3f",
+               mean0, mean05, mean1));
+
+    check (mean0 >= 0.0 && mean05 >= 0.0 && mean1 >= 0.0, "focus: grain views are visible at 0/0.5/1");
+    check (mean0 < 0.05, "focus 0 selects the oldest captured material");
+    check (std::abs (mean05 - 0.5) < 0.05, "focus 0.5 selects the middle of the window");
+    check (mean1 > 0.95, "focus 1 selects the newest captured material");
+    check (mean0 < mean05 && mean05 < mean1, "focus mapping is monotonic");
+}
+
+void testFeedbackDecay()
+{
+    // High feedback with zero decorrelators is the worst case for the loop: all
+    // grains are correlated, so their windows add up. The engine compensates the
+    // regeneration by the overlap gain, so with the source silent the cloud must
+    // decay at every density. A sparse cloud (overlap <= 1) still gets the full
+    // 0.95 into the capture path.
+    // shape 0.5 = Tukey, whose plateau has the highest average window value
+    // (worst case for correlated overlap); shape 1 = expodec.
+    struct Case { float density; float sizeMs; float shape; const char* label; bool compensated; };
+    const Case cases[] = {
+        {   1.0f, 500.0f, 1.0f, "sparse (full 0.95)"     , false },
+        {  30.0f,  80.0f, 0.5f, "default overlap, Tukey" , true  },
+        {  30.0f,  80.0f, 1.0f, "default overlap, expodec", false },
+        { 120.0f, 300.0f, 0.5f, "dense, Tukey"           , true  },
+        { 200.0f, 500.0f, 0.5f, "maximum overlap, Tukey" , true  },
+    };
+
+    const auto prime = [] (int, long long i)
+    {
+        // Coherent low-frequency tone (worst case for a feedback loop) plus a
+        // little broadband content.
+        return 0.4f * (float) std::sin (kTwoPi * 55.0 * (double) i / kSampleRate)
+             + 0.05f * (float) std::sin (kTwoPi * 1234.0 * (double) i / kSampleRate);
+    };
+
+    for (const auto& c : cases)
+    {
+        nagloed::EngineDSP engine;
+        engine.prepare (kSampleRate, 512, 2);
+        engine.reset();
+
+        auto p = cleanParams();
+        p.density     = c.density;
+        p.sizeMs      = c.sizeMs;
+        p.feedback    = 0.95f;
+        p.pitchSemis  = 0.0f;
+        p.pitchSpread = 0.0f;
+        p.reverse     = 0.0f;
+        p.jitter      = 0.0f;
+        p.spray       = 0.0f;
+        p.width       = 0.0f;
+        p.shape       = c.shape;
+        p.focus       = 1.0f;    // read the freshest (regenerated) material
+        p.mix         = 1.0f;
+        engine.setParams (p);
+
+        render (engine, 96000, 512, 2, prime);   // 2 s prime
+
+        float maxPre = 0.0f;
+        bool nonFinite = false;
+
+        const auto early = renderProbed (engine, 48000, 512, 2, silence, maxPre, nonFinite);   // 0-1 s
+        const auto mid   = renderProbed (engine, 48000, 512, 2, silence, maxPre, nonFinite);   // 1-2 s
+        renderProbed (engine, 96000, 512, 2, silence, maxPre, nonFinite);                      // 2-4 s skip
+        const auto late  = renderProbed (engine, 96000, 512, 2, silence, maxPre, nonFinite);   // 4-6 s
+
+        info (fmt ("feedback decay [%s]: effective %.3f, early %.5f mid %.5f late %.5f, pre-limiter peak %.3f",
+                   c.label, (double) engine.getEffectiveFeedback(),
+                   early.rms, mid.rms, late.rms, (double) maxPre));
+
+        check (! nonFinite, fmt ("feedback decay [%s]: pre-limiter signal never NaN/Inf", c.label));
+        check (maxPre <= 4.0f, fmt ("feedback decay [%s]: pre-limiter peak stays bounded", c.label));
+        check (mid.rms < early.rms,
+               fmt ("feedback decay [%s]: cloud decays in the 1-2 s window", c.label));
+        check (late.rms < mid.rms,
+               fmt ("feedback decay [%s]: cloud keeps decaying towards 6 s", c.label));
+        check (late.rms < early.rms * 0.5,
+               fmt ("feedback decay [%s]: cloud has decayed by at least 6 dB after 4 s", c.label));
+
+        if (c.compensated)
+            check (engine.getEffectiveFeedback() < 0.90f,
+                   fmt ("feedback decay [%s]: overlapping cloud is regeneration-compensated", c.label));
+        else
+            check (engine.getEffectiveFeedback() > 0.90f,
+                   fmt ("feedback decay [%s]: sparse cloud receives the full 0.95 feedback", c.label));
+    }
+}
+
+void testDryWetAlignment()
+{
+    // A 50/50 mix must be phase-coherent: the dry path has to be delayed by the
+    // full wet latency (oversampler + tape base delay + wow/flutter), otherwise
+    // the blend comb-filters. Static slow sine, mix = 0.5 -> level unchanged.
+    nagloed::dsp::AnalogChain chain;
+    chain.prepare (kSampleRate, 512);
+    chain.reset();
+
+    nagloed::dsp::AnalogChain::Controls c;
+    c.inputGain  = 1.0f;
+    c.driveGain  = 1.0f;
+    c.toneLow    = 1.0f;
+    c.toneHigh   = 1.0f;
+    c.bias       = 0.0f;
+
+    const float osRate = (float) kSampleRate * 2.0f;
+    c.ladderG = std::tan (nagloed::dsp::kPi * 20000.0f / osRate);   // wide open
+    c.ladderK = 0.0f;
+
+    // Same transport modulation the engine applies (a couple of samples of wow
+    // even at wow = 0, plus flutter/drift).
+    c.wowDepth     = 2.0f;
+    c.flutterDepth = 0.5f;
+    c.driftDepth   = 0.5f;
+    c.tapeDrive    = 1.0f;
+    c.tapeComp     = 1.0f;
+    c.lofiHold     = 1.0f;
+    c.lofiLevels   = 65536.0f;
+    c.hissGain     = 0.0f;
+    c.outputGain   = 1.0f;
+    c.mix          = 0.5f;
+    c.lofiActive   = false;
+    c.hissActive   = false;
+
+    const nagloed::dsp::AnalogChain::Group group { 0, c };
+
+    constexpr int block = 512;
+    std::vector<float> wetL (block), wetR (block), dryL (block), dryR (block);
+
+    double outEnergy = 0.0, inEnergy = 0.0;
+    int measuredSamples = 0;
+    long long index = 0;
+
+    const int totalBlocks = (int) (kSampleRate * 3.0) / block;
+    for (int b = 0; b < totalBlocks; ++b)
+    {
+        for (int i = 0; i < block; ++i)
+        {
+            const float s = 0.25f * (float) std::sin (kTwoPi * 220.0 * (double) (index + i) / kSampleRate);
+            wetL[i] = wetR[i] = s;
+            dryL[i] = dryR[i] = s;
+        }
+
+        chain.process (wetL.data(), wetR.data(), dryL.data(), dryR.data(), block, &group, 1);
+
+        if (b * block > (int) (kSampleRate * 2.0))   // skip the delay-line fill
+        {
+            for (int i = 0; i < block; ++i)
+            {
+                outEnergy += (double) wetL[i] * wetL[i] + (double) wetR[i] * wetR[i];
+                inEnergy  += (double) dryL[i] * dryL[i] + (double) dryR[i] * dryR[i];
+            }
+            measuredSamples += 2 * block;
+        }
+
+        index += block;
+    }
+
+    const double outRms = std::sqrt (outEnergy / (double) std::max (1, measuredSamples));
+    const double inRms  = std::sqrt (inEnergy  / (double) std::max (1, measuredSamples));
+    const double gainDb = 20.0 * std::log10 (outRms / std::max (1.0e-12, inRms));
+
+    info (fmt ("dry/wet alignment: reported latency %d samples, 50/50 gain %.3f dB",
+               chain.latencySamples(), gainDb));
+
+    check (chain.latencySamples() >= 32,
+           "dry/wet: reported latency includes the tape transport");
+    check (std::abs (gainDb) < 0.5,
+           "dry/wet: 50/50 blend stays phase-coherent (within 0.5 dB)");
+}
+
+
+void testOutputSafetyStage()
+{
+    // The final limiter must be a *soft* stage (not a hard clip) and the QA
+    // probe must expose the signal before it, so tests can distinguish a hot
+    // signal from the safety net that tames it.
+    nagloed::EngineDSP engine;
+    engine.prepare (kSampleRate, 512, 2);
+    engine.reset();
+
+    auto p = cleanParams();
+    p.mix = 0.0f;          // fully dry: exercises the limiter on the raw input path
+    engine.setParams (p);
+
+    juce::MidiBuffer midi;
+    juce::AudioBuffer<float> buffer (2, 512);
+
+    float outputPeak = 0.0f;
+    float probePeak  = 0.0f;
+    bool outputFinite = true;
+
+    for (int b = 0; b < 16; ++b)
+    {
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < 512; ++i)
+                buffer.setSample (ch, i, 1.5f * (float) std::sin (
+                    kTwoPi * 220.0 * (double) (b * 512 + i) / kSampleRate));
+
+        engine.process (buffer, midi);
+
+        probePeak = std::max (probePeak, engine.getPreLimiterPeak());
+
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < 512; ++i)
+            {
+                const float v = buffer.getSample (ch, i);
+                if (! std::isfinite (v))
+                    outputFinite = false;
+                outputPeak = std::max (outputPeak, std::abs (v));
+            }
+    }
+
+    info (fmt ("output safety: pre-limiter peak %.3f, post-limiter peak %.3f", (double) probePeak, (double) outputPeak));
+
+    check (probePeak > 1.4f, "safety: probe exposes the pre-limiter peak (hot dry signal)");
+    check (outputPeak < 1.35f, "safety: output is soft-limited rather than hard-clipped");
+    check (outputPeak > 1.0f, "safety: soft limiter still passes a hot signal");
+    check (outputFinite, "safety: output is finite");
+}
+
 } // namespace
 
 // =============================================================================
@@ -982,9 +1494,13 @@ void runDspTests()
     testLfoAndAutomationSmearing();
     testStereoWidth();
     testFeedbackStability();
+    testFeedbackDecay();
+    testFocusMapping();
+    testDryWetAlignment();
     testMonoAndStereo();
     testBlockSizeInvariance();
     testExtremeRandomParameters();
+    testOutputSafetyStage();
     testVisualState();
     testNoAllocationOnAudioThread();
     testCpuTiming();

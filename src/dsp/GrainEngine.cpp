@@ -13,11 +13,6 @@ constexpr int    kMinRingLength  = 1 << 12;   // 4096 samples minimum
 constexpr int    kMaxRingLength  = 1 << 22;   // ~4.2 M samples (87 s @48k)
 constexpr double kMinFillToSpawn = 256.0;     // wait for ~5 ms of material
 
-// Per-grain pitch is clamped to +/-4 octaves; the parameter range is smaller,
-// but spread + shimmer can stack, and a runaway rate would only waste CPU.
-constexpr float kMinGrainSemis = -48.0f;
-constexpr float kMaxGrainSemis =  48.0f;
-
 // Feedback damping: a one-pole lowpass at roughly 5 kHz keeps the regenerating
 // cloud warm instead of turning it into a high-frequency howl.
 constexpr float kFeedbackDampHz = 5000.0f;
@@ -299,19 +294,11 @@ int GrainEngine::findVoiceToUse() noexcept
         if (! grains[(size_t) i].active)
             return i;
 
-    // Pool exhausted: steal the quietest grain. This only happens at extreme
-    // density/length combinations and is far preferable to dropping notes.
-    int   best     = 0;
-    float bestEnv  = grains[0].env;
-    for (int i = 1; i < kMaxGrains; ++i)
-    {
-        if (grains[(size_t) i].env < bestEnv)
-        {
-            bestEnv = grains[(size_t) i].env;
-            best    = i;
-        }
-    }
-    return best;
+    // Defensive only: the engine's control layer clamps density to 400 g/s and
+    // grain length to 500 ms, so the maximum possible overlap is
+    // 400 * 0.5 = 200 voices — comfortably inside the 256-voice pool. Dropping
+    // a new grain is preferable to hard-cutting an audible one.
+    return -1;
 }
 
 void GrainEngine::spawnGrain (const GrainControls& controls) noexcept
@@ -321,9 +308,10 @@ void GrainEngine::spawnGrain (const GrainControls& controls) noexcept
         return;
 
     const int voice = findVoiceToUse();
-    Grain& g = grains[(size_t) voice];
+    if (voice < 0)
+        return;
 
-    const bool wasActive = g.active;
+    Grain& g = grains[(size_t) voice];
 
     // --- pitch ---------------------------------------------------------------
     // Per-grain scatter always applies. In Drone mode the cluster itself is
@@ -344,7 +332,7 @@ void GrainEngine::spawnGrain (const GrainControls& controls) noexcept
             pitch = quantisePitch (controls.tuneMode, pitch);
     }
 
-    pitch = clamp (pitch, kMinGrainSemis, kMaxGrainSemis);
+    pitch = clamp (pitch, kMinGrainSemitones, kMaxGrainSemitones);
 
     const float ratio = std::pow (2.0f, pitch * (1.0f / 12.0f));
     const bool  reverse = rng.chance (clamp (controls.reverse, 0.0f, 1.0f));
@@ -359,24 +347,41 @@ void GrainEngine::spawnGrain (const GrainControls& controls) noexcept
     // far Focus or Spray are pushed or how fast the grain reads.
     const float grainLengthSamples = std::max (16.0f, controls.grainSeconds * (float) sampleRate);
     const double readMargin = (double) grainLengthSamples * (double) ratio + 32.0;
+    const double usableSpan = windowLen - 2.0 * readMargin;
 
-    double relative = (double) clamp (controls.focus, 0.0f, 1.0f) * windowLen
-                    + readHead
-                    + (double) (rng.bipolar() * clamp (controls.spray, 0.0f, 1.0f) * 0.5f * (float) windowLen);
+    double relative = windowLen * 0.5;
 
-    relative = std::fmod (relative, windowLen);
-    if (relative < 0.0)
-        relative += windowLen;
+    if (usableSpan > 1.0)
+    {
+        // Focus maps linearly onto the *readable* part of the window: 0 is the
+        // oldest material a grain can safely read, 1 is the newest. It is not
+        // wrapped, so focus = 1 really means "newest" instead of folding to the
+        // oldest edge.
+        double drift = std::fmod (readHead, usableSpan);
+        if (drift < 0.0)
+            drift += usableSpan;
 
-    if (windowLen > 2.0 * readMargin)
+        const double sprayRange = usableSpan * 0.5
+                                * (double) clamp (controls.spray, 0.0f, 1.0f);
+        const double sprayOffset = (double) rng.bipolar() * sprayRange;
+
+        relative = readMargin
+                 + (double) clamp (controls.focus, 0.0f, 1.0f) * usableSpan
+                 + drift
+                 + sprayOffset;
+
         relative = std::max (readMargin, std::min (relative, windowLen - readMargin));
-    else
-        relative = windowLen * 0.5;   // capture still filling: stay in the middle
+    }
 
     g.sourcePos = writePos - windowLen + relative;
 
     g.rate   = reverse ? -(double) ratio : (double) ratio;
-    g.pitch  = pitch;
+
+    // In Drone mode the source material already sounds at controls.pitchSemis,
+    // so the visualiser must report that plus the grain's own texture pitch.
+    g.pitch  = (controls.sourceMode == 2)
+                   ? clamp (pitch + controls.pitchSemis, kMinGrainSemitones, kMaxGrainSemitones)
+                   : pitch;
     g.age    = 0.0f;
     g.length = grainLengthSamples;
     g.gain   = std::max (0.0f, controls.gain);
@@ -392,10 +397,7 @@ void GrainEngine::spawnGrain (const GrainControls& controls) noexcept
     panGains (pan, g.panL, g.panR);
 
     g.active = true;
-
-    if (! wasActive)
-        ++activeCount;
-
+    ++activeCount;
     ++rateSpawnCount;
 }
 
