@@ -25,16 +25,24 @@ static void resetToDefaults (juce::AudioProcessorValueTreeState& apvts)
             p->setValueNotifyingHost (p->getDefaultValue());
 }
 
-static bool applyJson (juce::AudioProcessorValueTreeState& apvts, const char* jsonText)
+// Applies one object of {parameterId: value} pairs. Values are real-world units.
+// Choice parameters may also be given by their display string ("Minor").
+static bool applyParamsObject (juce::AudioProcessorValueTreeState& apvts, const juce::var& paramsVar)
 {
-    const auto parsed = juce::JSON::parse (juce::String::fromUTF8 (jsonText));
-    auto* obj = parsed.getDynamicObject();
+    auto* obj = paramsVar.getDynamicObject();
     if (obj == nullptr)
         return false;
+
+    bool appliedAny = false;
 
     for (const auto& prop : obj->getProperties())
     {
         const auto id = prop.name.toString();
+
+        // Metadata keys are not parameters: skip silently.
+        if (id == "name" || id == "category" || id == "description" || id == "params")
+            continue;
+
         auto* param = apvts.getParameter (id);
         if (param == nullptr)
         {
@@ -42,10 +50,50 @@ static bool applyJson (juce::AudioProcessorValueTreeState& apvts, const char* js
             continue;
         }
 
-        const auto value = static_cast<float> (static_cast<double> (prop.value));
+        float value = 0.0f;
+        if (prop.value.isString())
+        {
+            // Choice parameters can be authored by name for readability.
+            const auto names = param->getAllValueStrings();
+            const auto index = names.indexOf (prop.value.toString());
+            if (index < 0)
+            {
+                DBG ("NAGLOED preset: '" << prop.value.toString()
+                     << "' is not a choice of '" << id << "'");
+                continue;
+            }
+            value = (float) index;
+        }
+        else if (prop.value.isBool())
+        {
+            value = (bool) prop.value ? 1.0f : 0.0f;
+        }
+        else
+        {
+            value = static_cast<float> (static_cast<double> (prop.value));
+        }
+
         param->setValueNotifyingHost (param->convertTo0to1 (value));
+        appliedAny = true;
     }
-    return true;
+
+    return appliedAny;
+}
+
+static bool applyJson (juce::AudioProcessorValueTreeState& apvts, const char* jsonText)
+{
+    const auto parsed = juce::JSON::parse (juce::String::fromUTF8 (jsonText));
+    auto* obj = parsed.getDynamicObject();
+    if (obj == nullptr)
+        return false;
+
+    // Presets are authored as {name, category, description, params:{...}}.
+    // Flat {parameterId: value} objects are also accepted.
+    const auto paramsVar = obj->getProperty ("params");
+    if (paramsVar.isObject())
+        return applyParamsObject (apvts, paramsVar);
+
+    return applyParamsObject (apvts, parsed);
 }
 
 bool applyTo (juce::AudioProcessorValueTreeState& apvts, int index)
