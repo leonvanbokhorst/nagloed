@@ -206,7 +206,7 @@ private:
     float windPhase = 0.0f;
 
     // Cached readout strings (regenerated at ~10 Hz, never per frame).
-    juce::String focusText, sprayText, densityText, grainRateText, bufferText;
+    juce::String focusText, sprayText, densityText, bufferText;
     juce::String headerInfoText, timelineInfoText;
     int readoutCounter = 0;
 
@@ -230,7 +230,6 @@ private:
     bool hoverField = false;
     juce::String dragHud;
 
-    int frameCounter = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GrainCloud)
 };

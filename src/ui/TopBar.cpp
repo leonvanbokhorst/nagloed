@@ -61,9 +61,6 @@ void TopBar::layoutAtScale()
     const auto b = getLocalBounds().toFloat();
     const auto h = b.getHeight();
 
-    wordmarkArea = { b.getX(), b.getY(), 300.0f * s, h };
-    taglineArea = { b.getX() + 34.0f * s, b.getY(), 310.0f * s, h };
-
     const auto freezeW = 122.0f * s;
     const auto freezeH = 28.0f * s;
     const auto freezeX = b.getRight() - freezeW;
@@ -255,20 +252,17 @@ void TopBar::paint (juce::Graphics& g)
                    muted.withAlpha (0.9f), juce::Justification::centredRight);
 }
 
-void TopBar::setStatus (float rate, int grains, bool hasGrains)
+void TopBar::setStatus (float rate, bool hasGrains)
 {
     const auto rounded = std::round (rate * 10.0f) * 0.1f;
     const auto liveFlag = hasGrains ? 1 : 0;
 
-    if (std::abs (rounded - shownRate) < 0.001f && grains == shownGrains
-        && liveFlag == shownLive)
+    if (std::abs (rounded - shownRate) < 0.001f && liveFlag == shownLive)
         return;
 
     grainRate = rounded;
-    numGrains = grains;
     live = hasGrains;
     shownRate = rounded;
-    shownGrains = grains;
     shownLive = liveFlag;
 
     repaint (statusArea.toNearestInt().expanded (2));

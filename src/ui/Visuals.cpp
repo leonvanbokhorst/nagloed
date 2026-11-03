@@ -32,11 +32,22 @@ AnalogueMeter::AnalogueMeter (const juce::String& meterLabel, bool useInput)
     setTitle (meterLabel + " level meter");
     setDescription ("Analogue VU meter with peak latch for the " + meterLabel.toLowerCase() + " signal.");
     setTooltip (meterLabel + utf8 (" VU — analogue ballistics with peak hold"));
+    rebuildFonts();
+}
+
+void AnalogueMeter::rebuildFonts()
+{
+    const auto fs = fontScaleFor (uiScale);
+    scaleFont = monoFont (6.8f * fs, juce::Font::plain, 0.02f);
+    labelFont = monoFont (8.4f * fs, juce::Font::plain, 0.16f);
+    valueFont = monoFont (7.0f * fs, juce::Font::plain, 0.13f);
+    tinyFont  = monoFont (6.4f * fs, juce::Font::plain, 0.02f);
 }
 
 void AnalogueMeter::setUiScale (float newScale)
 {
     uiScale = juce::jlimit (0.5f, 2.5f, newScale);
+    rebuildFonts();
     repaint();
 }
 
@@ -144,7 +155,6 @@ void AnalogueMeter::drawNeedle (juce::Graphics& g, const Needle& needle, float a
 void AnalogueMeter::paint (juce::Graphics& g)
 {
     const auto s = uiScale;
-    const auto fs = fontScaleFor (s);
     const auto b = getLocalBounds().toFloat();
     const auto pivot = juce::Point<float> (b.getCentreX(), b.getBottom() - 15.0f * s);
     const auto rx = b.getWidth() * 0.455f;
@@ -188,7 +198,7 @@ void AnalogueMeter::paint (juce::Graphics& g)
         {
             const auto angle = angleForDb (db);
             const auto p = pointOnArc (angle, 0.86f);
-            g.setFont (monoFont (6.8f * fs, juce::Font::plain, 0.02f));
+            g.setFont (scaleFont);
             g.setColour (db >= 0.0f ? warning.withAlpha (0.95f) : muted.withAlpha (0.9f));
             g.drawText (juce::String ((int) db),
                         juce::Rectangle<float> (p.x - 8.0f * s, p.y - 4.0f * s,
@@ -246,19 +256,19 @@ void AnalogueMeter::paint (juce::Graphics& g)
         drawMicroText (g, label,
                        { b.getX() + 6.0f * s, b.getY() + 4.0f * s,
                          b.getWidth() * 0.5f, 10.0f * s },
-                       monoFont (8.4f * fs, juce::Font::plain, 0.16f),
+                       labelFont,
                        gold.withAlpha (0.95f));
 
         drawMicroText (g, "VU",
                        { b.getCentreX(), b.getY() + 4.0f * s,
                          b.getWidth() * 0.5f - 6.0f * s, 10.0f * s },
-                       monoFont (7.0f * fs, juce::Font::plain, 0.13f),
+                       valueFont,
                        dim.withAlpha (0.9f), juce::Justification::centredRight);
 
         drawMicroText (g, formatDb (left.db) + " dB",
                        { b.getX() + 5.0f * s, pivot.y - 13.0f * s,
                          b.getWidth() * 0.55f, 9.0f * s },
-                       monoFont (7.0f * fs, juce::Font::plain, 0.02f),
+                       tinyFont,
                        muted.withAlpha (0.85f));
 
         // L/R needle legend.
@@ -267,7 +277,7 @@ void AnalogueMeter::paint (juce::Graphics& g)
         g.fillRect (b.getX() + b.getWidth() * 0.62f, legendY + 3.0f * s, 5.0f * s, 0.9f * s);
         g.setColour (gold.withAlpha (0.8f));
         g.fillRect (b.getX() + b.getWidth() * 0.62f, legendY + 5.5f * s, 5.0f * s, 0.9f * s);
-        g.setFont (monoFont (6.4f * fs, juce::Font::plain, 0.02f));
+        g.setFont (tinyFont);
         g.setColour (dim.withAlpha (0.9f));
         g.drawText ("L R", juce::Rectangle<float> (b.getX() + b.getWidth() * 0.68f, legendY,
                                                    18.0f * s, 10.0f * s),
@@ -285,12 +295,14 @@ FilterCurve::FilterCurve (juce::AudioProcessorValueTreeState& state)
     setWantsKeyboardFocus (false);
     setTitle ("EAR low-pass response");
     setDescription ("Live 24 dB low-pass response curve for the EAR analogue section.");
+    readoutFont = monoFont (7.2f * fontScaleFor (uiScale), juce::Font::plain, 0.03f);
     refresh();
 }
 
 void FilterCurve::setUiScale (float newScale)
 {
     uiScale = juce::jlimit (0.5f, 2.5f, newScale);
+    readoutFont = monoFont (7.2f * fontScaleFor (uiScale), juce::Font::plain, 0.03f);
     repaint();
 }
 
@@ -334,7 +346,6 @@ void FilterCurve::tick (const VisualState&, double)
 void FilterCurve::paint (juce::Graphics& g)
 {
     const auto s = uiScale;
-    const auto fs = fontScaleFor (s);
     const auto b = getLocalBounds().toFloat();
     const auto plot = b.reduced (2.0f * s, 3.0f * s);
 
@@ -438,7 +449,7 @@ void FilterCurve::paint (juce::Graphics& g)
     drawMicroText (g, readout,
                    { b.getX() + 4.0f * s, b.getBottom() - 10.0f * s,
                      b.getWidth() - 8.0f * s, 9.0f * s },
-                   monoFont (7.2f * fs, juce::Font::plain, 0.03f),
+                   readoutFont,
                    muted.withAlpha (0.9f), juce::Justification::bottomRight);
 }
 
@@ -452,13 +463,22 @@ LfoVisual::LfoVisual (juce::AudioProcessorValueTreeState& state)
     setWantsKeyboardFocus (false);
     setTitle ("LFO shape");
     setDescription ("Live modulation scope showing shape, rate and amount.");
+    rebuildFonts();
     refresh();
 }
 
 void LfoVisual::setUiScale (float newScale)
 {
     uiScale = juce::jlimit (0.5f, 2.5f, newScale);
+    rebuildFonts();
     repaint();
+}
+
+void LfoVisual::rebuildFonts()
+{
+    const auto fs = fontScaleFor (uiScale);
+    readoutFont = monoFont (7.0f * fs, juce::Font::plain, 0.05f);
+    tagFont = monoFont (7.0f * fs, juce::Font::plain, 0.15f);
 }
 
 float LfoVisual::lfoValue (int currentShape, float t)
@@ -509,7 +529,6 @@ void LfoVisual::tick (const VisualState&, double elapsedSeconds)
 void LfoVisual::paint (juce::Graphics& g)
 {
     const auto s = uiScale;
-    const auto fs = fontScaleFor (s);
     const auto b = getLocalBounds().toFloat();
     const auto plot = b.reduced (2.0f * s, 4.0f * s);
 
@@ -572,13 +591,13 @@ void LfoVisual::paint (juce::Graphics& g)
     // Readout.
     drawMicroText (g, juce::String (rate, rate < 1.0f ? 2 : 1) + " HZ",
                    { plot.getX(), plot.getBottom() - 8.0f * s, plot.getWidth() * 0.5f, 8.0f * s },
-                   monoFont (7.0f * fs, juce::Font::plain, 0.05f),
+                   readoutFont,
                    dim.withAlpha (0.9f));
 
     drawMicroText (g, "LFO",
                    { plot.getX() + plot.getWidth() * 0.5f, plot.getBottom() - 8.0f * s,
                      plot.getWidth() * 0.5f, 8.0f * s },
-                   monoFont (7.0f * fs, juce::Font::plain, 0.15f),
+                   tagFont,
                    mint.withAlpha (0.7f), juce::Justification::centredRight);
 }
 
@@ -592,13 +611,20 @@ SpaceVisual::SpaceVisual (juce::AudioProcessorValueTreeState& state)
     setWantsKeyboardFocus (false);
     setTitle ("Ruimte space depth");
     setDescription ("Perspective diagram of the reverb space: size, damping and modulation.");
+    rebuildFonts();
     refresh();
 }
 
 void SpaceVisual::setUiScale (float newScale)
 {
     uiScale = juce::jlimit (0.5f, 2.5f, newScale);
+    rebuildFonts();
     repaint();
+}
+
+void SpaceVisual::rebuildFonts()
+{
+    readoutFont = monoFont (7.0f * fontScaleFor (uiScale), juce::Font::plain, 0.04f);
 }
 
 void SpaceVisual::refresh()
@@ -629,7 +655,6 @@ void SpaceVisual::tick (const VisualState&, double elapsedSeconds)
 void SpaceVisual::paint (juce::Graphics& g)
 {
     const auto s = uiScale;
-    const auto fs = fontScaleFor (s);
     const auto b = getLocalBounds().toFloat();
     const auto plot = b.reduced (2.0f * s, 2.0f * s);
 
@@ -690,7 +715,7 @@ void SpaceVisual::paint (juce::Graphics& g)
     // Readout.
     drawMicroText (g, readout,
                    { plot.getX(), plot.getBottom() - 9.0f * s, plot.getWidth(), 9.0f * s },
-                   monoFont (5.4f * fs, juce::Font::plain, 0.04f),
+                   readoutFont,
                    dim.withAlpha (0.9f), juce::Justification::centredRight);
 }
 

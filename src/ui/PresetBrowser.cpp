@@ -267,13 +267,16 @@ void PresetBrowser::showMenu()
         menu.addItem (i + 1, info.name, true, i == currentIndex);
     }
 
+    const juce::Component::SafePointer<PresetBrowser> safeThis (this);
+
     menu.showMenuAsync (juce::PopupMenu::Options()
                             .withTargetComponent (this)
                             .withMinimumWidth (juce::jmax (160, getWidth() / 2)),
-                        [this] (int result)
+                        [safeThis] (int result)
                         {
                             if (result > 0)
-                                load (result - 1);
+                                if (auto* browser = safeThis.getComponent())
+                                    browser->load (result - 1);
                         });
 }
 

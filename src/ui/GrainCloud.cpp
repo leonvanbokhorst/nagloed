@@ -681,7 +681,6 @@ void GrainCloud::simulateWarmupFrames (int frames)
 void GrainCloud::tick (const VisualState& snapshot, double elapsedSeconds)
 {
     visual = snapshot;
-    ++frameCounter;
 
     const auto targetFocus = paramNormalised (focusParam);
     const auto targetSpray = paramNormalised (sprayParam);
@@ -764,7 +763,6 @@ void GrainCloud::updateReadouts()
     else
         densityText = utf8 ("—");
 
-    grainRateText = juce::String (visual.grainRate, visual.grainRate < 10.0f ? 2 : 1) + " G/S";
     bufferText = "BUFFER " + percentText (visual.bufferFill);
 
     headerInfoText = densityText + utf8 ("   ·   ")

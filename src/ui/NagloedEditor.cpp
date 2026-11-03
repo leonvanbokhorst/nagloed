@@ -204,7 +204,7 @@ void NagloedEditor::refreshOnce()
     sintelPanel.tick (snapshot, dt);
     earPanel.tick (snapshot, dt);
     bottomPanel.tick (snapshot, dt);
-    topBar.setStatus (snapshot.grainRate, snapshot.numGrains, snapshot.numGrains > 0);
+    topBar.setStatus (snapshot.grainRate, snapshot.numGrains > 0);
     topBar.refreshPresets();
 }
 
@@ -243,7 +243,7 @@ void NagloedEditor::timerCallback()
         sintelPanel.tick (snapshot, dt * 2.0);
         earPanel.tick (snapshot, dt * 2.0);
         bottomPanel.tick (snapshot, dt * 2.0);
-        topBar.setStatus (snapshot.grainRate, snapshot.numGrains, snapshot.numGrains > 0);
+        topBar.setStatus (snapshot.grainRate, snapshot.numGrains > 0);
     }
 
     if (tickCounter % 12 == 0)

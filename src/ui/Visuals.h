@@ -31,6 +31,8 @@ private:
         bool initialised = false;
     };
 
+    void rebuildFonts();
+
     static float dbFromRms (float rms);
     float angleForDb (float db) const;
     juce::Point<float> pointOnArc (float angle, float radius) const;
@@ -41,6 +43,8 @@ private:
     bool inputMeter = true;
     float uiScale = 1.0f;
     Needle left, right;
+    juce::Font scaleFont { juce::FontOptions() }, labelFont { juce::FontOptions() };
+    juce::Font valueFont { juce::FontOptions() }, tinyFont { juce::FontOptions() };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AnalogueMeter)
 };
@@ -65,6 +69,7 @@ private:
     float cutoffHz = 9000.0f;
     float reso = 0.15f;
     juce::String readout;
+    juce::Font readoutFont { juce::FontOptions() };
     int tickCounter = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FilterCurve)
@@ -85,6 +90,7 @@ public:
 private:
     static float lfoValue (int shape, float phase);
     void refresh();
+    void rebuildFonts();
 
     juce::AudioProcessorValueTreeState& apvts;
     float uiScale = 1.0f;
@@ -93,6 +99,7 @@ private:
     float rate = 0.15f;
     float amount = 0.0f;
     int tickCounter = 0;
+    juce::Font readoutFont { juce::FontOptions() }, tagFont { juce::FontOptions() };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LfoVisual)
 };
@@ -111,6 +118,7 @@ public:
 
 private:
     void refresh();
+    void rebuildFonts();
 
     juce::AudioProcessorValueTreeState& apvts;
     float uiScale = 1.0f;
@@ -119,6 +127,7 @@ private:
     float mod = 0.3f;
     float phase = 0.0f;
     juce::String readout;
+    juce::Font readoutFont { juce::FontOptions() };
     int tickCounter = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SpaceVisual)

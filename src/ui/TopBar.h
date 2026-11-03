@@ -24,7 +24,7 @@ public:
     ~TopBar() override;
 
     void setUiScale (float newScale);
-    void setStatus (float grainRate, int numGrains, bool hasGrains);
+    void setStatus (float grainRate, bool hasGrains);
 
     /** Animate the freeze ember while it's engaged. Called from the editor timer. */
     void tick();
@@ -61,14 +61,11 @@ private:
     BackgroundCache background;
 
     float uiScale = 1.0f;
-    juce::Rectangle<float> wordmarkArea, taglineArea, statusArea,
-                           browserCaptionRect, freezeCaptionRect;
+    juce::Rectangle<float> statusArea, browserCaptionRect, freezeCaptionRect;
 
     float grainRate = 0.0f;
-    int numGrains = 0;
     bool live = false;
     float shownRate = -1.0f;
-    int shownGrains = -1;
     int shownLive = -1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TopBar)
