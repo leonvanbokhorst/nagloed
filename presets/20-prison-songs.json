@@ -1,7 +1,7 @@
 {
   "name": "Prison Songs",
   "category": "Broken",
-  "description": "Brittle and boxed-in: mono width, extreme LoFi, high feedback and a Phrygian quantise. Play one mournful line; the capture buffer keeps repeating it back, worn.",
+  "description": "Brittle and boxed-in: narrow width, extreme LoFi, high feedback and a Phrygian quantise. Play one mournful line; the capture buffer keeps repeating it back, worn.",
   "params": {
     "grain.density": 40,
     "grain.size": 70,
