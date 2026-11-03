@@ -15,7 +15,7 @@ rotated.
 
 Pronounced **NAH-khloot**. The Dutch *g* is not a hard English *g*; it is the
 dry, throaty sound in *loch* with the lips already moving towards *loot*. There
-is no exact English equivalent, which is the point. Say it once, then say it
+is no exact English sound for it, which is the point. Say it once, then say it
 properly.
 
 *nagloed* is a compound: *na* (after) + *gloed* (glow, ember, heat). It is the
