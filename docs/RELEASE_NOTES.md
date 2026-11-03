@@ -29,8 +29,10 @@ it, and play what remains.
 - Full session state recall, including the current program.
 - Documentation: brand and design language, manual, architecture and these
   release notes.
-- An 84-second demo performance, re-rendered through the full engine as part of
-  the release build: `Demo/Nagloed-Demo.wav`.
+- An 84-second demo performance. The WAV in this repository is the current dry
+  source render; the tagged 1.0 release build re-renders it through the full
+  engine (`nagl_render` runs in CI on `v*` tags, and the full-engine WAV ships
+  with the release).
 
 ## Presets
 

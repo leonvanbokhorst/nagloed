@@ -146,9 +146,10 @@ AU component with `auval`. The CI workflow
 (`.github/workflows/ci.yml`) runs the same checks on a macOS runner; it is
 manual/release-only to keep runner minutes predictable.
 
-The demo render in `Demo/Nagloed-Demo.wav` is produced by `nagl_render` through
-the same `PluginProcessor` code path the plug-in uses; it is re-rendered through
-the full 1.0 engine as part of the release build.
+The WAV in `Demo/` is the current dry source render, produced by `nagl_render`.
+The tagged 1.0 release build re-renders the demo through the full engine:
+`nagl_render` runs in CI on `v*` tags, and the full-engine WAV ships with the
+release.
 
 ## Project layout
 
