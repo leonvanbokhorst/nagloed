@@ -46,7 +46,7 @@ AU and VST3 into `~/Library/Audio/Plug-Ins/{Components,VST3}`.
   prepare); visual-state ranges; 30-second render; CPU timing.
 - Audio-thread allocation watch (global `operator new`): **0 allocations** in
   `process()`, `setParams()` and `getVisual()`.
-- Measured CPU: **≈ 2.1–2.2 % of one core** at 48 kHz / 128 samples / stereo
+- Measured CPU: **≈ 1.9–2.2 % of one core** at 48 kHz / 128 samples / stereo
   with a 64-grain cloud plus reverb and analog stage; ~5.6 % at 200 grains.
 - Reported latency: **51 samples** at 48 kHz (oversampler + mean tape delay);
   the dry path is aligned to it, and the host compensates via `setLatencySamples`.
