@@ -29,10 +29,13 @@ it, and play what remains.
 - Full session state recall, including the current program.
 - Documentation: brand and design language, manual, architecture and these
   release notes.
-- An 84-second demo performance. The WAV in this repository is the current dry
-  source render; the tagged 1.0 release build re-renders it through the full
-  engine (`nagl_render` runs in CI on `v*` tags, and the full-engine WAV ships
-  with the release).
+- An 84-second demo performance rendered through the full engine
+  (`Demo/Nagloed-Demo.wav`): 48 kHz / 24-bit stereo, peak −2.1 dBFS, no clipping,
+  byte-reproducible from `nagl_render`. A spectrogram of the render is in
+  `docs/demo-spectrogram.png`.
+- Validation for 1.0: 164 automated checks, `auval` PASS, pluginval strictness 10
+  PASS on VST3 and AU, 0 audio-thread allocations, ~2% of one core at 48 kHz /
+  128 samples with a 64-grain cloud. Full evidence in `docs/VALIDATION.md`.
 
 ## Presets
 
@@ -65,6 +68,23 @@ No MIDI or MPE input is accepted in this release.
 - The same checks run in `.github/workflows/ci.yml` on a macOS runner.
 
 Rebuild and re-validate locally with `./scripts/validate.sh`.
+
+## Known limitations and intentional character
+
+- **No MIDI / MPE in 1.0.** NAGLOED is an audio effect; expression comes from the
+  five macros, the LFO, Auto drift and the grain-field gestures.
+- **macOS 12+ only.** The 1.0 builds are AU, VST3 and Standalone for macOS
+  (arm64 and x86_64 as built).
+- **Input-driven.** There is no sample import; the capture buffer is fed by live
+  input or by the internal Noise/Drone sources.
+- **Tape transport affects the dry path.** At very low `Mix` with high `Wow`,
+  the dry signal follows the tape transport and can waver slightly. This is
+  deliberate analog behaviour, not a bug.
+- **Feedback is overlap-compensated.** Sparse clouds can use the full feedback
+  amount; dense clouds get a scaled amount so the loop always decays once the
+  source stops. High feedback regenerates for seconds, never forever.
+- **No factory artist presets.** The 24 presets are designed for the instrument;
+  they are starting points, not imitations of recordings.
 
 ## Known limitations in 1.0.0
 

@@ -138,7 +138,8 @@ if (NAGLOED_BUILD_TOOLS)
         ${NAGLOED_CORE} ${NAGLOED_DSP} ${NAGLOED_UI} ${NAGLOED_PLUGIN}
         "${PRESETS_CPP}" "${PRESETS_H}")
     target_include_directories(nagl_preview PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${GENERATED_DIR}")
-    target_compile_definitions(nagl_preview PRIVATE ${NAGLOED_COMMON_DEFS})
+    target_compile_definitions(nagl_preview PRIVATE ${NAGLOED_COMMON_DEFS}
+        JUCE_MODAL_LOOPS_PERMITTED=1)
     target_link_libraries(nagl_preview PRIVATE juce::juce_audio_utils juce::juce_dsp)
     add_dependencies(nagl_preview nagloed_presets)
 endif()

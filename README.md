@@ -137,19 +137,24 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 
 | Check | Command | Status |
 |---|---|---|
-| Unit and smoke tests | `./build/nagl_tests_artefacts/Release/nagl_tests` | PASS |
+| DSP + unit tests (164 checks) | `./build/nagl_tests_artefacts/Release/nagl_tests` | PASS |
 | AU validation | `auval -v aufx Nagl UnlN` | PASS |
+| pluginval, strictness 10 (VST3 + AU) | `pluginval --strictness-level 10 --validate …` | PASS |
 | Offline render | `./build/nagl_render_artefacts/Release/nagl_render` | PASS — writes `Demo/Nagloed-Demo.wav` |
+| Offscreen editor snapshot | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — writes `docs/ui-preview.png` |
+
+The full evidence (commands, observed output, CPU/latency figures) is in
+[docs/VALIDATION.md](docs/VALIDATION.md).
 
 `./scripts/validate.sh` rebuilds everything, runs the tests and then validates the
 AU component with `auval`. The CI workflow
 (`.github/workflows/ci.yml`) runs the same checks on a macOS runner; it is
 manual/release-only to keep runner minutes predictable.
 
-The WAV in `Demo/` is the current dry source render, produced by `nagl_render`.
-The tagged 1.0 release build re-renders the demo through the full engine:
-`nagl_render` runs in CI on `v*` tags, and the full-engine WAV ships with the
-release.
+`Demo/Nagloed-Demo.wav` is rendered through the full engine: 84 seconds,
+48 kHz / 24-bit stereo, peaking at −2.1 dBFS. Regenerate it with
+`./build/nagl_render_artefacts/Release/nagl_render`. The render's spectrogram is
+in [docs/demo-spectrogram.png](docs/demo-spectrogram.png).
 
 ## Project layout
 

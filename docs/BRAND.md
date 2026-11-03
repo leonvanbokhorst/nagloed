@@ -170,7 +170,7 @@ type, the brand recommends these open-licensed equivalents.
 
 | Role | Shipped UI (system) | Recommended alternative | Rules |
 |---|---|---|---|
-| Display / wordmark | Avenir Next Condensed → Avenir Next → Helvetica Neue | Inter Tight (OFL) | NAGLOED always uppercase, tracking approx. +0.08em, pale ember on near-black. Never outline, gradient, emboss or shadow. |
+| Display / wordmark | Avenir Next Condensed → Avenir Next → Helvetica Neue | Inter Tight (OFL) | NAGLOED always uppercase, tracking approx. +0.08em, pale ember on near-black. Never outline, emboss or shadow; one subtle ember gradient in the wordmark is allowed (see shipped decisions below). |
 | UI labels | Avenir Next → Helvetica Neue | Inter (OFL) | Sentence case, 11–13 px at 100% scale. Short nouns. Tabular numerals for values. |
 | Body / documentation | System sans (Helvetica Neue, `-apple-system`) | Inter (OFL) | 15–17 px, generous leading (1.5–1.6). |
 | Numeric / IDs / debug | Menlo → SF Mono → Monaco | IBM Plex Mono (OFL) | Only for parameter IDs, test output and technical annotation. |
@@ -193,14 +193,35 @@ Do:
 
 Don't:
 
-- No purple/teal synthwave gradients, lens flares, bokeh, fake chrome.
+- No purple/teal synthwave gradients, lens flares, decorative bokeh or fake
+  chrome. (The grain field's embers are data, not bokeh: they must track
+  `VisualState`.)
 - No bitmap textures, VHS overlays, paper grain, distressed type. The grit is in
   the audio path, not the pixels.
 - No emoji, no icon soup, no badge clutter, no "revolutionary".
 - No literal pictures of modular synths and no depiction of real hardware.
 - No pure black (`#000000`) fields and no pure white body text.
-- No idle ambient animation. Motion without audio is a lie about what the
-  instrument is doing.
+- No decorative idle animation. Before the first grain the field may show a
+  cold, pre-warmed ember bed that represents the empty engine; it must never
+  suggest audio that is not there.
+
+### Shipped interface decisions (1.0)
+
+The 1.0 editor resolved a few open questions; these are deliberate and final for
+this release:
+
+- **Tagline** — "THE SOUND AFTER THE SOUND" in the top bar, with the location
+  line "GRANULAR AFTERGLOW INSTRUMENT · UNLIKENOISE · EINDHOVEN NL".
+- **Idle ember field** — a deterministic, pre-warmed dust field is allowed before
+  audio arrives (see the don't list); it is not decorative animation.
+- **Wordmark** — pale ember with one subtle ember gradient; no outline, emboss or
+  shadow.
+- **Phosphor base** — `#05070A`, not `#000000`.
+- **LIVE indicator** — amber (`#FF6B1A`), not mint. Mint stays reserved for the
+  LFO and modulation.
+- **Copper** — used only in the EAR section, as a material reference.
+- **Micro-labels** — 10 px uppercase mono is the floor at 100% scale; never
+  smaller.
 
 ## Tone of voice
 
