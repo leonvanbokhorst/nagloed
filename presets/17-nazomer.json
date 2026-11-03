@@ -1,7 +1,7 @@
 {
   "name": "Nazomer",
   "category": "Drone/Synth",
-  "description": "Late-summer drone: a warm internal source, heavy tape and a slow minor third pad that hangs in the air. Leave it running and ride Glow and Space.",
+  "description": "Late-summer drone: a warm internal source, heavy tape and a slow minor-key pad that hangs in the air. Leave it running and ride Glow and Space.",
   "params": {
     "grain.density": 22,
     "grain.size": 260,

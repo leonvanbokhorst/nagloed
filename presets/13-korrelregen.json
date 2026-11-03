@@ -1,7 +1,7 @@
 {
   "name": "Korrelregen",
   "category": "Rhythmic",
-  "description": "Grain rain: a fast forward scan chopped by a square LFO on Density for a tight, stuttering 16th feel. Feed it a steady line and let it rain.",
+  "description": "Grain rain: a fast forward scan chopped by a square LFO on Density for a tight, stuttering feel. Feed it a steady line and let it rain.",
   "params": {
     "grain.density": 72,
     "grain.size": 58,

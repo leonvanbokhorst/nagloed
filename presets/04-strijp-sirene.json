@@ -1,7 +1,7 @@
 {
   "name": "Strijp Sirene",
   "category": "Freeze",
-  "description": "A frozen two-voice siren: a captured tone held under a slow triangle LFO that bends it a fifth apart. Freeze a chord, then let the LFO steer the wail.",
+  "description": "A frozen two-voice siren: a captured tone held under a slow triangle LFO that bends it up a fourth. Freeze a chord, then let the LFO steer the wail.",
   "params": {
     "grain.density": 20,
     "grain.size": 140,

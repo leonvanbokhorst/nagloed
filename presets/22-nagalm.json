@@ -1,7 +1,7 @@
 {
   "name": "Nagalm",
   "category": "Space",
-  "description": "A five-grain bell in an endless room: huge Ruimte size, almost no damping and a whole-tone shimmer. Play one note every few seconds and let it ring.",
+  "description": "A five-grain bell in an endless room: huge Ruimte size, almost no damping and a pentatonic shimmer. Play one note every few seconds and let it ring.",
   "params": {
     "grain.density": 5,
     "grain.size": 400,

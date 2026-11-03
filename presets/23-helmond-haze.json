@@ -1,7 +1,7 @@
 {
   "name": "Helmond Haze",
   "category": "Space",
-  "description": "A washy industrial haze two octaves up: wide, heavily modulated space with a long triangle drift. Hold a chord and push Space until the room dissolves.",
+  "description": "A washy industrial haze an octave up: wide, heavily modulated space with a long triangle drift. Hold a chord and push Space until the room dissolves.",
   "params": {
     "grain.density": 30,
     "grain.size": 190,

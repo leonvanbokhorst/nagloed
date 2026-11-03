@@ -1,7 +1,7 @@
 {
   "name": "Doorzichtig",
   "category": "Freeze",
-  "description": "Glass-clear frozen shimmer an octave and a half up: bright, thin and see-through. Freeze a soft pad and play the Shimmer macro like a bell.",
+  "description": "Glass-clear frozen shimmer an octave and a fifth up: bright, thin and see-through. Freeze a soft pad and play the Shimmer macro like a bell.",
   "params": {
     "grain.density": 8,
     "grain.size": 300,

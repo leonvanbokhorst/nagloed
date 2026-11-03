@@ -15,12 +15,12 @@ every patch. Where a preset has an obvious gesture, it is listed below.
 
 | # | Preset | Category | Character | Source material & gesture |
 |---|--------|----------|-----------|----------------------------|
-| 01 | **Nachtgloed** | Textures | Slow, warm amber grain bed that thickens without harshness | Long synth or bowed notes. Ride **Glow** from 40 → 80%; nudge **Space** for a bigger room. |
+| 01 | **Nachtgloed** | Textures | Slow, warm amber grain bed that thickens without harshness | Long synth or bowed notes. Push **Glow** from its 75% start toward 95%; nudge **Space** for a bigger room. |
 | 02 | **Veldopname** | Textures | Wide field-recording haze with tape hiss and slow auto-pan | Field recordings, breath, rain. Leave it running; ride **Drift** to loosen the pan. |
 | 03 | **Klankstof** | Textures | Fine sound dust — a held note atomised into particles | Dense chords, metal hits. Open **Grain** then **Glow** slowly; play with Spray. |
 | 04 | **Strijp Sirene** | Freeze | Frozen interval siren bent by a slow triangle LFO | Any sustained chord. Freeze, then let the LFO wail; ride **Shimmer** for the octave edge. |
 | 05 | **Vlokken** | Freeze | Sparse, long reverse flakes drifting in a huge room | One soft note, then silence. Let it snow; **Space** and **Drift** stretch the drift. |
-| 06 | **Doorzichtig** | Freeze | Glass-clear frozen shimmer, 19 semitones up | Soft pad or voice. Freeze and play **Shimmer** like a bell; keep playing quiet single notes. |
+| 06 | **Doorzichtig** | Freeze | Glass-clear frozen shimmer, an octave and a fifth up | Soft pad or voice. Freeze and play **Shimmer** like a bell; keep playing quiet single notes. |
 | 07 | **Wolkenkaart** | Pads | Shimmering minor cloud-pad an octave up | Held triads. Ride **Shimmer** and **Space** until the room becomes weather. |
 | 08 | **Zomernacht** | Pads | Warm minor night-pad with tape wow and a lazy filter LFO | Slow dyads. Ride **Drift** to swell the tape; **Glow** to pull the cloud forward. |
 | 09 | **Schemerschijn** | Pads | Dorian feedback bloom with an S&H-nudged focus | Held chords, then feed it back. Hold and push **Glow** past 70%. |
