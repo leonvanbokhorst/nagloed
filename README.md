@@ -128,7 +128,7 @@ ships:
 | Tool | What it does |
 |---|---|
 | `nagl_tests` | Unit and smoke tests: parameter layout, presets, processor stability, state round-trip. |
-| `nagl_render` | Renders the demo performance through the real processor to `Demo/Nagloed-Demo.wav`. |
+| `nagl_render` | Renders the 84-second demo performance through the real processor to `Demo/Nagloed-Demo.wav`. |
 | `nagl_preview` | Renders the real editor offscreen to `docs/ui-preview.png`. |
 
 Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
@@ -147,7 +147,8 @@ AU component with `auval`. The CI workflow
 manual/release-only to keep runner minutes predictable.
 
 The demo render in `Demo/Nagloed-Demo.wav` is produced by `nagl_render` through
-the same `PluginProcessor` code path the plug-in uses.
+the same `PluginProcessor` code path the plug-in uses; it is re-rendered through
+the full 1.0 engine as part of the release build.
 
 ## Project layout
 
@@ -220,4 +221,4 @@ under GPL-3.0-or-later.
 - [Manual](docs/MANUAL.md)
 - [Release notes — v1.0.0](docs/RELEASE_NOTES.md)
 - [Architecture](docs/ARCHITECTURE.md)
-- Preset guide: `docs/PRESET_GUIDE.md`
+- [Preset guide](docs/PRESET_GUIDE.md)

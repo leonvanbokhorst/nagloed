@@ -25,12 +25,12 @@ it, and play what remains.
 - AU, VST3 and Standalone builds for macOS 12 or later; mono and stereo plug-in
   configurations.
 - Factory preset library: 24 presets across eight categories plus Init, exposed
-  as plug-in programs. See `docs/PRESET_GUIDE.md`.
+  as plug-in programs. See [the preset guide](PRESET_GUIDE.md).
 - Full session state recall, including the current program.
 - Documentation: brand and design language, manual, architecture and these
   release notes.
-- A demo performance rendered through the shipped processor:
-  `Demo/Nagloed-Demo.wav`.
+- An 84-second demo performance, re-rendered through the full engine as part of
+  the release build: `Demo/Nagloed-Demo.wav`.
 
 ## Presets
 
@@ -38,7 +38,7 @@ it, and play what remains.
   not silence.
 - The 24 factory presets are grouped into eight categories and embedded into the
   binary at build time from `presets/*.json`; they appear in the host's program
-  list. The preset guide describes every patch: `docs/PRESET_GUIDE.md`.
+  list. The preset guide describes every patch: [PRESET_GUIDE.md](PRESET_GUIDE.md).
 - Loading a preset replaces all parameter values. Saved sessions and host presets
   recall the current program and parameter state.
 

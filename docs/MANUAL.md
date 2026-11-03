@@ -25,8 +25,8 @@ Signal order: input trim → capture buffer → Sintel → Ruimte → EAR → ou
 
 Experimental musicians, modular players, sound artists, field recordists and
 one-take recorders; also sound designers who need texture that behaves like
-material. The instrument expects you to play it. There are 24 factory presets,
-but no single preset will make a finished track for you.
+material. The instrument expects you to play it. There are 24 factory presets
+across eight categories, but no single preset will make a finished track for you.
 
 ## Quick start
 
@@ -43,8 +43,8 @@ but no single preset will make a finished track for you.
 6. Add **Ruimte** (Space, Size, Damp) and EAR colour (Drive, Cutoff, Tape, Mix)
    to taste.
 
-If you want a starting point rather than Init, load a factory preset from the
-host's program list — see [Presets](#presets).
+If you want a starting point rather than Init, load one of the 24 factory presets
+from the host's program list — see [Presets](#presets).
 
 ## Signal flow
 
@@ -260,16 +260,17 @@ automation and preset authoring, and are reserved for the MPE update.
 
 ## Presets
 
+NAGLOED ships with **24 factory presets across eight categories, plus Init**:
+
 - **Init** is always program 0: the documented defaults exactly (Density
   30 g/s, Space 35%, EAR Mix 65%, and so on). It is a clean starting point, not
   silence.
-- The 24 factory presets, in eight categories, are exposed through the host's
-  program list. Loading a preset replaces every parameter value, so move the
-  controls afterwards.
+- The 24 presets are exposed through the host's program list. Loading a preset
+  replaces every parameter value, so move the controls afterwards.
 - NAGLOED 1.0.0 does not write user preset files. Save your own variations in
   your host's preset, rack or track-preset system; the plug-in state is saved in
   the session.
-- The preset guide ships with the release: `docs/PRESET_GUIDE.md`.
+- The preset guide describes every patch: [PRESET_GUIDE.md](PRESET_GUIDE.md).
 
 ## CPU, latency and sample rate
 
