@@ -6,6 +6,10 @@ on:
   workflow_dispatch:
   push:
     tags: [ "v*" ]
+  # macOS runner minutes are scarce on private repos: PR runs are label-gated.
+  # Add the "ci" label to a PR to trigger the full matrix.
+  pull_request:
+    types: [ labeled ]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -13,6 +17,7 @@ concurrency:
 
 jobs:
   build-and-validate:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'ci')
     runs-on: macos-14
     timeout-minutes: 45
     steps:
@@ -35,11 +40,16 @@ jobs:
 
       - name: AU validation (auval)
         run: |
-          rm -rf "$HOME/Library/Audio/Plug-Ins/Components/NAGLOED.component"
-          cp -R build/NAGLOED_artefacts/Release/AU/NAGLOED.component "$HOME/Library/Audio/Plug-Ins/Components/"
+          COMPONENTS="$HOME/Library/Audio/Plug-Ins/Components"
+          mkdir -p "$COMPONENTS"
+          rm -rf "$COMPONENTS/NAGLOED.component"
+          cp -R build/NAGLOED_artefacts/Release/AU/NAGLOED.component "$COMPONENTS/"
           killall -9 AudioComponentRegistrar || true
-          sleep 2
-          auval -v aufx Nagl UnlN
+          for attempt in 1 2 3; do
+            sleep 2
+            auval -v aufx Nagl UnlN && exit 0
+          done
+          exit 1
 
       - name: Offline render (smoke)
         run: ./build/nagl_render_artefacts/Release/nagl_render
