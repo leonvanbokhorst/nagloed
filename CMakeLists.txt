@@ -35,6 +35,7 @@ file(GLOB_RECURSE NAGLOED_CORE   CONFIGURE_DEPENDS src/core/*.cpp)
 file(GLOB_RECURSE NAGLOED_DSP    CONFIGURE_DEPENDS src/dsp/*.cpp)
 file(GLOB_RECURSE NAGLOED_UI     CONFIGURE_DEPENDS src/ui/*.cpp)
 file(GLOB_RECURSE NAGLOED_PLUGIN CONFIGURE_DEPENDS src/plugin/*.cpp)
+file(GLOB_RECURSE NAGLOED_TESTS  CONFIGURE_DEPENDS tests/*.cpp)
 
 set(NAGLOED_COMMON_DEFS
     JUCE_WEB_BROWSER=0
@@ -56,7 +57,9 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E make_directory "${GENERATED_DIR}"
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_presets.py"
             "${CMAKE_CURRENT_SOURCE_DIR}/presets" "${GENERATED_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ParamIDs.h"
     DEPENDS ${PRESET_JSONS} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_presets.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ParamIDs.h"
     COMMENT "Embedding NAGLOED presets")
 
 add_custom_target(nagloed_presets DEPENDS "${PRESETS_CPP}" "${PRESETS_H}")
@@ -111,7 +114,7 @@ option(NAGLOED_BUILD_TOOLS "Build the headless render/test tools" ON)
 if (NAGLOED_BUILD_TOOLS)
     juce_add_console_app(nagl_tests PRODUCT_NAME "nagl-tests")
     target_sources(nagl_tests PRIVATE
-        tests/test_main.cpp
+        ${NAGLOED_TESTS}
         ${NAGLOED_CORE} ${NAGLOED_DSP} ${NAGLOED_PLUGIN}
         "${PRESETS_CPP}" "${PRESETS_H}")
     target_include_directories(nagl_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src" "${GENERATED_DIR}")

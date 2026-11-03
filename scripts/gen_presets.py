@@ -8,6 +8,7 @@ with a debug message, and a dedicated C++ test asserts every id resolves.
 """
 import json
 import pathlib
+import re
 import sys
 
 
@@ -15,13 +16,28 @@ def c_string(value: str) -> str:
     return json.dumps(value)
 
 
+def known_ids(param_ids_header: pathlib.Path) -> set:
+    text = param_ids_header.read_text(encoding="utf-8")
+    return set(re.findall(r'inline constexpr const char\* \w+\s*=\s*"([^"]+)"', text))
+
+
 def main() -> int:
-    if len(sys.argv) != 3:
-        print("usage: gen_presets.py <preset_dir> <out_dir>", file=sys.stderr)
+    if len(sys.argv) != 4:
+        print("usage: gen_presets.py <preset_dir> <out_dir> <ParamIDs.h>", file=sys.stderr)
         return 2
     preset_dir = pathlib.Path(sys.argv[1])
     out_dir = pathlib.Path(sys.argv[2])
+    param_ids_header = pathlib.Path(sys.argv[3])
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        ids = known_ids(param_ids_header)
+    except OSError as exc:
+        print(f"cannot read {param_ids_header}: {exc}", file=sys.stderr)
+        return 1
+    if not ids:
+        print(f"no parameter ids parsed from {param_ids_header}", file=sys.stderr)
+        return 1
 
     presets = []
     for path in sorted(preset_dir.glob("*.json")):
@@ -36,6 +52,10 @@ def main() -> int:
         params = data.get("params") or {}
         if not isinstance(params, dict):
             print(f"params must be an object in {path}", file=sys.stderr)
+            return 1
+        unknown = sorted(set(params) - ids)
+        if unknown:
+            print(f"{path}: unknown parameter id(s): {', '.join(unknown)}", file=sys.stderr)
             return 1
         presets.append((name, category, description, params))
 
@@ -68,7 +88,7 @@ const PresetData* data();
     if not presets:
         lines.append('    { "", "", "", "" },  // placeholder, never read: presets::count() adds Init')
     lines.append("};")
-    lines.append("int count() { return (int) (sizeof (kPresets) / sizeof (kPresets[0])); }")
+    lines.append(f"int count() {{ return {len(presets)}; }}")
     lines.append("const PresetData* data() { return kPresets; }")
     lines.append("} // namespace nagloed::generated")
     (out_dir / "PresetsData.cpp").write_text("\n".join(lines) + "\n", encoding="utf-8")
