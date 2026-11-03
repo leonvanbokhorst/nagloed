@@ -6,25 +6,14 @@
 #include <cstdio>
 #include <string>
 
+#include "TestHarness.h"
+#include "DspTests.h"
+
 #include "plugin/PluginProcessor.h"
 #include "plugin/Presets.h"
 #include "core/Parameters.h"
 
-namespace
-{
-int gFailures = 0;
-int gChecks = 0;
-
-void check (bool condition, const std::string& what)
-{
-    ++gChecks;
-    if (! condition)
-    {
-        ++gFailures;
-        std::printf ("  FAIL  %s\n", what.c_str());
-    }
-}
-} // namespace
+using nagl_test::check;
 
 int main()
 {
@@ -78,6 +67,9 @@ int main()
     check (state.getSize() > 0, "state serialises");
     processor.setStateInformation (state.getData(), (int) state.getSize());
 
-    std::printf ("%d checks, %d failures\n", gChecks, gFailures);
-    return gFailures == 0 ? 0 : 1;
+    // --- DSP suite -----------------------------------------------------------
+    runDspTests();
+
+    std::printf ("\n%d checks, %d failures\n", nagl_test::gChecks, nagl_test::gFailures);
+    return nagl_test::gFailures == 0 ? 0 : 1;
 }
