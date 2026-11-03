@@ -1,0 +1,265 @@
+# NAGLOED — brand and design language
+
+Version 1.0.0 · UnlikeNoise Labs
+
+## The sentence
+
+**NAGLOED** *(Dutch, noun)* — the light that stays in the room after the source is gone.
+
+The tagline is **"the sound after the sound"**. The product is a granular
+effect and instrument for macOS: it captures live audio, breaks it into grains
+and lets the remains glow. The name is final; the tagline is not a slogan to be
+rotated.
+
+## The name
+
+Pronounced **NAH-khloot**. The Dutch *g* is not a hard English *g*; it is the
+dry, throaty sound in *loch* with the lips already moving towards *loot*. There
+is no exact English equivalent, which is the point. Say it once, then say it
+properly.
+
+*nagloed* is a compound: *na* (after) + *gloed* (glow, ember, heat). It is the
+word for the light that remains on a wall after the lamp is switched off, the
+red in the stove after the fire has died. English calls it an afterglow, which
+is accurate but too comfortable. *Nagloed* keeps the small ache in it.
+
+Usage:
+
+- **NAGLOED** in capitals is the product mark: titles, labels, the plug-in name.
+- *nagloed* in italics or plain lowercase is the Dutch word and the idea:
+  *the nagloed of a chord*, *a nagloed session*.
+- Never "Nagloed", never "NaGloed", never "the NAGLOED".
+
+## Why afterglow is the right metaphor for granular sound
+
+Granulation is usually explained as an effect: a source goes in, something
+strange comes out. That is not what this instrument is about.
+
+A short sound has no time to be itself. It arrives, it is loud, it is gone. A
+grain engine is a way of refusing the disappearance: hold the material in a
+buffer, cut it into embers, and place those embers back into the room at a rate
+your ear reads as a texture rather than a rhythm. What you hear is not the
+source repeated. It is the source *remaining*.
+
+That is nagloed. The capture buffer is the room. The grains are embers. Freeze
+is the moment you decide the room is warm enough and stop letting new air in.
+Sintel makes the embers, Ruimte gives them a room, EAR colours them like analog
+tape rather than glass. The instrument is about residue, not origin.
+
+It also sets the limits honestly: embers are finite. The buffer holds twelve
+seconds. The grain pool tops out at 256 voices. Those limits are part of the
+sound — a small room with a fire in it, not an infinite cloud generator.
+
+## The lineage
+
+NAGLOED is built for and with **Leon van Bokhorst**, who records and performs as
+**UnlikeNoise**: sound artist and electronic musician from Helmond, the
+Netherlands, working with modular synths, analog gear, one-take live recordings,
+field recordings and sound art. ([Last.fm biography](https://www.last.fm/music/UnlikeNoise/+wiki))
+
+He is one of the team behind **Modulab Eindhoven**, which organises electronic
+music events around modular synthesizers and DIY instruments, with Allard
+Krijger and Jurgen Winkel. The Modulab idea is close to the one in this plug-in:
+sound as a set of building blocks, patched by hand. ([Modulab Eindhoven](https://sonicrider.nl/modulab-eindhoven/))
+
+Leon and **SONICrider** (Jurgen Winkel) have recorded one-take studio sessions
+together — *Unlike* (2017) and *Connected* (2017) — modular and analog gear
+captured as it happened, no undo. ([SONICrider collaborations: UnlikeNoise](https://sonicrider.nl/category/collaborations/unlikenoise/))
+
+The broader sound world includes **EAR**, the label founded in 2020 by SONICrider
+under the phrase *"Emotional Analog Resonance"*: non-commercial electronic music,
+experimental and ambient, built for longer listening. ([EAR](https://sonicrider.nl/ear/))
+
+And it includes reimagining other people's remains. For **Cities and Memory**'s
+*Prison Songs* project — 1950s recordings from the Mississippi State Penitentiary,
+recomposed by sound artists around the world — Leon made *Frozen Prisonaire*
+(2022, 4:03). ([MPDS Audio Archive entry](https://www.mpdsaudioarchive.org/en/suoni/08b-frozen-prisonaire-unlikenoise-reimagined-compositions-leon-van-bokhorst/))
+
+The through-line is one-take thinking: the take is the material, the mistakes
+are the material, the room is audible, and what survives the session is the
+point. NAGLOED is the studio version of that habit.
+
+A note on what this is not: NAGLOED is not an official EAR product and not a
+reissue of anyone's instrument. EAR is a nod, made with affection, from one
+corner of the same scene. The people above are credited because they shaped the
+ear this instrument was tuned for, not because they endorse a product page.
+
+## Naming logic: Sintel, Ruimte, EAR
+
+The three engines are Dutch or Dutch-adjacent words with one meaning each. They
+are not acronyms, and they should not be translated in the interface.
+
+| Name | Meaning | Role | Why |
+|---|---|---|---|
+| **Sintel** | *sintel* — cinder, ember, the solid thing left after burning | Grain engine: capture buffer, grain scheduling, pitch and spray | Grains are embers: small, hot, finite, and best in numbers. A spark flies; an ember stays. |
+| **Ruimte** | *ruimte* — space, room, room to move | Space/reverb section | The room the embers glow in. Not a cathedral; a room with a history. |
+| **EAR** | the ear; a nod to **E**motional **A**nalog **R**esonance | Analog character section: drive, bias, filtering, drift, wow, tape, lo-fi, hiss | The part that listens back. EAR is the name of SONICrider's label, not an initialism invented here. |
+
+## Who this is for
+
+Experimental musicians, modular players, sound artists, field recordists,
+improvisers and one-take recorders; also film, game and installation sound
+people who need texture that behaves like material rather than like a preset.
+People who are comfortable with a capture buffer, an LFO destination list and a
+manual page of parameters.
+
+It is not for the listener who wants a finished sound in one click. There is an
+Init preset and a factory library, but the instrument expects to be played.
+
+## The visual language: a warm room at night
+
+The interface is a dark room with a fire in it. Almost everything is near-black;
+light is signal, not decoration. Amber means grain activity. Copper means analog
+— the EAR section, the parts with heat and tolerance. Pale ember is for text.
+Mint appears rarely, because anything that appears rarely is read as a warning
+or a measurement, and that is exactly what it is for.
+
+The grain cloud is the primary image of the instrument. It should show real
+behaviour: density, position, age, pitch, stereo spread, brightness. If a visual
+does not correspond to something the audio engine is doing, it is decoration
+and should not be there.
+
+### Palette
+
+| Hex | Name | Use |
+|---|---|---|
+| `#FF6B1A` | Amber ember | Primary accent. Grain cloud energy, active/hot states, focus rings. Never body text. |
+| `#FFB347` | Gold | Secondary light. Grain heads, peak indicators, the second step of heat. |
+| `#FFE9D6` | Pale ember | Warm white. Headlines, selected labels, the product wordmark. |
+| `#080A10` | Near-black (deep) | The outer field, the darkest surface. |
+| `#0B0E14` | Near-black (panel) | Panels and the main editor background. |
+| `#7CE8C7` | Phosphor mint | Modulation, LFO, measurement, tuning lock. Sparingly: one element per view. |
+| `#B87333` | Copper | EAR / analog section accents, hardware metal, tape path. Not a general accent. |
+| `#E7E2DA` | Text | Body text on dark. A paper white, never pure `#FFFFFF`. |
+
+Rules:
+
+- Never put amber and mint in equal amounts. Amber is the instrument; mint is a
+  gauge.
+- Do not use mint for decoration, success states or "on" indicators. It means
+  modulation or measurement.
+- Do not use copper outside the EAR section. Copper is a material reference, not
+  a brand colour.
+- Keep surfaces matte. No glossy highlights, no glass panels, no neon glow. The
+  only glow is the grain field and the amber the grain field leaves behind.
+- Text on `#0B0E14` must be `#E7E2DA` or `#FFE9D6`; check contrast before
+  shipping a new label colour.
+
+### Typography
+
+The brand uses open-licensed type so it can live in a GPL repository without
+licensing friction.
+
+| Role | Recommendation | Rules |
+|---|---|---|
+| Display / wordmark | Inter Tight (OFL) or a similar tight grotesque | NAGLOED always uppercase, tracking approx. +0.08em, pale ember on near-black. Never outline, gradient, emboss or shadow. |
+| UI labels | Inter (OFL) | Sentence case, 11–13 px at 100% scale. Short nouns. Tabular numerals for values. |
+| Body / documentation | Inter or system sans (`-apple-system`, `Helvetica Neue`) | 15–17 px, generous leading (1.5–1.6). |
+| Numeric / IDs / debug | IBM Plex Mono (OFL) | Only for parameter IDs, test output and technical annotation. |
+
+Casing: product and section names are capitalised as written — **NAGLOED**,
+**Sintel**, **Ruimte**, **EAR**. Ordinary controls are sentence case — *Density*,
+*Grain*, *Freeze*. Do not set whole sentences in capitals. Do not letterspace
+lowercase Dutch words; *nagloed* is one word, not a logo exercise.
+
+### Do and don't
+
+Do:
+
+- Leave a lot of dark. The room is part of the instrument.
+- Let heat encode data: more grains, more amber; older grains, dimmer.
+- Keep geometry quiet: one panel radius (about 12 px), one hairline weight,
+  one level of shadow at most.
+- Move at the speed of audio. If the sound is still, the picture is still.
+- Respect flicker limits: nothing above roughly 3 Hz, no strobe.
+
+Don't:
+
+- No purple/teal synthwave gradients, lens flares, bokeh, fake chrome.
+- No bitmap textures, VHS overlays, paper grain, distressed type. The grit is in
+  the audio path, not the pixels.
+- No emoji, no icon soup, no badge clutter, no "revolutionary".
+- No literal pictures of modular synths and no depiction of real hardware.
+- No pure black (`#000000`) fields and no pure white body text.
+- No idle ambient animation. Motion without audio is a lie about what the
+  instrument is doing.
+
+## Tone of voice
+
+Precise, tactile, unsentimental, with a little Dutch dry humour. Write like
+someone who has spent a day patching and has no patience for a sales deck.
+
+Principles:
+
+1. **Say what the control does, then what it is for.** One sentence each.
+2. **Prefer the concrete noun.** Grain, buffer, freeze, ember, room, tape, hiss.
+3. **Admit the limit.** "Twelve seconds" is more interesting than "unlimited".
+4. **No hype.** No *unleash*, *revolutionary*, *next-generation*, *sonic
+   journey*, *game-changing*, *infinitely creative*. If the instrument is good,
+   the sentence does not need to perspire.
+5. **Dry is funny enough.** Understatement lands; exclamation marks do not.
+6. **English text, Dutch concepts.** Keep *nagloed*, *Sintel*, *Ruimte*, *EAR*
+   untranslated and unexplained after their first definition.
+
+| Don't write | Write instead |
+|---|---|
+| "Unleash endless granular possibilities!" | "Capture up to twelve seconds. Freeze it. Play what remains." |
+| "Experience a revolutionary sonic journey." | "Feed it a chord. Hold the room." |
+| "The ultimate granular solution for modern producers." | "A granular effect and instrument for people who record in one take." |
+| "Its innovative engine will transform your sound." | "Sintel turns the capture buffer into grains; Ruimte gives them a room." |
+| "Freeze your audio into infinity." | "Freeze holds what is in the buffer. It adds nothing." |
+
+### Terminology
+
+Use these words consistently; they are the vocabulary of the instrument.
+
+| Term | Meaning | Do not use |
+|---|---|---|
+| *grain* | One short windowed piece of the capture buffer | *particle*, *slice*, *chunk* |
+| *capture buffer* | The 12-second ring of recorded input | *sample buffer*, *loop buffer*, *tape* |
+| *freeze* | Stop recording new input into the capture buffer; grains keep reading | *hold* (except conversationally), *lock*, *stutter* |
+| *afterglow* | The remaining light/sound after the source stops | *residue*, *tail* (tail is a host term) |
+| *gesture* | One deliberate performance move — a macro, a freeze, a scan sweep | *automation* (that is host automation) |
+| *Sintel*, *Ruimte*, *EAR* | Engine names, always capitalised as shown | translations, acronym expansion in UI |
+
+## Product descriptions
+
+### 60 words (store listing, one paragraph)
+
+NAGLOED is a granular instrument and effect for macOS, built for people who
+treat sound as material. Feed it a synth, a voice or a field recording; it holds
+up to twelve seconds in its capture buffer, dissolves the sound into grains and
+lets the remains glow. Sintel grains, Ruimte space, EAR analog colour. Freeze
+the moment. Play the afterglow.
+
+### 200 words (press / PR)
+
+NAGLOED is a granular instrument and effect for macOS, made by UnlikeNoise Labs
+for sound artist Leon van Bokhorst. It is built around a simple idea: the most
+interesting part of any sound is often what happens after the source stops. Feed
+NAGLOED a synth, a voice, a bowed string or a field recording and it holds up to
+twelve seconds in a capture buffer, then reads it as grains — small, windowed
+embers of sound. The Sintel engine schedules up to 256 of them, with control over
+density, grain length, spray, scan, pitch, spread, reverse, jitter, window shape,
+stereo width, feedback, focus and tuning. Ruimte puts the grains in a room. EAR
+colours them like analog gear: drive, bias, filtering, drift, wow, tape, lo-fi
+and hiss, with input and output trim and a dry/wet mix. Freeze is the central
+gesture: record a moment, freeze the buffer, and keep playing what is left while
+new sound no longer enters. A factory preset library, five performance macros, an
+LFO and auto-motion cover the long, evolving end of the instrument. NAGLOED is an
+AU, VST3 and standalone plug-in for macOS 12 or later. Free software, licensed
+under GPL-3.0-or-later, made in Helmond and Eindhoven.
+
+## Sources and credits
+
+Brand research, all verified November 2026:
+
+- [UnlikeNoise biography — Last.fm](https://www.last.fm/music/UnlikeNoise/+wiki)
+- [Modulab Eindhoven — SONICrider](https://sonicrider.nl/modulab-eindhoven/)
+- [EAR label — SONICrider](https://sonicrider.nl/ear/)
+- [SONICrider × UnlikeNoise collaborations](https://sonicrider.nl/category/collaborations/unlikenoise/)
+- [Frozen Prisonaire — MPDS Audio Archive](https://www.mpdsaudioarchive.org/en/suoni/08b-frozen-prisonaire-unlikenoise-reimagined-compositions-leon-van-bokhorst/)
+
+NAGLOED is designed by Leon van Bokhorst / UnlikeNoise Labs. Product name,
+engines and palette are NAGLOED 1.0.0 brand assets; the software itself is
+GPL-3.0-or-later. See [the manual](MANUAL.md) for how the instrument works.
