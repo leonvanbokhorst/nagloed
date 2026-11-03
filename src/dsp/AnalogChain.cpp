@@ -63,8 +63,11 @@ void AnalogChain::prepare (double sr, int maxBlockSize)
     }
 
     // --- filters -------------------------------------------------------------
-    toneLpL.setCutoff (kToneSplitHz, sampleRate);
-    toneLpR.setCutoff (kToneSplitHz, sampleRate);
+    // The tone tilt is applied inside the oversampled nonlinear loop (between
+    // saturation and the ladder, per the signal-chain design), so its split
+    // filter runs at 2x the host rate.
+    toneLpL.setCutoff (kToneSplitHz, sampleRate * 2.0);
+    toneLpR.setCutoff (kToneSplitHz, sampleRate * 2.0);
     hissLpL.setCutoff (kHissCutoffHz, sampleRate);
     hissLpR.setCutoff (kHissCutoffHz, sampleRate);
     dcL.setCutoff (kDcCutoffHz, sampleRate);
@@ -192,17 +195,11 @@ void AnalogChain::process (float* wetL, float* wetR,
 
         for (int i = s0; i < s1; ++i)
         {
-            float l = sanitiseInput (wetL[i]) * c.inputGain;
-            float r = sanitiseInput (wetR[i]) * c.inputGain;
-
-            const float lowL = toneLpL.process (l);
-            const float lowR = toneLpR.process (r);
-
-            // Tone tilt then drive gain: the saturation stage itself stays
-            // normalised (tanh of the driven signal) and the drive amount is
-            // smoothed at control rate upstream.
-            osInL[i] = (lowL * c.toneLow + (l - lowL) * c.toneHigh) * c.driveGain;
-            osInR[i] = (lowR * c.toneLow + (r - lowR) * c.toneHigh) * c.driveGain;
+            // Input gain + drive gain: both are linear pre-gains into the
+            // oversampled asymmetric saturator.
+            const float gain = c.inputGain * c.driveGain;
+            osInL[i] = sanitiseInput (wetL[i]) * gain;
+            osInR[i] = sanitiseInput (wetR[i]) * gain;
 
             dryWrite = (dryWrite + 1) & dryMask;
             dryDelayL[(size_t) dryWrite] = dryL[i];
@@ -242,11 +239,18 @@ void AnalogChain::process (float* wetL, float* wetR,
 
         for (int i = s0; i < s1; ++i)
         {
+            // Asymmetric saturation -> tone tilt -> 24 dB ladder, exactly the
+            // EAR chain order documented in AnalogChain.h.
             const float satL = fastTanh (upL[i] + bias) - biasShift;
             const float satR = fastTanh (upR[i] + bias) - biasShift;
 
-            upL[i] = processLadder (ladderL, satL, ladderG, ladderK);
-            upR[i] = processLadder (ladderR, satR, ladderG, ladderK);
+            const float lowL = toneLpL.process (satL);
+            const float lowR = toneLpR.process (satR);
+            const float tonedL = lowL * c.toneLow + (satL - lowL) * c.toneHigh;
+            const float tonedR = lowR * c.toneLow + (satR - lowR) * c.toneHigh;
+
+            upL[i] = processLadder (ladderL, tonedL, ladderG, ladderK);
+            upR[i] = processLadder (ladderR, tonedR, ladderG, ladderK);
         }
     }
 
