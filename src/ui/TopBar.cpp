@@ -64,7 +64,8 @@ void TopBar::layoutAtScale()
     const auto freezeH = 28.0f * s;
     const auto freezeX = b.getRight() - freezeW;
     const auto freezeY = (h - freezeH) * 0.5f;
-    freezeButton.setBounds (freezeX, freezeY, freezeW, freezeH);
+    freezeButton.setBounds (juce::roundToInt (freezeX), juce::roundToInt (freezeY),
+                            juce::roundToInt (freezeW), juce::roundToInt (freezeH));
 
     statusArea = { freezeX - 134.0f * s, (h - 30.0f * s) * 0.5f, 120.0f * s, 30.0f * s };
 
@@ -164,14 +165,14 @@ void TopBar::renderBackground (juce::Graphics& g, juce::Rectangle<float> bounds)
     // --- tagline ------------------------------------------------------------
     {
         const auto font = monoFont (6.3f * fs, juce::Font::plain, 0.22f);
-        const auto text = juce::String ("GRANULAR AFTERGLOW INSTRUMENT");
+        const auto taglineText = juce::String ("GRANULAR AFTERGLOW INSTRUMENT");
         const auto x = bounds.getX() + 34.0f * s;
         const auto y = bounds.getY() + h * 0.60f;
-        const auto width = textWidth (font, text) + 2.0f * s;
+        const auto width = textWidth (font, taglineText) + 2.0f * s;
 
         g.setFont (font);
         g.setColour (muted.withAlpha (0.95f));
-        g.drawText (text, juce::Rectangle<float> (x, y, width + 4.0f * s, 11.0f * s),
+        g.drawText (taglineText, juce::Rectangle<float> (x, y, width + 4.0f * s, 11.0f * s),
                     juce::Justification::centredLeft, false);
 
         g.setColour (copper.withAlpha (0.55f));

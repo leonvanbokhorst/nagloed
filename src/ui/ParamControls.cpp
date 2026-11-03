@@ -107,18 +107,18 @@ juce::RangedAudioParameter* ParamControlSet::findParam (const char* id) const
 
 juce::String ParamControlSet::tooltipFor (const juce::RangedAudioParameter& param)
 {
-    auto text = param.getName (48);
+    auto tip = param.getName (48);
     const auto label = param.getLabel();
 
     if (label.isNotEmpty())
-        text << " (" << label << ")";
+        tip << " (" << label << ")";
 
     if (dynamic_cast<const juce::AudioParameterChoice*> (&param) != nullptr)
-        text << theme::utf8 (" — click to choose");
+        tip << theme::utf8 (" — click to choose");
     else
-        text << theme::utf8 (" — drag to adjust · shift-drag for fine · double-click to reset");
+        tip << theme::utf8 (" — drag to adjust · shift-drag for fine · double-click to reset");
 
-    return text;
+    return tip;
 }
 
 ParamSlider& ParamControlSet::addKnob (juce::Component& parent, const char* paramId,

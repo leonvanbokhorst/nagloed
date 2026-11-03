@@ -9,12 +9,11 @@ namespace nagloed::ui
 
 using namespace theme;
 
-NagloedEditor::NagloedEditor (juce::AudioProcessor& processor,
+NagloedEditor::NagloedEditor (juce::AudioProcessor& audioProcessor,
                               juce::AudioProcessorValueTreeState& state,
                               const VisualSource& visualSource,
                               PresetAccess& presetAccess)
-    : juce::AudioProcessorEditor (&processor),
-      apvts (state),
+    : juce::AudioProcessorEditor (&audioProcessor),
       visual (visualSource),
       presets (presetAccess),
       lookAndFeel(),

@@ -55,7 +55,7 @@ public:
 
     void positionComboBoxText (juce::ComboBox&, juce::Label&) override;
 
-    void getIdealPopupMenuItemSize (const juce::String& text, bool isSeparator,
+    void getIdealPopupMenuItemSize (const juce::String& itemText, bool isSeparator,
                                     int standardMenuItemHeight,
                                     int& idealWidth, int& idealHeight) override;
 
@@ -63,13 +63,13 @@ public:
 
     void drawPopupMenuItem (juce::Graphics&, const juce::Rectangle<int>& area,
                             bool isSeparator, bool isActive, bool isHighlighted,
-                            bool isTicked, bool hasSubMenu, const juce::String& text,
+                            bool isTicked, bool hasSubMenu, const juce::String& itemText,
                             const juce::String& shortcutKeyText,
                             const juce::Drawable* icon,
                             const juce::Colour* textColour) override;
 
     // --- tooltips -----------------------------------------------------------
-    void drawTooltip (juce::Graphics&, const juce::String& text, int width, int height) override;
+    void drawTooltip (juce::Graphics&, const juce::String& tipText, int width, int height) override;
 
 private:
     void rebuildFonts();

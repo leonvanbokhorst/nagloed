@@ -12,7 +12,7 @@ using namespace theme;
 // SintelPanel
 // =============================================================================
 SintelPanel::SintelPanel (juce::AudioProcessorValueTreeState& state, AfterglowLookAndFeel& lookAndFeel)
-    : apvts (state), controls (state, lookAndFeel), background (*this)
+    : controls (state, lookAndFeel), background (*this)
 {
     setOpaque (false);
     setTitle ("Sintel grain engine controls");
@@ -64,8 +64,6 @@ void SintelPanel::layoutControls()
 
     headerRect = inner.removeFromTop (22.0f * s);
     inner.removeFromTop (5.0f * s);
-    statusArea = inner.removeFromBottom (34.0f * s);
-    inner.removeFromBottom (6.0f * s);
 
     // Tune/source need the full width so their values never truncate.
     const auto comboRow = inner.removeFromBottom (24.0f * s);
@@ -88,6 +86,11 @@ void SintelPanel::layoutControls()
                                            cellW, cellH);
         cell->setBounds (area.toNearestInt());
     }
+
+    // The two cells beside the FOCUS knob become the live buffer readout so the
+    // rail never ends in dead space.
+    statusArea = { gridArea.getX() + cellW, gridArea.getY() + cellH * 3.0f,
+                   cellW * 2.0f, cellH };
 
     const auto comboW = (comboRow.getWidth() - 6.0f * s) * 0.5f;
 
@@ -143,16 +146,18 @@ void SintelPanel::renderBackground (juce::Graphics& g, juce::Rectangle<float> bo
     drawPanelPlate (g, bounds.reduced (0.5f * s), s, 5.0f * s);
     drawHeader (g, headerRect, s, "01", "SINTEL", "GRAIN");
 
-    // Static readout captions and bar base.
+    // Static readout captions and bar base, stacked in the cells beside FOCUS.
     {
-        const auto row1 = statusArea.withHeight (16.0f * s);
-        const auto row2 = statusArea.withTrimmedTop (16.0f * s);
-        const auto bar = row1.withTrimmedLeft (46.0f * s).withTrimmedRight (36.0f * s)
-                             .withSizeKeepingCentre (statusArea.getWidth() - 82.0f * s, 4.0f * s);
+        const auto rowH = juce::jmin (16.0f * s, statusArea.getHeight() * 0.22f);
+        const auto row1 = statusArea.withHeight (rowH);
+        const auto row2 = statusArea.withTrimmedTop (rowH * 1.9f).withHeight (rowH);
+        const auto row3 = statusArea.withTrimmedTop (rowH * 2.8f).withHeight (rowH);
+        const auto bar = row1.withTrimmedLeft (40.0f * s).withTrimmedRight (30.0f * s)
+                             .withSizeKeepingCentre (statusArea.getWidth() - 70.0f * s, 4.0f * s);
 
         drawMicroText (g, "BUFFER",
-                       row1.withWidth (44.0f * s),
-                       monoFont (5.9f * fs, juce::Font::plain, 0.14f),
+                       row1.withWidth (38.0f * s),
+                       monoFont (5.8f * fs, juce::Font::plain, 0.14f),
                        copper.withAlpha (0.7f));
 
         g.setColour (juce::Colour (0xff070a0e));
@@ -161,13 +166,13 @@ void SintelPanel::renderBackground (juce::Graphics& g, juce::Rectangle<float> bo
         g.drawRoundedRectangle (bar, 2.0f * s, 0.7f * s);
 
         drawMicroText (g, "RATE",
-                       row2.withWidth (40.0f * s),
-                       monoFont (5.9f * fs, juce::Font::plain, 0.14f),
+                       row2.withWidth (38.0f * s),
+                       monoFont (5.8f * fs, juce::Font::plain, 0.14f),
                        copper.withAlpha (0.6f));
 
         drawMicroText (g, "ACTIVE",
-                       row2.withTrimmedLeft (statusArea.getWidth() * 0.5f),
-                       monoFont (5.9f * fs, juce::Font::plain, 0.14f),
+                       row3.withWidth (38.0f * s),
+                       monoFont (5.8f * fs, juce::Font::plain, 0.14f),
                        copper.withAlpha (0.6f));
     }
 }
@@ -181,11 +186,15 @@ void SintelPanel::paint (juce::Graphics& g)
     const auto s = uiScale;
     const auto fs = fontScaleFor (s);
 
+    const auto rowH = juce::jmin (16.0f * s, statusArea.getHeight() * 0.22f);
+    const auto row1 = statusArea.withHeight (rowH);
+    const auto row2 = statusArea.withTrimmedTop (rowH * 1.9f).withHeight (rowH);
+    const auto row3 = statusArea.withTrimmedTop (rowH * 2.8f).withHeight (rowH);
+
     // Buffer fill.
     {
-        const auto row1 = statusArea.withHeight (16.0f * s);
-        const auto bar = row1.withTrimmedLeft (46.0f * s).withTrimmedRight (36.0f * s)
-                             .withSizeKeepingCentre (statusArea.getWidth() - 82.0f * s, 4.0f * s);
+        const auto bar = row1.withTrimmedLeft (40.0f * s).withTrimmedRight (30.0f * s)
+                             .withSizeKeepingCentre (statusArea.getWidth() - 70.0f * s, 4.0f * s);
 
         const auto fill = juce::jlimit (0.0f, 1.0f, bufferFill);
         if (fill > 0.001f)
@@ -198,31 +207,27 @@ void SintelPanel::paint (juce::Graphics& g)
         }
 
         drawMicroText (g, juce::String (juce::roundToInt (fill * 100.0f)) + "%",
-                       row1.withTrimmedLeft (row1.getWidth() - 32.0f * s),
-                       monoFont (5.9f * fs, juce::Font::plain, 0.04f),
+                       row1.withTrimmedLeft (row1.getWidth() - 28.0f * s),
+                       monoFont (5.8f * fs, juce::Font::plain, 0.04f),
                        muted.withAlpha (0.9f), juce::Justification::centredRight);
     }
 
-    // Rate + active notes.
-    {
-        const auto row2 = statusArea.withTrimmedTop (16.0f * s);
-        drawMicroText (g, juce::String (grainRate, 1) + " G/S",
-                       row2.withTrimmedLeft (40.0f * s).withWidth (100.0f * s),
-                       monoFont (6.1f * fs, juce::Font::plain, 0.03f),
-                       muted.withAlpha (0.9f));
+    drawMicroText (g, juce::String (grainRate, 1) + " G/S",
+                   row2.withTrimmedLeft (38.0f * s),
+                   monoFont (6.0f * fs, juce::Font::plain, 0.03f),
+                   muted.withAlpha (0.9f));
 
-        drawMicroText (g, juce::String (activeNotes),
-                       row2.withTrimmedLeft (statusArea.getWidth() * 0.5f + 38.0f * s),
-                       monoFont (6.1f * fs, juce::Font::plain, 0.03f),
-                       muted.withAlpha (0.9f));
-    }
+    drawMicroText (g, juce::String (activeNotes),
+                   row3.withTrimmedLeft (38.0f * s),
+                   monoFont (6.0f * fs, juce::Font::plain, 0.03f),
+                   muted.withAlpha (0.9f));
 }
 
 // =============================================================================
 // EarPanel
 // =============================================================================
 EarPanel::EarPanel (juce::AudioProcessorValueTreeState& state, AfterglowLookAndFeel& lookAndFeel)
-    : apvts (state), controls (state, lookAndFeel),
+    : controls (state, lookAndFeel),
       background (*this), filterCurve (state)
 {
     setOpaque (false);
@@ -380,7 +385,7 @@ void EarPanel::paint (juce::Graphics& g)
 // BottomPanel
 // =============================================================================
 BottomPanel::BottomPanel (juce::AudioProcessorValueTreeState& state, AfterglowLookAndFeel& lookAndFeel)
-    : apvts (state), controls (state, lookAndFeel), background (*this),
+    : controls (state, lookAndFeel), background (*this),
       lfoVisual (state), spaceVisual (state)
 {
     setOpaque (false);

@@ -33,7 +33,7 @@ class NagloedEditor final : public juce::AudioProcessorEditor,
                             private juce::Timer
 {
 public:
-    NagloedEditor (juce::AudioProcessor& processor,
+    NagloedEditor (juce::AudioProcessor& audioProcessor,
                    juce::AudioProcessorValueTreeState& apvts,
                    const VisualSource& visualSource,
                    PresetAccess& presetAccess);
@@ -60,7 +60,6 @@ private:
     void verifyParameterCoverage();
     void renderPage (juce::Graphics&, juce::Rectangle<float>);
 
-    juce::AudioProcessorValueTreeState& apvts;
     const VisualSource& visual;
     PresetAccess& presets;
 

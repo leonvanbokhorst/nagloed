@@ -73,11 +73,11 @@ void GrainCloud::PhosphorField::fade (float amount)
 
     for (int y = 0; y < data->height; ++y)
     {
-        auto* line = data->getLinePointer (y);
+        auto* rowPtr = data->getLinePointer (y);
 
         for (int x = 0; x < data->width; ++x)
         {
-            auto* p = line + x * stride;
+            auto* p = rowPtr + x * stride;
             p[0] = (juce::uint8) ((p[0] * factor) >> 8);
             p[1] = (juce::uint8) ((p[1] * factor) >> 8);
             p[2] = (juce::uint8) ((p[2] * factor) >> 8);
@@ -119,7 +119,7 @@ void GrainCloud::PhosphorField::splat (float cx, float cy, float radius,
     {
         const auto dy = (float) y - py;
         const auto dy2 = dy * dy;
-        auto* line = data->getLinePointer (y);
+        auto* rowPtr = data->getLinePointer (y);
 
         for (int x = x0; x <= x1; ++x)
         {
@@ -131,7 +131,7 @@ void GrainCloud::PhosphorField::splat (float cx, float cy, float radius,
 
             const auto falloff = 1.0f - d2 * invR2;
             const auto f = falloff * falloff;
-            auto* p = line + x * stride;
+            auto* p = rowPtr + x * stride;
 
             // JUCE's RGB image stores pixels as blue, green, red.
             p[0] = (juce::uint8) juce::jmin (255, (int) p[0] + (int) (cb * f));
@@ -614,14 +614,21 @@ void GrainCloud::ensureCaches (float currentDeviceScale)
 {
     deviceScale = juce::jlimit (0.5f, 3.0f, currentDeviceScale);
 
-    chrome.ensure (getWidth(), getHeight(), deviceScale);
-    gridOverlay.ensure (getWidth(), getHeight(), deviceScale);
+    // Keep the cloud's cached pixels and phosphor buffer bounded on very large
+    // editor sizes; the screen is glow, so a slightly lower pixel density is
+    // invisible, while the per-frame blit and decay stay fluid.
+    const auto logicalArea = (float) juce::jmax (1, getWidth()) * (float) juce::jmax (1, getHeight());
+    constexpr float maxCachedPixels = 1'800'000.0f;
+    const auto densityCap = std::sqrt (maxCachedPixels / juce::jmax (1.0f, logicalArea));
+    const auto cacheScale = juce::jlimit (1.0f, juce::jmin (deviceScale, 2.2f), densityCap);
+
+    chrome.ensure (getWidth(), getHeight(), cacheScale);
+    gridOverlay.ensure (getWidth(), getHeight(), cacheScale);
 
     const auto fw = juce::jmax (1, (int) std::lround (fieldRect.getWidth()));
     const auto fh = juce::jmax (1, (int) std::lround (fieldRect.getHeight()));
-    const auto phosphorScale = juce::jmin (deviceScale, 2.0f);
 
-    if (phosphor.ensure (fw, fh, phosphorScale))
+    if (phosphor.ensure (fw, fh, juce::jmin (cacheScale, 2.0f)))
         prewarmNeeded = true;
 }
 
@@ -1125,7 +1132,8 @@ void GrainCloud::mouseDown (const juce::MouseEvent& e)
 {
     grabKeyboardFocus();
 
-    if (e.mods.isPopupMenu() || ! fieldRect.contains (e.position) && ! trackRect.contains (e.position))
+    if (e.mods.isPopupMenu()
+        || (! fieldRect.contains (e.position) && ! trackRect.contains (e.position)))
         return;
 
     dragging = true;

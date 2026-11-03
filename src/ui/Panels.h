@@ -42,7 +42,6 @@ private:
     void renderBackground (juce::Graphics&, juce::Rectangle<float>);
     void layoutControls();
 
-    juce::AudioProcessorValueTreeState& apvts;
     ParamControlSet controls;
     BackgroundCache background;
 
@@ -89,7 +88,6 @@ private:
     void renderBackground (juce::Graphics&, juce::Rectangle<float>);
     void layoutControls();
 
-    juce::AudioProcessorValueTreeState& apvts;
     ParamControlSet controls;
     BackgroundCache background;
     FilterCurve filterCurve;
@@ -133,7 +131,6 @@ private:
     void renderBackground (juce::Graphics&, juce::Rectangle<float>);
     void layoutControls();
 
-    juce::AudioProcessorValueTreeState& apvts;
     ParamControlSet controls;
     BackgroundCache background;
     LfoVisual lfoVisual;

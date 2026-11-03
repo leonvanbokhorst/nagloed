@@ -719,7 +719,7 @@ juce::Font AfterglowLookAndFeel::getLabelFont (juce::Label& label)
     return labelFont;
 }
 
-void AfterglowLookAndFeel::getIdealPopupMenuItemSize (const juce::String& text, bool isSeparator,
+void AfterglowLookAndFeel::getIdealPopupMenuItemSize (const juce::String& itemText, bool isSeparator,
                                                       int standardMenuItemHeight,
                                                       int& idealWidth, int& idealHeight)
 {
@@ -736,7 +736,7 @@ void AfterglowLookAndFeel::getIdealPopupMenuItemSize (const juce::String& text, 
     const auto fontH = menuFont.getHeight();
     idealHeight = juce::jmax (standardMenuItemHeight, juce::roundToInt (fontH + 10.0f * uiScale));
     idealWidth = juce::jmax (juce::roundToInt (fontH * 6.5f),
-                             juce::roundToInt (theme::textWidth (menuFont, text) + 34.0f * uiScale));
+                             juce::roundToInt (theme::textWidth (menuFont, itemText) + 34.0f * uiScale));
 }
 
 void AfterglowLookAndFeel::drawPopupMenuBackground (juce::Graphics& g, int width, int height)
@@ -755,7 +755,7 @@ void AfterglowLookAndFeel::drawPopupMenuBackground (juce::Graphics& g, int width
 
 void AfterglowLookAndFeel::drawPopupMenuItem (juce::Graphics& g, const juce::Rectangle<int>& area,
                                               bool isSeparator, bool isActive, bool isHighlighted,
-                                              bool isTicked, bool hasSubMenu, const juce::String& text,
+                                              bool isTicked, bool hasSubMenu, const juce::String& itemText,
                                               const juce::String& shortcutKeyText,
                                               const juce::Drawable* icon, const juce::Colour* textColour)
 {
@@ -794,7 +794,7 @@ void AfterglowLookAndFeel::drawPopupMenuItem (juce::Graphics& g, const juce::Rec
     g.setFont (menuFont);
     g.setColour (isActive ? (isHighlighted ? theme::paleEmber : theme::text)
                           : theme::dim);
-    g.drawText (text, textArea, juce::Justification::centredLeft, false);
+    g.drawText (itemText, textArea, juce::Justification::centredLeft, false);
 
     if (hasSubMenu)
     {
@@ -808,7 +808,7 @@ void AfterglowLookAndFeel::drawPopupMenuItem (juce::Graphics& g, const juce::Rec
     }
 }
 
-void AfterglowLookAndFeel::drawTooltip (juce::Graphics& g, const juce::String& text,
+void AfterglowLookAndFeel::drawTooltip (juce::Graphics& g, const juce::String& tipText,
                                          int width, int height)
 {
     const auto s = juce::jmax (0.5f, uiScale);
@@ -825,7 +825,7 @@ void AfterglowLookAndFeel::drawTooltip (juce::Graphics& g, const juce::String& t
 
     g.setFont (tooltipFont);
     g.setColour (theme::text.withAlpha (0.95f));
-    g.drawFittedText (text, bounds.reduced (7.0f * s, 4.0f * s).toNearestInt(),
+    g.drawFittedText (tipText, bounds.reduced (7.0f * s, 4.0f * s).toNearestInt(),
                       juce::Justification::centredLeft, 3);
 }
 

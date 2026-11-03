@@ -678,7 +678,7 @@ void SpaceVisual::paint (juce::Graphics& g)
         {
             if (i == 0)
                 continue;
-            const auto x = cx + i * maxW * 0.34f * depth;
+            const auto x = cx + (float) i * maxW * 0.34f * depth;
             g.setColour (copperDim.withAlpha (0.32f));
             g.fillRect (x, cy - 3.0f * s, 0.5f * s, 6.0f * s);
         }

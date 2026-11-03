@@ -105,9 +105,9 @@ juce::Font monoFont (float height, int style, float kerning)
     return makeFont (monoFamily(), height, style, kerning);
 }
 
-float textWidth (const juce::Font& font, const juce::String& text)
+float textWidth (const juce::Font& font, const juce::String& textToMeasure)
 {
-    return juce::GlyphArrangement::getStringWidth (font, text);
+    return juce::GlyphArrangement::getStringWidth (font, textToMeasure);
 }
 
 // -----------------------------------------------------------------------------
@@ -319,16 +319,16 @@ void drawHeader (juce::Graphics& g, juce::Rectangle<float> r, float scale,
                   copper.withAlpha (0.5f), 0.30f);
 }
 
-void drawMicroText (juce::Graphics& g, const juce::String& text,
+void drawMicroText (juce::Graphics& g, const juce::String& microText,
                     juce::Rectangle<float> r, juce::Font font, Colour colour,
                     juce::Justification justification, float alpha)
 {
-    if (text.isEmpty() || r.isEmpty())
+    if (microText.isEmpty() || r.isEmpty())
         return;
 
     g.setFont (font);
     g.setColour (colour.withMultipliedAlpha (juce::jlimit (0.0f, 1.0f, alpha)));
-    g.drawText (text, r, justification, false);
+    g.drawText (microText, r, justification, false);
 }
 
 void drawGlowDot (juce::Graphics& g, float cx, float cy, float radius, Colour colour,

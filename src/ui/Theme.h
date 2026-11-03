@@ -64,10 +64,10 @@ juce::Font bodyFont    (float height, int style = juce::Font::plain, float kerni
 juce::Font monoFont    (float height, int style = juce::Font::plain, float kerning = 0.0f);
 
 /** Shaped text width (JUCE 9 moved this out of Font). */
-float textWidth (const juce::Font& font, const juce::String& text);
+float textWidth (const juce::Font& font, const juce::String& textToMeasure);
 
 /** JUCE narrow string literals are Latin-1 by default; UTF-8 must be explicit. */
-inline juce::String utf8 (const char* text) { return juce::String::fromUTF8 (text); }
+inline juce::String utf8 (const char* utf8Text) { return juce::String::fromUTF8 (utf8Text); }
 
 // --- cached, scale-aware background painting --------------------------------
 /**
@@ -110,7 +110,7 @@ void drawHeader (juce::Graphics& g, juce::Rectangle<float> r, float scale,
                  const juce::String& index, const juce::String& title,
                  const juce::String& right = {});
 
-void drawMicroText (juce::Graphics& g, const juce::String& text,
+void drawMicroText (juce::Graphics& g, const juce::String& microText,
                     juce::Rectangle<float> r, juce::Font font, Colour colour,
                     juce::Justification justification = juce::Justification::centredLeft,
                     float alpha = 1.0f);
