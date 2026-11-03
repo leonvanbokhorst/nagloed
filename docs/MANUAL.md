@@ -5,9 +5,9 @@
 > *nagloed* (Dutch, n.) — the light that stays in the room after the source is gone.
 
 This manual documents NAGLOED's controls as implemented in 1.0.0. Control
-names, ranges, defaults and parameter IDs are taken from the same source of
-truth the plug-in uses (`src/core/Parameters.h`), so what is written here is what
-the host sees.
+names, ranges, defaults and choice lists are taken from `src/core/Parameters.h`;
+the parameter ID strings come from `src/core/ParamIDs.h`. They are the same
+source of truth the plug-in uses, so what is written here is what the host sees.
 
 ## What it is
 
@@ -25,8 +25,8 @@ Signal order: input trim → capture buffer → Sintel → Ruimte → EAR → ou
 
 Experimental musicians, modular players, sound artists, field recordists and
 one-take recorders; also sound designers who need texture that behaves like
-material. The instrument expects you to play it. There is a factory library, but
-no single preset will make a finished track for you.
+material. The instrument expects you to play it. There are 24 factory presets,
+but no single preset will make a finished track for you.
 
 ## Quick start
 
@@ -144,18 +144,19 @@ ID is always unique; in this manual, a control is named by its section
 
 ## Gesture macros
 
-The five macros are performance gestures, not a modulation matrix. Each one moves
-several internal parameters at once, and what it does depends on where the direct
-controls already are. They are designed to be moved while the sound is playing,
-and they are stored in presets and saved sessions like any other parameter.
+The five macros are performance gestures, not a modulation matrix. Each one adds
+fixed offsets to several internal controls at once, on top of the direct
+parameters, so what it does depends on where those controls already are. They are
+designed to be moved while the sound is playing, and they are stored in presets
+and saved sessions like any other parameter.
 
 | Macro | Range | Default | Gesture |
 |---|---|---|---|
-| **Glow** (`macro.glow`) | 0–100% | 30% | Overall heat and presence of the grain field. Raise to bring the cloud forward; lower to let the source through. |
-| **Drift** (`macro.drift`) | 0–100% | 30% | Total instability: timing, pitch and analog wobble. Raise for a sound that refuses to sit still. |
-| **Grain** (`macro.grain`) | 0–100% | 50% | Grain character, from fine dust to coarse embers. |
-| **Space** (`macro.space`) | 0–100% | 40% | Overall distance and room. Raise to step back from the instrument. |
-| **Shimmer** (`macro.shimmer`) | 0–100% | 20% | High, glassy movement in the cloud. Use sparingly; it is the brightest gesture. |
+| **Glow** (`macro.glow`) | 0–100% | 30% | Warm old-tape character added to EAR: at 100%, +8 dB drive, cutoff down 1.2 octaves, hiss +0.35 and a darker tone. Raise to pull the cloud forward and age it. |
+| **Drift** (`macro.drift`) | 0–100% | 30% | Analog instability added to EAR: at 100%, drift +0.8, wow +0.5, tape +0.4 and extra pitch wobble. Raise for a sound that refuses to sit still. |
+| **Grain** (`macro.grain`) | 0–100% | 50% | Cloud shape, centred at 50%: density × 2^(±1.2 octaves), spray ±25%, width ±35% and spread ±6 st at the extremes. Below 50% it thins and dries; above it thickens and widens. |
+| **Space** (`macro.space`) | 0–100% | 40% | Ruimte depth: at 100%, mix +0.35, size +0.25, mod +0.30. Raise to step back from the instrument. |
+| **Shimmer** (`macro.shimmer`) | 0–100% | 20% | Chance that a grain jumps up an octave (up to 55% of grains at 100%), plus extra space: mix +0.12, mod +0.15. Use sparingly; it is the brightest gesture. |
 
 Practical gesture: hold **Freeze** with one hand and move **Scan**, **Pitch** or
 **Shimmer** with the other. That is the core performance move of the instrument.
@@ -262,8 +263,9 @@ automation and preset authoring, and are reserved for the MPE update.
 - **Init** is always program 0: the documented defaults exactly (Density
   30 g/s, Space 35%, EAR Mix 65%, and so on). It is a clean starting point, not
   silence.
-- The factory library is exposed through the host's program list. Loading a preset
-  replaces every parameter value, so move the controls afterwards.
+- The 24 factory presets, in eight categories, are exposed through the host's
+  program list. Loading a preset replaces every parameter value, so move the
+  controls afterwards.
 - NAGLOED 1.0.0 does not write user preset files. Save your own variations in
   your host's preset, rack or track-preset system; the plug-in state is saved in
   the session.
@@ -342,8 +344,8 @@ and all parameter values are saved with the session and restored on reload.
 | Clicks when automating | Choice parameters or Freeze changing mid-grain | Automate between phrases, not inside a grain or a freeze. |
 | Plug-in not listed in the host | Not installed in the scanned plug-in folder, or host cache stale | Build/copy to `~/Library/Audio/Plug-Ins/{Components,VST3}`, rescan, restart the host. |
 | AU fails validation | Stale installed component, or build not copied | Run `./scripts/validate.sh`; check `auval -v aufx Nagl UnlN`. |
-| No response to MIDI | By design in 1.0.0: no MIDI or MPE input | Use host automation, the macro knobs or the editor. |
-| Only Init preset appears | Source tree built without `presets/*.json` | Build from the release tree; presets are embedded at build time. |
+| No response to MIDI | By design in 1.0.0: no MIDI or MPE input | Use host automation on the macros and direct parameters. |
+| Only Init preset appears | Source tree built without `presets/*.json` | Check that `presets/*.json` is present, then rebuild with `./scripts/build.sh`; artifacts land in `build/NAGLOED_artefacts/Release/` and presets are embedded at build time. |
 | Mono track sounds odd | Host routing, not the plug-in | The plug-in supports mono and stereo; check the track's input configuration. |
 
 ## Reference

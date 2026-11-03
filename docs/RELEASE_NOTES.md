@@ -18,14 +18,14 @@ it, and play what remains.
 - **EAR**, the analog section: Drive, Bias, Tone, Cutoff, Reso, Drift, Wow, Tape,
   LoFi, Hiss, In, Out, Mix.
 - Five gesture macros (Glow, Drift, Grain, Space, Shimmer), one LFO with six
-  shapes and seven destinations, and Auto-motion.
+  shapes and six destinations plus Off, and Auto-motion.
 - 45 host-automatable parameters in total, with permanent parameter IDs.
 - Freeze workflow: the buffer stops recording, the grains keep playing.
 - Resizable editor with a live grain cloud, default 1180 × 680.
 - AU, VST3 and Standalone builds for macOS 12 or later; mono and stereo plug-in
   configurations.
-- Factory preset library: Init plus a categorised set, exposed as plug-in
-  programs. See `docs/PRESET_GUIDE.md`.
+- Factory preset library: 24 presets across eight categories plus Init, exposed
+  as plug-in programs. See `docs/PRESET_GUIDE.md`.
 - Full session state recall, including the current program.
 - Documentation: brand and design language, manual, architecture and these
   release notes.
@@ -36,9 +36,9 @@ it, and play what remains.
 
 - **Init** (program 0) is the documented default state: a clean starting point,
   not silence.
-- The factory library is categorised and embedded into the binary at build time
-  from `presets/*.json`; it appears in the host's program list. The preset guide
-  describes every patch: `docs/PRESET_GUIDE.md`.
+- The 24 factory presets are grouped into eight categories and embedded into the
+  binary at build time from `presets/*.json`; they appear in the host's program
+  list. The preset guide describes every patch: `docs/PRESET_GUIDE.md`.
 - Loading a preset replaces all parameter values. Saved sessions and host presets
   recall the current program and parameter state.
 

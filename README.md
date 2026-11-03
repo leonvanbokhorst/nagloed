@@ -11,7 +11,7 @@ remains glow: Sintel grains, Ruimte space, EAR analog colour.
 Version **1.0.0** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
 UnlikeNoise Labs
 
-![The NAGLOED editor](docs/ui-preview.png)
+![NAGLOED editor](docs/ui-preview.png)
 
 ## What it is
 
@@ -54,8 +54,9 @@ moment and play what remains, read on.
 
 **Performance**
 
-- Five gesture macros: Glow, Drift, Grain, Space, Shimmer.
-- One LFO (six shapes, seven destinations) and Auto-motion for long evolves.
+- Five gesture macros: Glow (tape warmth), Drift (instability), Grain (cloud
+  shape), Space (room), Shimmer (octave sparkle).
+- One LFO (six shapes, six destinations plus Off) and Auto-motion for long evolves.
 - Resizable editor (1180 × 680 default) with a live grain cloud.
 - Full host automation and session state; presets exposed as plug-in programs.
 
@@ -63,7 +64,7 @@ moment and play what remains, read on.
 
 - AU, VST3 and Standalone for macOS 12 or later.
 - Mono and stereo plug-in configurations.
-- Factory presets embedded in the binary: Init plus a categorised library.
+- 24 factory presets across eight categories, embedded in the binary, plus Init.
 
 ## Install
 
@@ -98,7 +99,8 @@ first time it runs.
 Requirements:
 
 - macOS 12 or later, with Xcode Command Line Tools (`xcode-select --install`).
-- CMake 3.22 or later.
+- CMake 3.22 or later for `./scripts/build.sh`; CMake 3.25 or later if you use the
+  CMake presets (`CMakePresets.json` uses schema v6).
 - Python 3 (used at build time to embed `presets/*.json`).
 - Network access for the first JUCE download only; after that the build is
   offline and reproducible from `.deps/JUCE`.
@@ -115,8 +117,8 @@ xcode-select --install
 ```
 
 `scripts/build.sh` configures a Release build in `build/` and builds with the
-available CPU cores. CMake presets are also provided: `cmake --preset local`,
-`cmake --build --preset local`.
+available CPU cores. CMake presets are also provided (CMake 3.25+):
+`cmake --preset local`, `cmake --build --preset local`.
 
 ### Developer tools
 
@@ -175,6 +177,9 @@ against `develop`. Issues are labelled by workstream (`dsp`, `ui`, `docs`,
 output and, for GUI changes, a screenshot. DSP changes must also pass the realtime
 checklist: no allocation, locks or file I/O in `process()`, smoothed parameter
 changes, finite output under extreme settings.
+
+The full workflow — branches, worktrees, commit conventions, review and release —
+is in [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 This is a small, local-first project. Read the manual and the architecture doc
 before changing signal flow, and keep the afterglow intact.

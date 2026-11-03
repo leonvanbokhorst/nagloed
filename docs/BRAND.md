@@ -21,7 +21,7 @@ properly.
 *nagloed* is a compound: *na* (after) + *gloed* (glow, ember, heat). It is the
 word for the light that remains on a wall after the lamp is switched off, the
 red in the stove after the fire has died. English calls it an afterglow, which
-is accurate but too comfortable. *Nagloed* keeps the small ache in it.
+is accurate but too comfortable. The word keeps the small ache in it.
 
 Usage:
 
@@ -121,16 +121,29 @@ and should not be there.
 
 ### Palette
 
+The editor is built from a small set of colours defined in `src/ui/Theme.h`. The
+page and plate colours are gradients, not flat fills; the table lists the top and
+bottom stops.
+
 | Hex | Name | Use |
 |---|---|---|
-| `#FF6B1A` | Amber ember | Primary accent. Grain cloud energy, active/hot states, focus rings. Never body text. |
-| `#FFB347` | Gold | Secondary light. Grain heads, peak indicators, the second step of heat. |
-| `#FFE9D6` | Pale ember | Warm white. Headlines, selected labels, the product wordmark. |
-| `#080A10` | Near-black (deep) | The outer field, the darkest surface. |
-| `#0B0E14` | Near-black (panel) | Panels and the main editor background. |
+| `#0B0E14 → #06080C` | Page | The editor background, top to bottom. |
+| `#141922 → #0B0F16` | Plate | Panel plates and raised surfaces, top to bottom. |
+| `#080B10 → #05070A` | Well | Inset wells and the deepest recesses, top to bottom. |
+| `#28303E` | Edge | Panel hairlines and boundaries. |
+| `#4A3826` | Edge hot | Warm edge highlight on active panels. |
+| `#FF6B1A` | Amber ember | Primary accent: grain cloud energy, active/hot states, focus rings. Never body text. |
+| `#9C3D08` | Ember deep | Cooled ember: shadowed heat, secondary grain trails. |
+| `#FFB347` | Gold | Secondary light: grain heads, peak indicators, the second step of heat. |
+| `#FFE9D6` | Pale ember | Warm white: headlines, selected labels, the product wordmark. |
 | `#7CE8C7` | Phosphor mint | Modulation, LFO, measurement, tuning lock. Sparingly: one element per view. |
 | `#B87333` | Copper | EAR / analog section accents, hardware metal, tape path. Not a general accent. |
+| `#6F4622` | Copper dim | Secondary copper: hardware shadows, inactive analog controls. |
 | `#E7E2DA` | Text | Body text on dark. A paper white, never pure `#FFFFFF`. |
+| `#8A8F98` | Muted | Secondary labels, units, inactive text. |
+| `#565D69` | Dim | Tertiary labels and backgrounds behind text. |
+| `#FF4D6D` | Warning | Overload, clipping and fault states. Use only for real warnings. |
+| `#2B3240` / `#1C222D` | Line / line soft | Dividers; the soft variant for quiet separators. |
 
 Rules:
 
@@ -142,20 +155,25 @@ Rules:
   a brand colour.
 - Keep surfaces matte. No glossy highlights, no glass panels, no neon glow. The
   only glow is the grain field and the amber the grain field leaves behind.
-- Text on `#0B0E14` must be `#E7E2DA` or `#FFE9D6`; check contrast before
-  shipping a new label colour.
+- Text on the page (`#0B0E14`–`#06080C`) must be `#E7E2DA` or `#FFE9D6`; use
+  `#8A8F98` for secondary labels. Check contrast before shipping a new label
+  colour.
+- Warning red is reserved for something actually wrong. It is not a mood.
 
 ### Typography
 
-The brand uses open-licensed type so it can live in a GPL repository without
-licensing friction.
+The editor draws with the macOS system type stack resolved in
+`src/ui/Theme.cpp` — Avenir Next Condensed for display, Avenir Next or
+Helvetica Neue for body text, Menlo for numeric micro-labels — so no font files
+ship and nothing needs licensing. For print, or for a future build that bundles
+type, the brand recommends these open-licensed equivalents.
 
-| Role | Recommendation | Rules |
-|---|---|---|
-| Display / wordmark | Inter Tight (OFL) or a similar tight grotesque | NAGLOED always uppercase, tracking approx. +0.08em, pale ember on near-black. Never outline, gradient, emboss or shadow. |
-| UI labels | Inter (OFL) | Sentence case, 11–13 px at 100% scale. Short nouns. Tabular numerals for values. |
-| Body / documentation | Inter or system sans (`-apple-system`, `Helvetica Neue`) | 15–17 px, generous leading (1.5–1.6). |
-| Numeric / IDs / debug | IBM Plex Mono (OFL) | Only for parameter IDs, test output and technical annotation. |
+| Role | Shipped UI (system) | Recommended alternative | Rules |
+|---|---|---|---|
+| Display / wordmark | Avenir Next Condensed → Avenir Next → Helvetica Neue | Inter Tight (OFL) | NAGLOED always uppercase, tracking approx. +0.08em, pale ember on near-black. Never outline, gradient, emboss or shadow. |
+| UI labels | Avenir Next → Helvetica Neue | Inter (OFL) | Sentence case, 11–13 px at 100% scale. Short nouns. Tabular numerals for values. |
+| Body / documentation | System sans (Helvetica Neue, `-apple-system`) | Inter (OFL) | 15–17 px, generous leading (1.5–1.6). |
+| Numeric / IDs / debug | Menlo → SF Mono → Monaco | IBM Plex Mono (OFL) | Only for parameter IDs, test output and technical annotation. |
 
 Casing: product and section names are capitalised as written — **NAGLOED**,
 **Sintel**, **Ruimte**, **EAR**. Ordinary controls are sentence case — *Density*,
