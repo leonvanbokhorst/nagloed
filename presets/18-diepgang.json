@@ -1,7 +1,7 @@
 {
   "name": "Diepgang",
   "category": "Drone/Synth",
-  "description": "Depth itself: two octaves down, half-second grains and a sub-only filter. Play one low note per bar and let the pressure build under the room.",
+  "description": "Depth itself: two octaves down, half-second grains and a sub-only filter. No input needed — let the pressure build under the room and ride Space.",
   "params": {
     "grain.density": 6,
     "grain.size": 480,
