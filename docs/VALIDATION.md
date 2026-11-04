@@ -120,6 +120,18 @@ Renders the real `AudioProcessorEditor` offscreen to `docs/ui-preview.png`
 (2360 × 1360, i.e. 1180 × 680 at 2×) after loading a factory preset and feeding
 the engine audio, so the snapshot shows the live grain field.
 
+### Grain-field phosphor soak
+
+```
+./build/nagl_preview_artefacts/Release/nagl_preview --soak
+```
+
+Runs the editor for eight seconds and asserts the phosphor buffer stayed opaque
+(`alphaOk`), no near-white wash, sane field luminance, and that the field is still
+animating. This is the regression test for the 1.0.1 grain-field corruption
+(alpha channel decayed by the bit-trick fade, breaking premultiplied compositing);
+it prints `SOAK PASS`.
+
 ### Editor refresh in a host-style mount
 
 ```
@@ -139,7 +151,7 @@ One command reproduces everything above, provided pluginval is present in
 ```
 
 GitHub Actions CI (`.github/workflows/ci.yml`) builds the AU/VST3/Standalone
-targets, runs the suite and validates the AU; run `41698856335` on the release
+targets, runs the suite and validates the AU; run `41796859555` on the release
 branch is green.
 
 ## Manual checks

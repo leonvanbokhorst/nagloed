@@ -19,6 +19,7 @@
 #include "plugin/PluginProcessor.h"
 #include "plugin/Presets.h"
 #include "ui/EditorFactory.h"
+#include "ui/GrainCloud.h"
 
 namespace
 {
@@ -220,6 +221,59 @@ int main (int argc, char** argv)
         return runEmbeddedTest (processor, editor, width, height);
 
     editor->setVisible (true);
+
+    // --soak renders after several seconds of live ticking, which exposes
+    // phosphor/decay problems that a short snapshot hides.
+    const bool soak = hasArg (argc, argv, "--soak");
+    if (soak)
+    {
+        // Let the visualiser run for several seconds: alpha decay bugs, additive
+        // saturation and flicker only show up after many frames.
+        juce::MessageManager::getInstance()->runDispatchLoopUntil (7000);
+
+        auto* cloud = findByTitle (*editor, "Grain cloud");
+        auto& target = cloud != nullptr ? *cloud : *editor;
+
+        const auto a = target.createComponentSnapshot (target.getLocalBounds(), true, 1.0f);
+        juce::MessageManager::getInstance()->runDispatchLoopUntil (400);
+        const auto b = target.createComponentSnapshot (target.getLocalBounds(), true, 1.0f);
+
+        double luminanceSum = 0.0;
+        int whitePixels = 0, pixels = 0;
+        for (int y = 0; y < a.getHeight(); ++y)
+            for (int x = 0; x < a.getWidth(); ++x)
+            {
+                const auto c = a.getPixelAt (x, y);
+                luminanceSum += 0.2126 * c.getFloatRed() + 0.7152 * c.getFloatGreen()
+                              + 0.0722 * c.getFloatBlue();
+                if (c.getRed() > 235 && c.getGreen() > 235 && c.getBlue() > 235)
+                    ++whitePixels;
+                ++pixels;
+            }
+
+        const auto meanLuminance = pixels > 0 ? luminanceSum / pixels : 0.0;
+        const auto whiteRatio = pixels > 0 ? (double) whitePixels / pixels : 1.0;
+        const bool animates = imagesDiffer (a, b);
+
+        bool alphaOk = true;
+        if (auto* gc = dynamic_cast<nagloed::ui::GrainCloud*> (cloud))
+            alphaOk = gc->alphaInvariantHeld();
+
+        const auto soakFile = juce::File ("/tmp/nagl-soak.png");
+        writePng (soakFile, editor->createComponentSnapshot (editor->getLocalBounds(), true, 2.0f));
+
+        std::printf ("soak: meanLuminance=%.2f whiteRatio=%.4f animates=%d alphaOk=%d -> %s\n",
+                     meanLuminance, whiteRatio, (int) animates, (int) alphaOk,
+                     soakFile.getFullPathName().toRawUTF8());
+
+        // A washed-out/white field or a frozen cloud is a failure. Luminance is
+        // 0..1; a healthy ember field is dark with a little glow (roughly
+        // 0.02..0.35), and almost no pixel should be near pure white.
+        const bool ok = alphaOk && whiteRatio < 0.01 && meanLuminance > 0.01
+                     && meanLuminance < 0.4 && animates;
+        std::printf ("%s\n", ok ? "SOAK PASS" : "SOAK FAIL");
+        return ok ? 0 : 1;
+    }
 
     // Let the editor's timers ingest the engine's visual state and repaint
     // before we snapshot, so the grain field is alive in the capture.

@@ -411,8 +411,10 @@ Colour emberRamp (float t)
 
 Colour pitchColour (float semitones)
 {
+    // Cap the ramp at gold: a pale-ember top end saturates to pure white in the
+    // additive phosphor buffer and the embers stop reading as embers.
     const auto t = juce::jlimit (0.0f, 1.0f, (semitones + 24.0f) / 48.0f);
-    return emberRamp (0.12f + 0.88f * t);
+    return emberRamp (0.12f + 0.62f * t);
 }
 
 } // namespace nagloed::ui::theme

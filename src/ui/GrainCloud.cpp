@@ -85,6 +85,7 @@ bool GrainCloud::PhosphorField::ensure (int logicalWidth, int logicalHeight, flo
 
     pixels = std::make_unique<juce::Image::BitmapData> (buffer, juce::Image::BitmapData::writeOnly);
     active = false;
+    alphaBroken = false;
     return true;
 }
 
@@ -95,6 +96,7 @@ void GrainCloud::PhosphorField::clear()
 
     buffer.clear (buffer.getBounds(), juce::Colour (0xff05070a));
     active = false;
+    alphaBroken = false;
 }
 
 void GrainCloud::PhosphorField::fade (int shift)
@@ -103,9 +105,11 @@ void GrainCloud::PhosphorField::fade (int shift)
         return;
 
     const auto step = (juce::uint32) juce::jlimit (2, 6, shift);
-    // Keep only the bits that came from the same colour byte; everything higher
-    // would bleed between channels (and from alpha) and poison the colours.
-    const auto mask = (juce::uint32) ((1u << (8u - step)) - 1u) * 0x01010101u;
+    // Keep only the bits that came from the same colour byte, and mask OUT the
+    // alpha byte: the phosphor image must stay fully opaque. Decaying alpha
+    // breaks JUCE's premultiplied ARGB compositing, which turns faded embers
+    // into additive white ghosts (the "black/white stuttering field" bug).
+    const auto mask = (juce::uint32) ((((1u << (8u - step)) - 1u) * 0x01010101u) & 0x00FFFFFFu);
 
     auto* data = pixels.get();
     if (data->pixelStride != 4)
@@ -126,7 +130,10 @@ void GrainCloud::PhosphorField::fade (int shift)
             // Subtract the high bits of each colour byte (1/16 .. 1/64 decay),
             // leaving the alpha byte untouched. Two ops, no division.
             const auto delta = (p >> step) & mask;
-            row[x] = p - delta;
+            row[x] = (p - delta) | 0xFF000000u;   // keep the field opaque
+
+            if ((row[x] >> 24) != 0xFFu)
+                alphaBroken = true;
         }
     }
 }
@@ -160,6 +167,13 @@ void GrainCloud::PhosphorField::splat (float cx, float cy, float radius,
     const auto cg = (float) colour.getGreen() * energy;
     const auto cb = (float) colour.getBlue() * energy;
 
+    // Per-splat colour ceiling. Without it, pixels hit repeatedly by the same
+    // grain in consecutive frames keep adding until all channels clip to white;
+    // the field then flickers as white ghosts rather than glowing embers.
+    const auto capR = juce::jmin (255, juce::roundToInt ((float) colour.getRed() * 2.1f + 24.0f));
+    const auto capG = juce::jmin (255, juce::roundToInt ((float) colour.getGreen() * 2.1f + 24.0f));
+    const auto capB = juce::jmin (255, juce::roundToInt ((float) colour.getBlue() * 2.1f + 24.0f));
+
     for (int y = y0; y <= y1; ++y)
     {
         const auto dy = (float) y - py;
@@ -179,9 +193,9 @@ void GrainCloud::PhosphorField::splat (float cx, float cy, float radius,
 
             // JUCE ARGB stores pixels as blue, green, red, alpha; keep the
             // screen fully opaque so the ember colour is what glows.
-            row[0] = (juce::uint8) juce::jmin (255, (int) row[0] + (int) (cb * f));
-            row[1] = (juce::uint8) juce::jmin (255, (int) row[1] + (int) (cg * f));
-            row[2] = (juce::uint8) juce::jmin (255, (int) row[2] + (int) (cr * f));
+            row[0] = (juce::uint8) juce::jmin (capB, (int) row[0] + (int) (cb * f));
+            row[1] = (juce::uint8) juce::jmin (capG, (int) row[1] + (int) (cg * f));
+            row[2] = (juce::uint8) juce::jmin (capR, (int) row[2] + (int) (cr * f));
             row[3] = 255;
         }
     }
@@ -587,18 +601,18 @@ void GrainCloud::drawDust (float timeScale, float energyScale)
         const auto e = m.energy * flicker * energy;
         const auto colour = emberRamp (0.22f + 0.60f * m.warmth);
 
-        phosphor.splat (px, py, m.size * 2.8f, colour, e * 0.38f);
-        phosphor.splat (px, py, m.size, colour, e);
+        phosphor.splat (px, py, m.size * 2.8f, colour, e * 0.30f);
+        phosphor.splat (px, py, m.size, colour, e * 0.72f);
 
         if (m.size > 1.0f)
         {
             phosphor.splat (px - m.vx * fw * 2.5f,
                             py - m.vy * fh * 2.5f,
-                            m.size * 0.95f, colour, e * 0.50f);
+                            m.size * 0.95f, colour, e * 0.34f);
         }
 
         if (e > 0.09f)
-            phosphor.splat (px, py, m.size * 0.45f, paleEmber, e * 0.45f);
+            phosphor.splat (px, py, m.size * 0.45f, gold, e * 0.30f);
     }
 
 }
@@ -626,12 +640,13 @@ void GrainCloud::drawGrains()
         const auto colour = pitchColour (pitch);
         const auto energy = 0.15f + 0.55f * env;
 
-        phosphor.splat (x, y, radius * 2.3f, colour, energy * 0.24f);
-        phosphor.splat (x, y, radius, colour, energy * 0.70f);
+        phosphor.splat (x, y, radius * 2.3f, colour, energy * 0.20f);
+        phosphor.splat (x, y, radius, colour, energy * 0.55f);
+        phosphor.splat (x, y, radius * 0.55f, gold, energy * 0.28f);
 
         if (brightness > 0.35f)
-            phosphor.splat (x, y, radius * 0.45f, paleEmber,
-                            energy * 0.30f * (brightness - 0.35f) / 0.65f);
+            phosphor.splat (x, y, radius * 0.40f, gold,
+                            energy * 0.18f * (brightness - 0.35f) / 0.65f);
     }
 }
 
@@ -661,7 +676,7 @@ void GrainCloud::drawGhostGrains()
 
             phosphor.splat (pos * fw + pan * 6.0f * uiScale + offsetX,
                             (1.0f - pitchToNorm (pitch)) * fh + offsetY,
-                            (1.4f + 2.2f * env) * uiScale, colour, e * 0.35f);
+                            (1.4f + 2.2f * env) * uiScale, colour, e * 0.26f);
         }
     }
 }
