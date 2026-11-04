@@ -355,7 +355,7 @@ and all parameter values are saved with the session and restored on reload.
 - Parameter IDs are permanent. Automation, presets and saved sessions address
   parameters by ID, so IDs are never renamed in a release.
 - Version: 1.0.3 · Manufacturer: Master Lonn & Little Wan · Bundle:
-  `com.unlikenoise.nagloed`.
+  `com.masterlonn.littlewan.nagloed`.
 - Design notes and palette: [BRAND.md](BRAND.md).
 - Architecture and build internals: [ARCHITECTURE.md](ARCHITECTURE.md).
 - Release history: [RELEASE_NOTES.md](RELEASE_NOTES.md).

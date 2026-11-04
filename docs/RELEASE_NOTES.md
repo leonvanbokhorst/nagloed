@@ -13,9 +13,10 @@ Released 4 November 2026 · Master Lonn & Little Wan · macOS 12+ · AU / VST3 /
   hosts, `Info.plist`, docs and the top bar ("MASTER LONN & LITTLE WAN ·
   EINDHOVEN NL").
 - **AU/VST3 identity changed**: manufacturer code `MLLW` (was `UnlN`), subtype
-  `Nagl`, bundle id `com.masterlonn.littlewan.nagloed`. Because the AU manufacturer
-  code changed, **sessions saved with 1.0.0–1.0.2 may need NAGLOED to be
-  re-instantiated once**; plug-in state and presets are unchanged.
+  `Nagl`, bundle id `com.masterlonn.littlewan.nagloed`. The VST3 class UID derives
+  from the same code, so **old instances will not resolve**: sessions saved with
+  1.0.0–1.0.2 need NAGLOED to be re-instantiated once. Presets and the state format
+  are unchanged.
 - **UnlikeNoise is retired.** It was Leon's solo alias for years; NAGLOED belongs
   to the Master Lonn & Little Wan practice. The alias appears only as history.
 - **EAR**: the analogue stage keeps its name (the ear that listens). It is **not**

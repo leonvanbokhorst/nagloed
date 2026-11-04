@@ -215,8 +215,9 @@ Don't:
 The 1.0 editor resolved a few open questions; these are deliberate and final for
 this release:
 
-- **Tagline** — "THE SOUND AFTER THE SOUND" in the top bar, with the location
-  line "GRANULAR AFTERGLOW INSTRUMENT · UNLIKENOISE · EINDHOVEN NL".
+- **Tagline** — "THE SOUND AFTER THE SOUND" in the top bar, with the credit line
+  "MASTER LONN & LITTLE WAN · EINDHOVEN NL" and "MASTER LONN & LITTLE WAN" in the
+  footer (the retired UnlikeNoise credit line is superseded as of 1.0.3).
 - **Idle ember field** — a deterministic, pre-warmed dust field is allowed before
   audio arrives (see the don't list); it is not decorative animation.
 - **Wordmark** — pale ember with one subtle ember gradient; no outline, emboss or
