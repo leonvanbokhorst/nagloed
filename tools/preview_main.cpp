@@ -1,7 +1,16 @@
-// Renders the real editor offscreen to a PNG so the UI can be reviewed without
-// opening a DAW. Used for docs/ui-preview.png and for design iteration.
-#include <juce_gui_basics/juce_gui_basics.h>
+// Renders the real editor offscreen for documentation, and mounts it the way a
+// host does to regression-test that the visualisers keep repainting.
+//
+//   nagl-preview                 -> docs/ui-preview.png (1180x680 at 2x)
+//   nagl-preview 2400 1500       -> custom size
+//   nagl-preview --embedded      -> host-style mount test; prints EMBEDDED PASS/FAIL
+//
+// --embedded is what would have caught the 1.0.0 frozen-visualiser bug: it puts
+// the editor inside a peer-owning parent component (like a DAW does), changes
+// cutoff and LFO shape, and fails unless the EAR curve, LFO scope and grain field
+// all repaint.
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_events/juce_events.h>
 #include <cmath>
 #include <cstdio>
@@ -11,42 +20,74 @@
 #include "plugin/Presets.h"
 #include "ui/EditorFactory.h"
 
-int main (int argc, char** argv)
+namespace
 {
-    const juce::ScopedJuceInitialiser_GUI juceInit;
+void writePng (const juce::File& out, const juce::Image& image)
+{
+    out.getParentDirectory().createDirectory();
+    out.deleteFile();   // JUCE's POSIX FileOutputStream appends
 
-    const double sampleRate = 48000.0;
-    const int blockSize = 512;
+    juce::PNGImageFormat png;
+    std::unique_ptr<juce::FileOutputStream> stream (out.createOutputStream());
+    if (stream == nullptr || ! png.writeImageToStream (image, *stream))
+        std::fprintf (stderr, "failed to write %s\n", out.getFullPathName().toRawUTF8());
+}
 
-    nagloed::NagloedProcessor processor;
-    processor.setPlayConfigDetails (2, 2, sampleRate, blockSize);
-    processor.prepareToPlay (sampleRate, blockSize);
+bool hasArg (int argc, char** argv, const char* flag)
+{
+    for (int i = 1; i < argc; ++i)
+        if (juce::String (argv[i]) == flag)
+            return true;
+    return false;
+}
 
-    // The documentation image should show the instrument playing, not an idle
-    // instance: load a spacious factory pad and feed it a warm chord so the
-    // capture buffer fills and the grain field comes alive.
-    const int presetIndex = 7;   // 07 - Wolkenkaart
-    processor.loadPreset (presetIndex);
+juce::Component* findByTitle (juce::Component& root, const juce::String& title)
+{
+    if (root.getTitle() == title)
+        return &root;
 
-    // Ordinary parameter moves, so the knobs in the picture show exactly what
-    // the engine is doing: a dense, wide, glowing cloud rather than the sparse
-    // default. Nothing here is faked after rendering.
-    auto setParam = [&processor] (const char* id, float value)
-    {
-        if (auto* p = processor.getAPVTS().getParameter (id))
-            p->setValueNotifyingHost (p->convertTo0to1 (value));
-    };
-    setParam (nagloed::pid::density,    150.0f);
-    setParam (nagloed::pid::size,       140.0f);
-    setParam (nagloed::pid::spray,      0.55f);
-    setParam (nagloed::pid::spaceMix,   0.72f);
-    setParam (nagloed::pid::macroGrain, 0.85f);
-    setParam (nagloed::pid::macroGlow,  0.80f);
+    for (auto* child : root.getChildren())
+        if (child != nullptr)
+            if (auto* found = findByTitle (*child, title))
+                return found;
+
+    return nullptr;
+}
+
+juce::Image snapshot (juce::Component& c)
+{
+    return c.createComponentSnapshot (c.getLocalBounds(), true, 1.0f);
+}
+
+bool imagesDiffer (const juce::Image& a, const juce::Image& b)
+{
+    if (a.getWidth() != b.getWidth() || a.getHeight() != b.getHeight())
+        return true;
+
+    for (int y = 0; y < a.getHeight(); ++y)
+        for (int x = 0; x < a.getWidth(); ++x)
+            if (a.getPixelAt (x, y).getARGB() != b.getPixelAt (x, y).getARGB())
+                return true;
+
+    return false;
+}
+
+void setParam (nagloed::NagloedProcessor& processor, const char* id, float value)
+{
+    if (auto* p = processor.getAPVTS().getParameter (id))
+        p->setValueNotifyingHost (p->convertTo0to1 (value));
+}
+
+// Plays a warm chord through the processor so the capture buffer fills and the
+// grain field has something to show.
+void feedChord (nagloed::NagloedProcessor& processor, double sampleRate, int blockSize,
+                double seconds)
+{
+    static const float chordHz[] = { 110.0f, 130.81f, 164.81f, 220.0f, 261.63f };
 
     juce::AudioBuffer<float> buffer (2, blockSize);
     juce::MidiBuffer midi;
-    const float chordHz[] = { 110.0f, 130.81f, 164.81f, 220.0f, 261.63f };
-    const int totalSamples = (int) (3.2 * sampleRate);
+    const int totalSamples = (int) (seconds * sampleRate);
 
     for (int start = 0; start < totalSamples; start += blockSize)
     {
@@ -76,6 +117,95 @@ int main (int argc, char** argv)
 
         processor.processBlock (buffer, midi);
     }
+}
+
+int runEmbeddedTest (nagloed::NagloedProcessor& processor,
+                     std::unique_ptr<juce::AudioProcessorEditor>& editor,
+                     int width, int height)
+{
+    // Mimic a host: the editor is a CHILD of a component that owns the peer, not
+    // a peer of its own. isShowing() becomes true through the parent.
+    juce::Component holder;
+    holder.setSize (width, height);
+    holder.addToDesktop (0);
+    holder.setTopLeftPosition (80, 80);
+    holder.setVisible (true);
+    holder.addAndMakeVisible (*editor);
+    editor->setBounds (0, 0, width, height);
+    editor->setVisible (true);
+
+    juce::MessageManager::getInstance()->runDispatchLoopUntil (500);
+
+    std::printf ("embedded: visible=%d showing=%d peer=%d\n",
+                 (int) editor->isVisible(), (int) editor->isShowing(),
+                 editor->getPeer() != nullptr);
+
+    auto* cloud = findByTitle (*editor, "Grain cloud");
+    auto* curve = findByTitle (*editor, "EAR low-pass response");
+    auto* lfo   = findByTitle (*editor, "LFO shape");
+
+    bool ok = curve != nullptr && lfo != nullptr;
+
+    if (cloud != nullptr)
+    {
+        const auto cloudBefore = snapshot (*cloud);
+        juce::MessageManager::getInstance()->runDispatchLoopUntil (350);
+        const bool animates = imagesDiffer (cloudBefore, snapshot (*cloud));
+        std::printf ("embedded: cloudAnimates=%d\n", (int) animates);
+        ok = ok && animates;
+    }
+
+    if (curve != nullptr && lfo != nullptr)
+    {
+        const auto curveBefore = snapshot (*curve);
+        const auto lfoBefore   = snapshot (*lfo);
+
+        setParam (processor, nagloed::pid::cutoff, 185.786f);
+        setParam (processor, nagloed::pid::lfoShape, 3.0f);   // Saw Down
+        juce::MessageManager::getInstance()->runDispatchLoopUntil (700);
+
+        const bool curveChanged = imagesDiffer (curveBefore, snapshot (*curve));
+        const bool lfoChanged   = imagesDiffer (lfoBefore, snapshot (*lfo));
+        std::printf ("embedded: curveChanged=%d lfoChanged=%d\n",
+                     (int) curveChanged, (int) lfoChanged);
+        ok = ok && curveChanged && lfoChanged;
+    }
+
+    holder.removeChildComponent (editor.get());
+    std::printf ("%s\n", ok ? "EMBEDDED PASS" : "EMBEDDED FAIL");
+    return ok ? 0 : 1;
+}
+} // namespace
+
+int main (int argc, char** argv)
+{
+    const juce::ScopedJuceInitialiser_GUI juceInit;
+
+    const double sampleRate = 48000.0;
+    const int blockSize = 512;
+
+    const bool embedded = hasArg (argc, argv, "--embedded");
+    const int width  = (argc > 1 && ! juce::String (argv[1]).startsWith ("--"))
+                           ? juce::String (argv[1]).getIntValue() : 1180;
+    const int height = (argc > 2 && ! juce::String (argv[2]).startsWith ("--"))
+                           ? juce::String (argv[2]).getIntValue() : 680;
+
+    nagloed::NagloedProcessor processor;
+    processor.setPlayConfigDetails (2, 2, sampleRate, blockSize);
+    processor.prepareToPlay (sampleRate, blockSize);
+
+    if (! embedded)
+    {
+        // Documentation image: the instrument playing, not an idle instance.
+        processor.loadPreset (7);   // 07 - Wolkenkaart
+        setParam (processor, nagloed::pid::density,    150.0f);
+        setParam (processor, nagloed::pid::size,       140.0f);
+        setParam (processor, nagloed::pid::spray,       0.55f);
+        setParam (processor, nagloed::pid::spaceMix,    0.72f);
+        setParam (processor, nagloed::pid::macroGrain,  0.85f);
+        setParam (processor, nagloed::pid::macroGlow,   0.80f);
+        feedChord (processor, sampleRate, blockSize, 3.2);
+    }
 
     auto editor = std::unique_ptr<juce::AudioProcessorEditor> (processor.createEditor());
     if (editor == nullptr)
@@ -84,9 +214,11 @@ int main (int argc, char** argv)
         return 1;
     }
 
-    const int width  = (argc > 1) ? juce::String (argv[1]).getIntValue() : 1180;
-    const int height = (argc > 2) ? juce::String (argv[2]).getIntValue() : 680;
     editor->setSize (width, height);
+
+    if (embedded)
+        return runEmbeddedTest (processor, editor, width, height);
+
     editor->setVisible (true);
 
     // Let the editor's timers ingest the engine's visual state and repaint
@@ -96,19 +228,7 @@ int main (int argc, char** argv)
     const auto image = editor->createComponentSnapshot (editor->getLocalBounds(), true, 2.0f);
     const auto out = juce::File::getCurrentWorkingDirectory().getChildFile ("docs")
                          .getChildFile ("ui-preview.png");
-    out.getParentDirectory().createDirectory();
-
-    // JUCE's POSIX FileOutputStream appends. If an older PNG is left in place,
-    // decoders read the stale image in front of the new bytes.
-    out.deleteFile();
-
-    juce::PNGImageFormat png;
-    std::unique_ptr<juce::FileOutputStream> stream (out.createOutputStream());
-    if (stream == nullptr || ! png.writeImageToStream (image, *stream))
-    {
-        std::fprintf (stderr, "failed to write %s\n", out.getFullPathName().toRawUTF8());
-        return 1;
-    }
+    writePng (out, image);
 
     std::printf ("wrote %s (%d x %d, preset %d \"%s\")\n",
                  out.getFullPathName().toRawUTF8(), image.getWidth(), image.getHeight(),

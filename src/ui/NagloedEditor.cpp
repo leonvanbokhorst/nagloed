@@ -92,6 +92,7 @@ NagloedEditor::NagloedEditor (juce::AudioProcessor& audioProcessor,
                               const VisualSource& visualSource,
                               PresetAccess& presetAccess)
     : juce::AudioProcessorEditor (&audioProcessor),
+      apvts (state),
       visual (visualSource),
       presets (presetAccess),
       lookAndFeel(),
@@ -120,6 +121,12 @@ NagloedEditor::NagloedEditor (juce::AudioProcessor& audioProcessor,
     resizeGrip = std::make_unique<CornerResizeGrip> (*this);
     addAndMakeVisible (*resizeGrip);
 
+    // Every parameter change (mouse or host automation) schedules a visual
+    // refresh; the timer is the steady animation clock on top of that.
+    for (auto* parameter : audioProcessor.getParameters())
+        if (auto* withId = dynamic_cast<juce::AudioProcessorParameterWithID*> (parameter))
+            apvts.addParameterListener (withId->paramID, this);
+
     refreshOnce();
     verifyParameterCoverage();
     lastTickMs = juce::Time::getMillisecondCounterHiRes();
@@ -129,6 +136,12 @@ NagloedEditor::NagloedEditor (juce::AudioProcessor& audioProcessor,
 NagloedEditor::~NagloedEditor()
 {
     stopTimer();
+    cancelPendingUpdate();
+
+    for (auto* parameter : getAudioProcessor()->getParameters())
+        if (auto* withId = dynamic_cast<juce::AudioProcessorParameterWithID*> (parameter))
+            apvts.removeParameterListener (withId->paramID, this);
+
     setLookAndFeel (nullptr);
 }
 
@@ -210,16 +223,32 @@ void NagloedEditor::refreshOnce()
 
 void NagloedEditor::visibilityChanged()
 {
-    // Don't keep animating (or reading snapshots) while the window is hidden.
-    if (isShowing())
-    {
-        if (! isTimerRunning())
-            startTimerHz (60);
-    }
-    else
-    {
-        stopTimer();
-    }
+    // Hosts mount the editor as a child of their own view and can report
+    // isShowing() false transiently while reparenting. Stopping the timer here
+    // loses the animation clock for the rest of the session (the 1.0.0 frozen
+    // visualiser bug). The timer stays alive; timerCallback() is a cheap no-op
+    // while the editor is not visible.
+    if (isVisible() && ! isTimerRunning())
+        startTimerHz (60);
+}
+
+void NagloedEditor::parentHierarchyChanged()
+{
+    // Defensive restart for hosts that reparent the editor view after showing
+    // it: the timer must survive any mount order.
+    if (isVisible() && ! isTimerRunning())
+        startTimerHz (60);
+}
+
+void NagloedEditor::parameterChanged (const juce::String&, float)
+{
+    // Called on the audio thread for automation, hence the async hop.
+    triggerAsyncUpdate();
+}
+
+void NagloedEditor::handleAsyncUpdate()
+{
+    refreshOnce();
 }
 
 void NagloedEditor::timerCallback()
@@ -228,7 +257,7 @@ void NagloedEditor::timerCallback()
     auto dt = (now - lastTickMs) / 1000.0;
     lastTickMs = now;
 
-    if (! isShowing())
+    if (! isVisible())
         return;   // hidden editor: no snapshot reads, no repaints
 
     dt = juce::jlimit (0.001, 0.1, dt);

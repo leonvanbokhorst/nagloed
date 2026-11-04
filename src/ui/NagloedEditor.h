@@ -30,7 +30,9 @@ namespace nagloed::ui
 // other visualisers are refreshed at 30 Hz.
 // -----------------------------------------------------------------------------
 class NagloedEditor final : public juce::AudioProcessorEditor,
-                            private juce::Timer
+                            private juce::Timer,
+                            private juce::AudioProcessorValueTreeState::Listener,
+                            private juce::AsyncUpdater
 {
 public:
     NagloedEditor (juce::AudioProcessor& audioProcessor,
@@ -41,6 +43,7 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    void parentHierarchyChanged() override;
     void visibilityChanged() override;
 
 private:
@@ -55,12 +58,18 @@ private:
     };
 
     void timerCallback() override;
+
+    // APVTS listener: any parameter change (mouse or host automation) schedules
+    // one async visual refresh, so the curve/scope/meters never wait for a tick.
+    void parameterChanged (const juce::String&, float) override;
+    void handleAsyncUpdate() override;
     void layoutAtScale();
     void applyScale (float newScale);
     void refreshOnce();
     void verifyParameterCoverage();
     void renderPage (juce::Graphics&, juce::Rectangle<float>);
 
+    juce::AudioProcessorValueTreeState& apvts;
     const VisualSource& visual;
     PresetAccess& presets;
 
