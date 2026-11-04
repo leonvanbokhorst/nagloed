@@ -41,6 +41,10 @@ echo "== editor refresh in a host-style (embedded) mount =="
 ./build/nagl_preview_artefacts/Release/nagl_preview --embedded
 
 echo
+echo "== editor refresh (headless host-mount lifecycle, CI-safe) =="
+./build/nagl_preview_artefacts/Release/nagl_preview --headless-host
+
+echo
 echo "== grain-field phosphor soak (8 s) =="
 ./build/nagl_preview_artefacts/Release/nagl_preview --soak
 
@@ -62,11 +66,11 @@ PLUGINVAL="$ROOT/.deps/pluginval/pluginval.app/Contents/MacOS/pluginval"
 if [[ "$QUICK" == 0 && -x "$PLUGINVAL" ]]; then
     echo
     echo "== pluginval strictness 10: VST3 =="
-    "$PLUGINVAL" --strictness-level 10 \
+    "$PLUGINVAL" --strictness-level 10 --random-seed 0x3eafa08 \
         --validate "$ROOT/build/NAGLOED_artefacts/Release/VST3/NAGLOED.vst3" | tail -5
     echo
     echo "== pluginval strictness 10: AU =="
-    "$PLUGINVAL" --strictness-level 10 \
+    "$PLUGINVAL" --strictness-level 10 --random-seed 0x3eafa08 \
         --validate "$AU_SRC" | tail -5
 else
     echo

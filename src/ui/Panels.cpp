@@ -578,6 +578,12 @@ void BottomPanel::collectParameterIds (juce::StringArray& ids) const
     controls.collectParameterIds (ids);
 }
 
+void BottomPanel::setPhasesForPreview (float spacePhase, float lfoPhase)
+{
+    spaceVisual.setPhaseForPreview (spacePhase);
+    lfoVisual.setPhaseForPreview (lfoPhase);
+}
+
 void BottomPanel::tick (const VisualState& snapshot, double elapsedSeconds)
 {
     meterIn.tick (snapshot, elapsedSeconds);
