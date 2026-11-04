@@ -36,12 +36,6 @@ pluginval strictness 10 SUCCESS on VST3 and AU, demo unchanged
 
 ## 1.0.1 — 4 November 2026
 
-Released 4 November 2026 · UnlikeNoise Labs · macOS 12+ · AU / VST3 / Standalone
-
-> *nagloed* (Dutch, n.) — the light that stays in the room after the source is gone.
-
-## 1.0.1 — 4 November 2026
-
 **Fix: visualisers could freeze in hosts.**
 
 In 1.0.0, mounting the editor in Ableton Live or REAPER could leave the 60 Hz
@@ -131,7 +125,8 @@ No MIDI or MPE input is accepted in this release.
   release).
 - Offline render through the real processor: PASS — `nagl_render` produces
   `Demo/Nagloed-Demo.wav`.
-- GitHub Actions CI (macOS): green on the release branch (run `41698856335`).
+- GitHub Actions CI (macOS): builds the AU/VST3/Standalone bundles, runs the
+  suite and validates the AU on every `v*` tag (and on demand).
 
 Rebuild and re-validate locally with `./scripts/validate.sh`.
 
