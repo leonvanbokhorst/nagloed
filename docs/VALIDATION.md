@@ -154,8 +154,10 @@ One command reproduces everything above, provided pluginval is present in
 ```
 
 GitHub Actions CI (`.github/workflows/ci.yml`) builds the AU/VST3/Standalone
-targets, runs the suite and validates the AU; run `41804122764` on the release
-branch is green.
+targets, runs the suite and validates the AU; it runs on every `v*` tag (and on
+demand). The `v1.0.1` tag run and the `fix/phosphor-render` dispatch run were both
+green; a tag run is not cited by number here because it changes with every
+release.
 
 ## Manual checks
 
