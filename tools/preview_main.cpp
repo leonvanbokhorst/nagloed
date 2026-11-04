@@ -1,14 +1,20 @@
 // Renders the real editor offscreen for documentation, and mounts it the way a
 // host does to regression-test that the visualisers keep repainting.
 //
-//   nagl-preview                 -> docs/ui-preview.png (1180x680 at 2x)
+//   nagl-preview                 -> docs/ui-preview.png (1180x680 at 2x,
+//                                   deterministic for a given build/platform)
 //   nagl-preview 2400 1500       -> custom size
-//   nagl-preview --embedded      -> host-style mount test; prints EMBEDDED PASS/FAIL
+//   nagl-preview --embedded      -> windowed host-style mount test (local; needs a
+//                                   desktop window server); prints EMBEDDED PASS/FAIL
+//   nagl-preview --headless-host -> CI-safe version of --embedded: performs the DAW
+//                                   hide/show lifecycle without a peer, asserts the
+//                                   animation timer survived and steps fixed visual
+//                                   frames; prints HEADLESS-HOST PASS/FAIL
+//   nagl-preview --soak          -> 8 s phosphor regression, frame-stepped with audio
+//                                   flowing; prints SOAK PASS/FAIL
 //
-// --embedded is what would have caught the 1.0.0 frozen-visualiser bug: it puts
-// the editor inside a peer-owning parent component (like a DAW does), changes
-// cutoff and LFO shape, and fails unless the EAR curve, LFO scope and grain field
-// all repaint.
+// --embedded/--headless-host catch the 1.0.0 frozen-visualiser bug; --soak catches
+// the 1.0.2 alpha-decay/white-disc bug.
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_events/juce_events.h>
@@ -296,10 +302,13 @@ int main (int argc, char** argv)
         // Deterministic long run with audio flowing: alpha decay bugs, additive
         // saturation and flicker only show up after many frames. Stepping frames
         // explicitly keeps this independent of runner timer delivery.
-        for (int i = 0; i < 480; ++i)
+        // Coarse audio chunks (0.1 s per six frames) keep grain overlap/density
+        // at the live-soak level; feeding 0.02 s per single frame reduced overlap
+        // so much that the clipped-ember regression stopped reproducing.
+        for (int i = 0; i < 80; ++i)
         {
-            feedChord (processor, sampleRate, blockSize, 0.02);
-            nagloedEditor->stepVisualsForPreview (1);
+            feedChord (processor, sampleRate, blockSize, 0.1);
+            nagloedEditor->stepVisualsForPreview (6);
         }
 
         auto* cloud = findByTitle (*editor, "Grain cloud");

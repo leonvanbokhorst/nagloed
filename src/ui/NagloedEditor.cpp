@@ -295,7 +295,8 @@ void NagloedEditor::timerCallback()
     lastTickMs = now;
 
     if (! isVisible())
-        return;   // hidden editor: no snapshot reads, no repaints
+        return;   // editor hidden by its own flag: no snapshot reads, no repaints
+                  // (a host hiding the parent still ticks; the callback is cheap)
 
     dt = juce::jlimit (0.001, 0.1, dt);
 
