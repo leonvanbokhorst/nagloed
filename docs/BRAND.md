@@ -1,6 +1,6 @@
 # NAGLOED — brand and design language
 
-Version 1.0.0 · UnlikeNoise Labs
+Version 1.0.2 · UnlikeNoise Labs
 
 ## The sentence
 
@@ -300,5 +300,5 @@ Brand research, all verified November 2026:
 - [Frozen Prisonaire — MPDS Audio Archive](https://www.mpdsaudioarchive.org/en/suoni/08b-frozen-prisonaire-unlikenoise-reimagined-compositions-leon-van-bokhorst/)
 
 NAGLOED is designed by Leon van Bokhorst / UnlikeNoise Labs. Product name,
-engines and palette are NAGLOED 1.0.0 brand assets; the software itself is
+engines and palette are NAGLOED 1.0.2 brand assets; the software itself is
 GPL-3.0-or-later. See [the manual](MANUAL.md) for how the instrument works.

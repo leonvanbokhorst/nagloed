@@ -44,6 +44,9 @@ public:
     /** Current visual frame. Called from the editor's 60 Hz timer. */
     void tick (const VisualState& snapshot, double elapsedSeconds);
 
+    /** QA hook: false means the phosphor buffer lost its opacity invariant. */
+    bool alphaInvariantHeld() const noexcept { return ! phosphor.hasBrokenAlpha(); }
+
     void collectParameterIds (juce::StringArray& ids) const;
 
     void paint (juce::Graphics&) override;
@@ -76,6 +79,7 @@ private:
 
         const juce::Image& getImage() const noexcept { return buffer; }
         float getScale() const noexcept { return pixelScale; }
+        bool hasBrokenAlpha() const noexcept { return alphaBroken; }
 
     private:
         juce::Image buffer;
@@ -83,6 +87,7 @@ private:
         int logicalW = 0, logicalH = 0;
         int minX = 0, minY = 0, maxX = 0, maxY = 0;   // active pixel bounds
         bool active = false;
+        bool alphaBroken = false;   // QA invariant: the field must stay opaque
         float pixelScale = 1.0f;
     };
 

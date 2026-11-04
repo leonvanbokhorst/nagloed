@@ -41,6 +41,10 @@ echo "== editor refresh in a host-style (embedded) mount =="
 ./build/nagl_preview_artefacts/Release/nagl_preview --embedded
 
 echo
+echo "== grain-field phosphor soak (8 s) =="
+./build/nagl_preview_artefacts/Release/nagl_preview --soak
+
+echo
 echo "== Apple AU validation =="
 AU_SRC="$ROOT/build/NAGLOED_artefacts/Release/AU/NAGLOED.component"
 AU_DEST="$HOME/Library/Audio/Plug-Ins/Components/NAGLOED.component"
