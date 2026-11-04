@@ -1,8 +1,37 @@
-# NAGLOED 1.0.2 — release notes
+# NAGLOED 1.0.3 — release notes
 
-Released 4 November 2026 · UnlikeNoise Labs · macOS 12+ · AU / VST3 / Standalone
+Released 4 November 2026 · Master Lonn & Little Wan · macOS 12+ · AU / VST3 / Standalone
 
 > *nagloed* (Dutch, n.) — the light that stays in the room after the source is gone.
+
+## 1.0.3 — 4 November 2026
+
+**Identity: NAGLOED is now a Master Lonn & Little Wan release.**
+
+- **Vendor** changed from "UnlikeNoise Labs" to **Master Lonn & Little Wan**
+  (Leon van Bokhorst / Master Lonn with Little Wan / Little Padawan). It shows in
+  hosts, `Info.plist`, docs and the top bar ("MASTER LONN & LITTLE WAN ·
+  EINDHOVEN NL").
+- **AU/VST3 identity changed**: manufacturer code `MLLW` (was `UnlN`), subtype
+  `Nagl`, bundle id `com.masterlonn.littlewan.nagloed`. The VST3 class UID derives
+  from the same code, so **old instances will not resolve**: sessions saved with
+  1.0.0–1.0.2 need NAGLOED to be re-instantiated once. Presets and the state format
+  are unchanged.
+- **UnlikeNoise is retired.** It was Leon's solo alias for years; NAGLOED belongs
+  to the Master Lonn & Little Wan practice. The alias appears only as history.
+- **EAR**: the analogue stage keeps its name (the ear that listens). It is **not**
+  affiliated with, endorsed by, or connected to Jurgen Winkel's EAR label. Brand
+  book and manual now state this explicitly.
+- **Modulab Eindhoven**: Leon was part of its early team but has not been involved
+  for over eight years. It is described as scene and friendship, not a current
+  affiliation — same for the rest of the Eindhoven/Helmond underground.
+- Releases 1.0.0–1.0.2 shipped under the old vendor name and manufacturer code and
+  are kept here as the historical record.
+
+Everything from 1.0.2 (grain-field rendering, LFO dot, host-mount and phosphor
+regression harnesses) is included. Verified: 167 checks / 0 failures,
+`EMBEDDED PASS`, `SOAK PASS`, `auval -v aufx Nagl MLLW` PASS, pluginval strictness
+10 SUCCESS on VST3 and AU, demo unchanged (sha256 `de987eed…`).
 
 ## 1.0.2 — 4 November 2026
 
@@ -107,7 +136,7 @@ it, and play what remains.
 
 | Format | Artefact | Notes |
 |---|---|---|
-| AU | `NAGLOED.component` | Type `aufx`, subtype `Nagl`, manufacturer `UnlN`. Validated with `auval`. |
+| AU | `NAGLOED.component` | Type `aufx`, subtype `Nagl`, manufacturer `MLLW`. Validated with `auval`. |
 | VST3 | `NAGLOED.vst3` | Category Fx. |
 | Standalone | `NAGLOED.app` | Live processor for an audio input; configure the device in the app's audio settings. |
 
@@ -118,7 +147,7 @@ No MIDI or MPE input is accepted in this release.
 ## Validation
 
 - Unit and smoke tests: PASS.
-- Apple AU validation: PASS — `auval -v aufx Nagl UnlN`.
+- Apple AU validation: PASS — `auval -v aufx Nagl MLLW`.
 - pluginval strictness 10: PASS on both VST3 and AU, including state
   save/restore (verified across several random seeds; a state-recall bug that
   only appeared under specific seeds was found by this test and fixed before
@@ -187,9 +216,10 @@ Intent, not a delivery promise:
 
 ## Credits
 
-Designed and directed by Leon van Bokhorst / UnlikeNoise, Helmond, NL. Made by
-UnlikeNoise Labs with JUCE 9. Scene credits: Modulab Eindhoven, SONICrider and the
-EAR label. NAGLOED 1.0 was developed in a small, human-directed, AI-assisted
+Designed and directed by Master Lonn (Leon van Bokhorst) with Little Wan, Helmond/
+Eindhoven, NL. Made by Master Lonn & Little Wan with JUCE 9. UnlikeNoise is a
+retired solo alias. Scene gratitude: Modulab Eindhoven, SONICrider, and Jurgen
+Winkel's EAR label — inspiration and friendship, no affiliation. NAGLOED 1.0 was developed in a small, human-directed, AI-assisted
 process; see the transparency note in [README.md](../README.md).
 
 ## Documentation

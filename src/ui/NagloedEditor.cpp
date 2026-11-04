@@ -419,7 +419,7 @@ void NagloedEditor::renderPage (juce::Graphics& g, juce::Rectangle<float> bounds
         const auto footer = footerRect.toFloat();
         const auto font = monoFont (7.6f * fs, juce::Font::plain, 0.11f);
 
-        drawMicroText (g, juce::String ("NAGLOED ") + kVersion + utf8 ("  ·  UNLIKENOISE LABS"),
+        drawMicroText (g, juce::String ("NAGLOED ") + kVersion + utf8 ("  ·  MASTER LONN & LITTLE WAN"),
                        footer.withTrimmedRight (footer.getWidth() * 0.66f),
                        font, muted.withAlpha (0.8f));
 

@@ -52,7 +52,7 @@ jobs:
           killall -9 AudioComponentRegistrar || true
           for attempt in 1 2 3; do
             sleep 2
-            auval -v aufx Nagl UnlN && exit 0
+            auval -v aufx Nagl MLLW && exit 0
           done
           exit 1
 

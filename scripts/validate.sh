@@ -54,7 +54,7 @@ cp -R "$AU_SRC" "$AU_DEST"
 killall -9 AudioComponentRegistrar 2>/dev/null || true
 for attempt in 1 2 3; do
     sleep 2
-    if auval -v aufx Nagl UnlN; then break; fi
+    if auval -v aufx Nagl MLLW; then break; fi
     [[ "$attempt" == 3 ]] && exit 1
 done
 
