@@ -44,10 +44,19 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    /** Deterministic preview/test hook: stop the wall-clock timer and advance the
-        visualisers by a fixed number of frames. Used by nagl_preview so the
-        documentation hero is byte-reproducible and by the soak harness. */
+    /** Deterministic preview/test hook: stop the wall-clock timer, reset the
+        animated/random visual state, advance a fixed number of frames and pin the
+        visualiser phases. The editor's timer stays stopped afterwards, so take the
+        snapshot immediately. Used by nagl_preview for the byte-reproducible hero. */
     void advanceForPreview (int frames, double dtSeconds = 1.0 / 60.0);
+
+    /** Deterministic frame advance without stopping the timer or resetting state.
+        Used by the soak harness so it does not depend on runner timer delivery. */
+    void stepVisualsForPreview (int frames, double dtSeconds = 1.0 / 60.0);
+
+    /** QA hook: is the animation clock running? (Regression test for the 1.0.0
+        host-mount bug, where a visibility change stopped it for good.) */
+    bool isAnimationTimerRunningForTest() const noexcept { return isTimerRunning(); }
     void parentHierarchyChanged() override;
     void visibilityChanged() override;
 

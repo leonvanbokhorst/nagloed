@@ -147,7 +147,22 @@ independently, additive splats clipped bright channels to white discs. It prints
 Mounts the editor as a child of a peer component (the way hosts mount plugin
 views), changes cutoff and LFO shape, and fails unless the EAR curve, LFO scope
 and grain field all repaint. This is the regression test for the 1.0.0 frozen
-visualiser bug; a passing run prints `EMBEDDED PASS`.
+visualiser bug; a passing run prints `EMBEDDED PASS`. It needs a desktop window
+server, so it stays a local/manual check.
+
+GitHub's macOS runners have no window server, so CI runs the CI-safe variant:
+
+```
+./build/nagl_preview_artefacts/Release/nagl_preview --headless-host
+```
+
+It performs the lifecycle a DAW performs on the editor (hide/show while
+`isShowing()` stays false because there is no peer), then asserts the animation
+timer is still running and drives a fixed number of visual frames to confirm the
+cloud, curve and scope repaint. Both checks are independent of message-loop timer
+delivery, so they are stable on headless runners. It prints `HEADLESS-HOST PASS`;
+restoring the 1.0.0 timer logic makes it print `HEADLESS-HOST FAIL`
+(`timerRunning=0`).
 
 One command reproduces everything above, provided pluginval is present in
 `.deps/pluginval` (the pluginval stage is optional and skipped otherwise):

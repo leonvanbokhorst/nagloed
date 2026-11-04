@@ -145,10 +145,11 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 | AU validation | `auval -v aufx Nagl MLLW` | PASS |
 | pluginval, strictness 10 (VST3 + AU) | `pluginval --strictness-level 10 --validate …` | PASS |
 | Offline render | `./build/nagl_render_artefacts/Release/nagl_render` | PASS — writes `Demo/Nagloed-Demo.wav` |
-| Offscreen editor snapshot (deterministic) | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — byte-identical `docs/ui-preview.png` |
+| Offscreen editor snapshot (deterministic) | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — byte-identical for a given build/platform |
 | Editor refresh in a host-style mount | `./build/nagl_preview_artefacts/Release/nagl_preview --embedded` | PASS — `EMBEDDED PASS` |
+| Editor refresh, headless (CI) | `./build/nagl_preview_artefacts/Release/nagl_preview --headless-host` | PASS — `HEADLESS-HOST PASS` |
 | Phosphor / grain-field soak (8 s) | `./build/nagl_preview_artefacts/Release/nagl_preview --soak` | PASS — `SOAK PASS` |
-| GitHub Actions CI (macOS) | `.github/workflows/ci.yml` | PASS — build, tests, auval, harnesses, deterministic hero and pluginval on every tag |
+| GitHub Actions CI (macOS) | `.github/workflows/ci.yml` | PASS — build, tests, auval, headless harnesses, deterministic hero and pluginval on every tag |
 
 The full evidence (commands, observed output, CPU/latency figures) is in
 [docs/VALIDATION.md](docs/VALIDATION.md).

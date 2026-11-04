@@ -69,10 +69,15 @@ jobs:
           ./build/nagl_preview_artefacts/Release/nagl_preview
           shasum -a 256 docs/ui-preview.png | awk '{print $1}' > /tmp/hero2.sha
           diff /tmp/hero1.sha /tmp/hero2.sha
+          test "$(wc -c < docs/ui-preview.png)" -gt 100000
           echo "hero deterministic: $(cat /tmp/hero1.sha)"
 
-      - name: Editor refresh in a host-style (embedded) mount
-        run: ./build/nagl_preview_artefacts/Release/nagl_preview --embedded
+      # GitHub's macOS runners have no desktop window server; --headless-host
+      # triggers the same hide/show lifecycle a DAW does (visibilityChanged while
+      # isShowing() stays false) and checks that the timer keeps the visualisers
+      # alive. --embedded remains the local/manual windowed variant.
+      - name: Editor refresh regression (headless host-mount lifecycle)
+        run: ./build/nagl_preview_artefacts/Release/nagl_preview --headless-host
 
       - name: Grain-field phosphor soak (8 s)
         run: ./build/nagl_preview_artefacts/Release/nagl_preview --soak

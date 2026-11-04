@@ -24,6 +24,9 @@
 
 namespace
 {
+constexpr auto nagloedpid_cutoff   = "ear.cutoff";
+constexpr auto nagloedpid_lfoShape = "mod.lfoShape";
+
 void writePng (const juce::File& out, const juce::Image& image)
 {
     out.getParentDirectory().createDirectory();
@@ -223,18 +226,80 @@ int main (int argc, char** argv)
 
     editor->setVisible (true);
 
+    // --headless-host: CI-safe variant of the host-mount regression. It performs
+    // the same lifecycle a DAW does to the editor (hide/show while the component
+    // has no peer, i.e. isShowing() stays false) and then checks that the timer
+    // keeps running and the visualisers repaint. This is what caught the 1.0.0
+    // bug; unlike --embedded it does not need a desktop window, so it works on
+    // headless CI runners.
+    if (hasArg (argc, argv, "--headless-host"))
+    {
+        auto* nagloedEditor = dynamic_cast<nagloed::ui::NagloedEditor*> (editor.get());
+        if (nagloedEditor == nullptr)
+        {
+            std::fprintf (stderr, "headless-host: editor type mismatch\n");
+            return 1;
+        }
+
+        // The lifecycle a DAW performs: hide/show while the component has no peer,
+        // so isShowing() stays false. The 1.0.0 bug stopped the timer here for good.
+        editor->setVisible (false);
+        editor->setVisible (true);
+
+        const bool timerRunning = nagloedEditor->isAnimationTimerRunningForTest();
+
+        auto* cloud = findByTitle (*editor, "Grain cloud");
+        auto* curve = findByTitle (*editor, "EAR low-pass response");
+        auto* lfo   = findByTitle (*editor, "LFO shape");
+
+        if (cloud == nullptr || curve == nullptr || lfo == nullptr)
+        {
+            std::fprintf (stderr, "headless-host: components not found\n");
+            return 1;
+        }
+
+        // Deterministic frame stepping: independent of runner timer delivery.
+        const auto cloudA = snapshot (*cloud);
+        nagloedEditor->stepVisualsForPreview (30);
+        const bool animates = imagesDiffer (cloudA, snapshot (*cloud));
+
+        const auto curveBefore = snapshot (*curve);
+        const auto lfoBefore   = snapshot (*lfo);
+
+        setParam (processor, nagloedpid_cutoff, 185.786f);
+        setParam (processor, nagloedpid_lfoShape, 3.0f);   // Saw Down
+        nagloedEditor->stepVisualsForPreview (12);
+
+        const bool curveChanged = imagesDiffer (curveBefore, snapshot (*curve));
+        const bool lfoChanged   = imagesDiffer (lfoBefore, snapshot (*lfo));
+
+        const bool ok = timerRunning && animates && curveChanged && lfoChanged;
+        std::printf ("headless-host: visible=%d showing=%d timerRunning=%d cloudAnimates=%d curveChanged=%d lfoChanged=%d\n",
+                     (int) editor->isVisible(), (int) editor->isShowing(), (int) timerRunning,
+                     (int) animates, (int) curveChanged, (int) lfoChanged);
+        std::printf ("%s\n", ok ? "HEADLESS-HOST PASS" : "HEADLESS-HOST FAIL");
+        return ok ? 0 : 1;
+    }
+
     // --soak renders after several seconds of live ticking, which exposes
     // phosphor/decay problems that a short snapshot hides.
     const bool soak = hasArg (argc, argv, "--soak");
     if (soak)
     {
-        // Let the visualiser run for several seconds with audio flowing, so the
-        // grains actually move: alpha decay bugs, additive saturation and
-        // flicker only show up after many frames.
-        for (int i = 0; i < 80; ++i)
+        auto* nagloedEditor = dynamic_cast<nagloed::ui::NagloedEditor*> (editor.get());
+        if (nagloedEditor == nullptr)
         {
-            feedChord (processor, sampleRate, blockSize, 0.1);
-            juce::MessageManager::getInstance()->runDispatchLoopUntil (100);
+            std::fprintf (stderr, "soak: editor type mismatch\n");
+            return 1;
+        }
+
+        // Deterministic long run with audio flowing: alpha decay bugs, additive
+        // saturation and flicker only show up after many frames. Stepping frames
+        // explicitly keeps this independent of runner timer delivery.
+        for (int i = 0; i < 480; ++i)
+        {
+            feedChord (processor, sampleRate, blockSize, 0.02);
+            nagloedEditor->stepVisualsForPreview (1);
         }
 
         auto* cloud = findByTitle (*editor, "Grain cloud");
@@ -246,7 +311,7 @@ int main (int argc, char** argv)
         auto& target = *cloud;
 
         const auto a = target.createComponentSnapshot (target.getLocalBounds(), true, 1.0f);
-        juce::MessageManager::getInstance()->runDispatchLoopUntil (400);
+        nagloedEditor->stepVisualsForPreview (20);
         const auto b = target.createComponentSnapshot (target.getLocalBounds(), true, 1.0f);
 
         // Measure inside the phosphor field only: the component also contains

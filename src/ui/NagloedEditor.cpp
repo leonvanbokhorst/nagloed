@@ -208,11 +208,8 @@ void NagloedEditor::verifyParameterCoverage()
 }
 
 // -----------------------------------------------------------------------------
-void NagloedEditor::advanceForPreview (int frames, double dtSeconds)
+void NagloedEditor::stepVisualsForPreview (int frames, double dtSeconds)
 {
-    stopTimer();   // no wall-clock frames mixed into the deterministic run
-
-    grainCloud.resetForDeterministicPreview();
     visual.copyVisual (snapshot);
 
     for (int i = 0; i < frames; ++i)
@@ -233,6 +230,15 @@ void NagloedEditor::advanceForPreview (int frames, double dtSeconds)
         if (i % 4 == 0)
             topBar.tick();
     }
+
+    repaint();
+}
+
+void NagloedEditor::advanceForPreview (int frames, double dtSeconds)
+{
+    stopTimer();   // no wall-clock frames mixed into the deterministic run
+    grainCloud.resetForDeterministicPreview();
+    stepVisualsForPreview (frames, dtSeconds);
 
     // Pin the wall-clock-driven visualiser phases so the frame is reproducible.
     bottomPanel.setPhasesForPreview (0.37f, 0.21f);
