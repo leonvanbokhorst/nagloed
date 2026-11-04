@@ -154,10 +154,13 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 The full evidence (commands, observed output, CPU/latency figures) is in
 [docs/VALIDATION.md](docs/VALIDATION.md).
 
-`./scripts/validate.sh` rebuilds everything, runs the tests and then validates the
-AU component with `auval`. The CI workflow
-(`.github/workflows/ci.yml`) runs the same checks on a macOS runner; it is
-manual/release-only to keep runner minutes predictable.
+`./scripts/validate.sh` rebuilds everything, runs the tests, validates the AU
+component with `auval`, runs the `--embedded` host-mount test and the frame-stepped
+soak, and checks the deterministic hero. The CI workflow
+(`.github/workflows/ci.yml`) runs the build, tests, `auval`, the CI-safe
+`--headless-host` and `--soak` regressions, the deterministic-hero comparison and
+pluginval on a macOS runner (the windowed `--embedded` mount stays local); it runs
+on tags and on demand.
 
 `Demo/Nagloed-Demo.wav` is rendered through the full engine: 84 seconds,
 48 kHz / 24-bit stereo, peaking at −2.1 dBFS. Regenerate it with

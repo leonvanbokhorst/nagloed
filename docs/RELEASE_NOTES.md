@@ -22,8 +22,8 @@ Released 4 November 2026 · Master Lonn & Little Wan · macOS 12+ · AU / VST3 /
   version stamps refreshed.
 
 Verified: 167 checks / 0 failures, `EMBEDDED PASS`, `SOAK PASS`, hero
-byte-identical across runs, `auval -v aufx Nagl MLLW` PASS, pluginval SUCCESS on
-VST3 and AU, demo unchanged (sha256 `de987eed…`).
+byte-identical across runs for a given build/platform, `auval -v aufx Nagl MLLW`
+PASS, pluginval SUCCESS on VST3 and AU, demo unchanged (sha256 `de987eed…`).
 
 ## 1.0.3 — 4 November 2026
 
