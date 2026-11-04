@@ -55,6 +55,9 @@ empty — so do this:
 Presets that use the **Drone** or **Noise** source (`grain.source`) generate
 their own material and sound immediately, whatever the freeze state.
 
+> The analogue stage is called **EAR** (the ear that listens). It is not affiliated
+> with Jurgen Winkel's EAR label — see [BRAND.md](BRAND.md#the-lineage).
+
 ## How to audition
 
 1. **Load the plugin on a stereo track** and put a simple source in front of it:

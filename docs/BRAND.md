@@ -1,6 +1,6 @@
 # NAGLOED — brand and design language
 
-Version 1.0.2 · UnlikeNoise Labs
+Version 1.0.3 · Master Lonn & Little Wan
 
 ## The sentence
 
@@ -52,37 +52,42 @@ sound — a small room with a fire in it, not an infinite cloud generator.
 
 ## The lineage
 
-NAGLOED is built for and with **Leon van Bokhorst**, who records and performs as
-**UnlikeNoise**: sound artist and electronic musician from Helmond, the
-Netherlands, working with modular synths, analog gear, one-take live recordings,
-field recordings and sound art. ([Last.fm biography](https://www.last.fm/music/UnlikeNoise/+wiki))
+NAGLOED is built for and with **Master Lonn** (Leon van Bokhorst) and **Little Wan**
+(Little Padawan): a duo working from Helmond/Eindhoven with modular synths, analog
+gear, one-take live recordings, field recordings and sound art. Leon performed for
+many years as **UnlikeNoise**; that solo alias is retired, and NAGLOED belongs to
+the Master Lonn & Little Wan practice.
 
-He is one of the team behind **Modulab Eindhoven**, which organises electronic
-music events around modular synthesizers and DIY instruments, with Allard
-Krijger and Jurgen Winkel. The Modulab idea is close to the one in this plug-in:
-sound as a set of building blocks, patched by hand. ([Modulab Eindhoven](https://sonicrider.nl/modulab-eindhoven/))
+Leon was part of the early team around **Modulab Eindhoven**, the modular/DIY event
+platform, but has not been involved for over eight years. The friendship, the
+Modulab idea (sound as building blocks, patched by hand) and the wider Eindhoven
+underground remain a deep influence; there is no current affiliation.
 
-Leon and **SONICrider** (Jurgen Winkel) have recorded one-take studio sessions
-together — *Unlike* (2017) and *Connected* (2017) — modular and analog gear
-captured as it happened, no undo. ([SONICrider collaborations: UnlikeNoise](https://sonicrider.nl/category/collaborations/unlikenoise/))
+One-take sessions with **SONICrider** (Jurgen Winkel) shaped the habit: modular and
+analog gear captured as it happened, no undo — *Unlike* (2017) and *Connected*
+(2017), made when Leon still recorded as UnlikeNoise.
+([SONICrider](https://sonicrider.nl/))
 
-The broader sound world includes **EAR**, the label founded in 2020 by SONICrider
-under the phrase *"Emotional Analog Resonance"*: non-commercial electronic music,
-experimental and ambient, built for longer listening. ([EAR](https://sonicrider.nl/ear/))
+The broader sound world includes **EAR**, Jurgen Winkel's label for non-commercial
+experimental and ambient electronic music under the phrase *"Emotional Analog
+Resonance"*. NAGLOED's analogue stage is also called **EAR**, after the ear that
+listens. That is a shared word, not a connection: NAGLOED is **not affiliated
+with, endorsed by, or an official product of** the EAR label. The label is simply
+part of the scene we love.
 
 And it includes reimagining other people's remains. For **Cities and Memory**'s
 *Prison Songs* project — 1950s recordings from the Mississippi State Penitentiary,
-recomposed by sound artists around the world — Leon made *Frozen Prisonaire*
-(2022, 4:03). ([MPDS Audio Archive entry](https://www.mpdsaudioarchive.org/en/suoni/08b-frozen-prisonaire-unlikenoise-reimagined-compositions-leon-van-bokhorst/))
+recomposed by sound artists around the world — Leon (then recording as UnlikeNoise)
+made *Frozen Prisonaire* (2022, 4:03).
+([MPDS Audio Archive entry](https://www.mpdsaudioarchive.org/en/suoni/08b-frozen-prisonaire-unlikenoise-reimagined-compositions-leon-van-bokhorst/))
 
-The through-line is one-take thinking: the take is the material, the mistakes
-are the material, the room is audible, and what survives the session is the
-point. NAGLOED is the studio version of that habit.
+The through-line is one-take thinking: the take is the material, the mistakes are
+the material, the room is audible, and what survives the session is the point.
+NAGLOED is the studio version of that habit.
 
 A note on what this is not: NAGLOED is not an official EAR product and not a
-reissue of anyone's instrument. EAR is a nod, made with affection, from one
-corner of the same scene. The people above are credited because they shaped the
-ear this instrument was tuned for, not because they endorse a product page.
+reissue of anyone's instrument. The people above are credited because they shaped
+the ear this instrument was tuned for, not because they endorse a product.
 
 ## Naming logic: Sintel, Ruimte, EAR
 
@@ -93,7 +98,7 @@ are not acronyms, and they should not be translated in the interface.
 |---|---|---|---|
 | **Sintel** | *sintel* — cinder, ember, the solid thing left after burning | Grain engine: capture buffer, grain scheduling, pitch and spray | Grains are embers: small, hot, finite, and best in numbers. A spark flies; an ember stays. |
 | **Ruimte** | *ruimte* — space, room, room to move | Space/reverb section | The room the embers glow in. Not a cathedral; a room with a history. |
-| **EAR** | the ear; a nod to **E**motional **A**nalog **R**esonance | Analog character section: drive, bias, filtering, drift, wow, tape, lo-fi, hiss | The part that listens back. EAR is the name of SONICrider's label, not an initialism invented here. |
+| **EAR** | the ear (the hearing organ) | Analog character section: drive, bias, filtering, drift, wow, tape, lo-fi, hiss | The part that listens back. Not an acronym, and not a reference to the EAR label; see the lineage note above. |
 
 ## Who this is for
 
@@ -210,8 +215,9 @@ Don't:
 The 1.0 editor resolved a few open questions; these are deliberate and final for
 this release:
 
-- **Tagline** — "THE SOUND AFTER THE SOUND" in the top bar, with the location
-  line "GRANULAR AFTERGLOW INSTRUMENT · UNLIKENOISE · EINDHOVEN NL".
+- **Tagline** — "THE SOUND AFTER THE SOUND" in the top bar, with the credit line
+  "MASTER LONN & LITTLE WAN · EINDHOVEN NL" and "MASTER LONN & LITTLE WAN" in the
+  footer (the retired UnlikeNoise credit line is superseded as of 1.0.3).
 - **Idle ember field** — a deterministic, pre-warmed dust field is allowed before
   audio arrives (see the don't list); it is not decorative animation.
 - **Wordmark** — pale ember with one subtle ember gradient; no outline, emboss or
@@ -273,7 +279,8 @@ the moment. Play the afterglow.
 
 ### 200 words (press / PR)
 
-NAGLOED is a granular instrument and effect for macOS, made by UnlikeNoise Labs
+NAGLOED is a granular instrument and effect for macOS, made by Master Lonn & Little
+Wan
 for sound artist Leon van Bokhorst. It is built around a simple idea: the most
 interesting part of any sound is often what happens after the source stops. Feed
 NAGLOED a synth, a voice, a bowed string or a field recording and it holds up to
@@ -293,12 +300,13 @@ under GPL-3.0-or-later, made in Helmond and Eindhoven.
 
 Brand research, all verified November 2026:
 
-- [UnlikeNoise biography — Last.fm](https://www.last.fm/music/UnlikeNoise/+wiki)
+- [UnlikeNoise biography — Last.fm](https://www.last.fm/music/UnlikeNoise/+wiki) (historical alias)
 - [Modulab Eindhoven — SONICrider](https://sonicrider.nl/modulab-eindhoven/)
 - [EAR label — SONICrider](https://sonicrider.nl/ear/)
-- [SONICrider × UnlikeNoise collaborations](https://sonicrider.nl/category/collaborations/unlikenoise/)
+- [SONICrider sessions](https://sonicrider.nl/) (recorded when Leon performed as UnlikeNoise)
 - [Frozen Prisonaire — MPDS Audio Archive](https://www.mpdsaudioarchive.org/en/suoni/08b-frozen-prisonaire-unlikenoise-reimagined-compositions-leon-van-bokhorst/)
 
-NAGLOED is designed by Leon van Bokhorst / UnlikeNoise Labs. Product name,
-engines and palette are NAGLOED 1.0.2 brand assets; the software itself is
+NAGLOED is designed by Master Lonn (Leon van Bokhorst) with Little Wan, and made by
+Master Lonn & Little Wan. Product name, engines and palette are NAGLOED 1.0.3 brand
+assets; the software itself is
 GPL-3.0-or-later. See [the manual](MANUAL.md) for how the instrument works.
