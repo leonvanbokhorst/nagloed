@@ -28,7 +28,7 @@ inline constexpr const char* spaceSize   = "space.size";
 inline constexpr const char* spaceDamp   = "space.damp";
 inline constexpr const char* spaceMod    = "space.mod";
 
-// --- EAR: emotional analog resonance ---------------------------------------
+// --- EAR: the analogue character stage (the ear that listens) --------------
 inline constexpr const char* drive       = "ear.drive";
 inline constexpr const char* bias        = "ear.bias";
 inline constexpr const char* tone        = "ear.tone";

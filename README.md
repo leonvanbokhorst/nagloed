@@ -50,7 +50,8 @@ moment and play what remains, read on.
 **EAR — analog section**
 
 - Drive, Bias, Tone, Cutoff, Reso, Drift, Wow, Tape, LoFi and Hiss, plus In/Out
-  trim and dry/wet Mix. A nod to the *Emotional Analog Resonance* label.
+  trim and dry/wet Mix. Named for the ear that listens; see the credits for the
+  no-affiliation note.
 
 **Performance**
 

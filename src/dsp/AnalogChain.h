@@ -8,7 +8,8 @@
 #include "DspUtil.h"
 
 // -----------------------------------------------------------------------------
-// EAR — "emotional analog resonance".
+// EAR — the analogue character stage. Named for the ear that listens, not for the
+// EAR label.
 //
 // The character section that turns a clean granular cloud into something that
 // sounds like it has been through a valve desk and a tape machine:
