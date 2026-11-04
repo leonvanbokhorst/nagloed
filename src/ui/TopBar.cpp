@@ -172,7 +172,7 @@ void TopBar::renderBackground (juce::Graphics& g, juce::Rectangle<float> bounds)
                        monoFont (7.4f * fs, juce::Font::plain, 0.22f),
                        paleEmber.withAlpha (0.78f));
 
-        drawMicroText (g, utf8 ("UNLIKENOISE · GRANULAR AFTERGLOW · EINDHOVEN NL"),
+        drawMicroText (g, utf8 ("MASTER LONN & LITTLE WAN · EINDHOVEN NL"),
                        { x, bounds.getY() + h * 0.72f, 330.0f * s, 10.0f * s },
                        monoFont (6.4f * fs, juce::Font::plain, 0.14f),
                        muted.withAlpha (0.75f));

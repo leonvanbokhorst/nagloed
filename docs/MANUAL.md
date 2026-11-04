@@ -1,10 +1,10 @@
 # NAGLOED manual
 
-**NAGLOED 1.0.2** · UnlikeNoise Labs · AU / VST3 / Standalone · macOS 12 or later
+**NAGLOED 1.0.3** · Master Lonn & Little Wan · AU / VST3 / Standalone · macOS 12 or later
 
 > *nagloed* (Dutch, n.) — the light that stays in the room after the source is gone.
 
-This manual documents NAGLOED's controls as implemented in 1.0.2. Control
+This manual documents NAGLOED's controls as implemented in 1.0.3. Control
 names, ranges, defaults and choice lists are taken from `src/core/Parameters.h`;
 the parameter ID strings come from `src/core/ParamIDs.h`. They are the same
 source of truth the plug-in uses, so what is written here is what the host sees.
@@ -118,7 +118,8 @@ digital plate; it is meant to sit behind the grains and move a little.
 
 EAR is the output stage: drive, tone shaping, tape behaviour, noise and the final
 trim. It is the part that makes grains sound like they ran through a small analog
-console rather than a plug-in. The settings are deliberately conservative at
+console rather than a plug-in. The name refers to the ear that listens; it is not
+affiliated with Jurgen Winkel's EAR label (see [BRAND.md](BRAND.md#the-lineage)). The settings are deliberately conservative at
 Init; push them when you want the instrument to sound older than it is.
 
 | Control | Range | Default | What it does |
@@ -248,7 +249,7 @@ tremolo.
 
 ### Expression parameters
 
-NAGLOED 1.0.2 does not accept MIDI or MPE input, so these parameters cannot be
+NAGLOED 1.0.3 does not accept MIDI or MPE input, so these parameters cannot be
 played from a controller. They are part of the permanent parameter surface for
 automation and preset authoring, and are reserved for the MPE update.
 
@@ -267,7 +268,7 @@ NAGLOED ships with **24 factory presets across eight categories, plus Init**:
   silence.
 - The 24 presets are exposed through the host's program list. Loading a preset
   replaces every parameter value, so move the controls afterwards.
-- NAGLOED 1.0.2 does not write user preset files. Save your own variations in
+- NAGLOED 1.0.3 does not write user preset files. Save your own variations in
   your host's preset, rack or track-preset system; the plug-in state is saved in
   the session.
 - The preset guide describes every patch: [PRESET_GUIDE.md](PRESET_GUIDE.md).
@@ -304,7 +305,7 @@ NAGLOED ships with **24 factory presets across eight categories, plus Init**:
 ### AU, VST3 and Standalone
 
 - **AU** — component `NAGLOED.component`, type `aufx`, subtype `Nagl`, manufacturer
-  `UnlN`. Validate with `auval -v aufx Nagl UnlN`.
+  `MLLW`. Validate with `auval -v aufx Nagl MLLW`.
 - **VST3** — `NAGLOED.vst3`, category Fx.
 - **Standalone** — runs as a live processor for a microphone or instrument input.
   Configure the audio device in the standalone app's audio settings.
@@ -344,8 +345,8 @@ and all parameter values are saved with the session and restored on reload.
 | CPU spikes | High Density, long Grain, high Feed, long Ruimte tail | Reduce Density and Grain length; lower Ruimte Size; Freeze does not help CPU. |
 | Clicks when automating | Choice parameters or Freeze changing mid-grain | Automate between phrases, not inside a grain or a freeze. |
 | Plug-in not listed in the host | Not installed in the scanned plug-in folder, or host cache stale | Build/copy to `~/Library/Audio/Plug-Ins/{Components,VST3}`, rescan, restart the host. |
-| AU fails validation | Stale installed component, or build not copied | Run `./scripts/validate.sh`; check `auval -v aufx Nagl UnlN`. |
-| No response to MIDI | By design in 1.0.2: no MIDI or MPE input | Use host automation on the macros and direct parameters. |
+| AU fails validation | Stale installed component, or build not copied | Run `./scripts/validate.sh`; check `auval -v aufx Nagl MLLW`. |
+| No response to MIDI | By design in 1.0.3: no MIDI or MPE input | Use host automation on the macros and direct parameters. |
 | Only Init preset appears | Source tree built without `presets/*.json` | Check that `presets/*.json` is present, then rebuild with `./scripts/build.sh`; artifacts land in `build/NAGLOED_artefacts/Release/` and presets are embedded at build time. |
 | Mono track sounds odd | Host routing, not the plug-in | The plug-in supports mono and stereo; check the track's input configuration. |
 
@@ -353,7 +354,7 @@ and all parameter values are saved with the session and restored on reload.
 
 - Parameter IDs are permanent. Automation, presets and saved sessions address
   parameters by ID, so IDs are never renamed in a release.
-- Version: 1.0.2 · Manufacturer: UnlikeNoise Labs · Bundle:
+- Version: 1.0.3 · Manufacturer: Master Lonn & Little Wan · Bundle:
   `com.unlikenoise.nagloed`.
 - Design notes and palette: [BRAND.md](BRAND.md).
 - Architecture and build internals: [ARCHITECTURE.md](ARCHITECTURE.md).

@@ -8,8 +8,8 @@ remains glow: Sintel grains, Ruimte space, EAR analog colour.
 
 > *nagloed* (Dutch, noun) — the light that stays in the room after the source is gone.
 
-Version **1.0.2** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
-UnlikeNoise Labs
+Version **1.0.3** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
+Master Lonn & Little Wan
 
 ![NAGLOED editor](docs/ui-preview.png)
 
@@ -141,7 +141,7 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 | Check | Command | Status |
 |---|---|---|
 | DSP + unit tests (167 checks) | `./build/nagl_tests_artefacts/Release/nagl_tests` | PASS |
-| AU validation | `auval -v aufx Nagl UnlN` | PASS |
+| AU validation | `auval -v aufx Nagl MLLW` | PASS |
 | pluginval, strictness 10 (VST3 + AU) | `pluginval --strictness-level 10 --validate …` | PASS |
 | Offline render | `./build/nagl_render_artefacts/Release/nagl_render` | PASS — writes `Demo/Nagloed-Demo.wav` |
 | Offscreen editor snapshot | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — writes `docs/ui-preview.png` |
@@ -209,15 +209,23 @@ NAGLOED requires you to hold an appropriate JUCE licence of your own.
 
 ## Credits
 
-Designed and directed by **Leon van Bokhorst / UnlikeNoise**, Helmond, the
-Netherlands, and made by **UnlikeNoise Labs**. Built with
-[JUCE](https://juce.com) 9.
+Designed and directed by **Master Lonn** (Leon van Bokhorst) with **Little Wan**
+(Little Padawan), Helmond/Eindhoven, the Netherlands, and made by
+**Master Lonn & Little Wan**. Built with [JUCE](https://juce.com) 9.
 
-The sound world owes a debt to the Eindhoven/Helmond experimental scene:
-[Modulab Eindhoven](https://sonicrider.nl/modulab-eindhoven/) (Leon van Bokhorst,
-Allard Krijger, Jurgen Winkel), the one-take sessions with
-[SONICrider](https://sonicrider.nl/category/collaborations/unlikenoise/), and the
-[EAR](https://sonicrider.nl/ear/) label's *Emotional Analog Resonance*.
+*UnlikeNoise* was Leon's solo alias for many years; the alias is retired, and
+NAGLOED is a Master Lonn & Little Wan project.
+
+The sound world grew out of the Eindhoven/Helmond underground: the modular scene
+around [Modulab Eindhoven](https://sonicrider.nl/modulab-eindhoven/) (Leon was part
+of its early team, but has not been involved for over eight years — the friendship
+and the respect remain), the one-take sessions with
+[SONICrider](https://sonicrider.nl/), and the wider experimental scene.
+
+NAGLOED's analogue stage is called **EAR**. The name refers to the ear that
+listens; it is **not** affiliated with, endorsed by, or connected to Jurgen
+Winkel's [EAR](https://sonicrider.nl/ear/) label. The label is part of the scene we
+love, and is credited as such — nothing more.
 
 ### How this was built
 
@@ -231,6 +239,6 @@ under GPL-3.0-or-later.
 
 - [Brand and design language](docs/BRAND.md)
 - [Manual](docs/MANUAL.md)
-- [Release notes — v1.0.2](docs/RELEASE_NOTES.md)
+- [Release notes — v1.0.3](docs/RELEASE_NOTES.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Preset guide](docs/PRESET_GUIDE.md)

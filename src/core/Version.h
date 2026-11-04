@@ -7,9 +7,9 @@
 namespace nagloed
 {
 inline constexpr const char* kProductName   = "NAGLOED";
-inline constexpr const char* kCompanyName   = "UnlikeNoise Labs";
-inline constexpr const char* kVersion       = "1.0.2";
-inline constexpr const char* kBundleId      = "com.unlikenoise.nagloed";
+inline constexpr const char* kCompanyName   = "Master Lonn & Little Wan";
+inline constexpr const char* kVersion       = "1.0.3";
+inline constexpr const char* kBundleId      = "com.masterlonn.littlewan.nagloed";
 inline constexpr int         kVersionHint   = 1;
 
 inline constexpr int         kMaxGrains     = 256;   // ceiling for the grain pool

@@ -1,4 +1,4 @@
-# NAGLOED 1.0 — validation report
+# NAGLOED 1.0.3 — validation report
 
 Everything below was produced on the release candidate on the build machine
 described here. The point is not a badge: it is that the numbers can be
@@ -25,7 +25,7 @@ build/NAGLOED_artefacts/Release/VST3/NAGLOED.vst3
 build/NAGLOED_artefacts/Release/Standalone/NAGLOED.app
 ```
 
-AU identity: type `aufx`, subtype `Nagl`, manufacturer `UnlN`. The build copies
+AU identity: type `aufx`, subtype `Nagl`, manufacturer `MLLW`. The build copies
 AU and VST3 into `~/Library/Audio/Plug-Ins/{Components,VST3}`.
 
 ## Automated checks
@@ -55,7 +55,7 @@ AU and VST3 into `~/Library/Audio/Plug-Ins/{Components,VST3}`.
 ### Apple AU validation
 
 ```
-auval -v aufx Nagl UnlN
+auval -v aufx Nagl MLLW
 ```
 
 ```

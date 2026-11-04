@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(NAGLOED VERSION 1.0.2 LANGUAGES C CXX)
+project(NAGLOED VERSION 1.0.3 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -69,9 +69,9 @@ add_custom_target(nagloed_presets DEPENDS "${PRESETS_CPP}" "${PRESETS_H}")
 # -----------------------------------------------------------------------------
 juce_add_plugin(NAGLOED
     PRODUCT_NAME                "NAGLOED"
-    COMPANY_NAME                "UnlikeNoise Labs"
-    BUNDLE_ID                   "com.unlikenoise.nagloed"
-    PLUGIN_MANUFACTURER_CODE    UnlN
+    COMPANY_NAME                "Master Lonn & Little Wan"
+    BUNDLE_ID                   "com.masterlonn.littlewan.nagloed"
+    PLUGIN_MANUFACTURER_CODE    MLLW
     PLUGIN_CODE                 Nagl
     FORMATS                     AU VST3 Standalone
     IS_SYNTH                    FALSE
@@ -82,7 +82,7 @@ juce_add_plugin(NAGLOED
     COPY_PLUGIN_AFTER_BUILD     TRUE
     PLUGIN_CATEGORY             "Fx"
     VST3_CATEGORIES             "Fx"
-    COMPANY_COPYRIGHT           "Copyright 2026 Leon van Bokhorst / UnlikeNoise Labs"
+    COMPANY_COPYRIGHT           "Copyright 2026 Master Lonn & Little Wan"
     VERSION                     ${PROJECT_VERSION})
 
 juce_generate_juce_header(NAGLOED)

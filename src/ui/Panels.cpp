@@ -232,8 +232,8 @@ EarPanel::EarPanel (juce::AudioProcessorValueTreeState& state, AfterglowLookAndF
 {
     setOpaque (false);
     setTitle ("EAR analogue section");
-    setDescription ("Emotional analogue resonance: drive, bias, tone, the 24 dB low-pass, "
-                    "drift, wow, tape, lofi, hiss and final mix.");
+    setDescription ("Analogue character — the ear that listens back: drive, bias, tone, the 24 dB low-pass, "
+                    "drift, wow, tape, lofi, hiss and final mix. Not affiliated with the EAR label.");
 
     const std::array<const char*, 11> ids {
         pid::drive, pid::bias, pid::tone, pid::drift, pid::wow, pid::tape,
