@@ -1,8 +1,38 @@
-# NAGLOED 1.0.1 — release notes
+# NAGLOED 1.0.2 — release notes
 
 Released 4 November 2026 · UnlikeNoise Labs · macOS 12+ · AU / VST3 / Standalone
 
 > *nagloed* (Dutch, n.) — the light that stays in the room after the source is gone.
+
+## 1.0.2 — 4 November 2026
+
+**Fix: grain field rendering (black/white stutter, white ghosts, clipped embers).**
+
+Two rendering bugs in the phosphor field shipped in 1.0.0/1.0.1:
+
+- The phosphor decay used a bit-trick that also subtracted from the **alpha**
+  channel. The phosphor screen is an opaque premultiplied ARGB image, so decaying
+  its alpha made the dark base drift and the field itself translucent: a washed
+  grey/white rectangle that flickered as splats reset alpha.
+- Independently, per-frame additive splats drove the bright channels to 255 within
+  a few frames, turning stationary grains into hard white discs.
+
+Fixes: RGB-only decay with the alpha byte pinned opaque; a tight per-splat colour
+ceiling (a little brighter than the ember colour) so repeated splats stay warm
+instead of clipping; grain/dust energies re-tuned so the cloud keeps its density;
+the pitch colour ramp capped at a warm gold rather than near-white pale ember.
+
+Also: the LFO phase dot now traverses the **full** scope width and samples the
+displayed two-cycle waveform (it previously turned around at the middle).
+
+Regression coverage: `nagl_preview --soak` (8 s run; asserts opaque phosphor, no
+white wash, sane luminance, still animating) and the 1.0.1 `--embedded` host-mount
+test; both run in `./scripts/validate.sh`. `SOAK FAIL`/`alphaOk=0` on the old decay,
+`SOAK PASS` now.
+
+Verified: 167 checks / 0 failures, `EMBEDDED PASS`, `SOAK PASS`, `auval` PASS,
+pluginval strictness 10 SUCCESS on VST3 and AU, demo unchanged
+(sha256 `de987eed…`, peak −2.13 dBFS).
 
 ## 1.0.1 — 4 November 2026
 
@@ -95,7 +125,8 @@ No MIDI or MPE input is accepted in this release.
   release).
 - Offline render through the real processor: PASS — `nagl_render` produces
   `Demo/Nagloed-Demo.wav`.
-- GitHub Actions CI (macOS): green on the release branch (run `41698856335`).
+- GitHub Actions CI (macOS): builds the AU/VST3/Standalone bundles, runs the
+  suite and validates the AU on every `v*` tag (and on demand).
 
 Rebuild and re-validate locally with `./scripts/validate.sh`.
 

@@ -8,7 +8,7 @@ remains glow: Sintel grains, Ruimte space, EAR analog colour.
 
 > *nagloed* (Dutch, noun) — the light that stays in the room after the source is gone.
 
-Version **1.0.1** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
+Version **1.0.2** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
 UnlikeNoise Labs
 
 ![NAGLOED editor](docs/ui-preview.png)
@@ -91,7 +91,7 @@ cp -R build/NAGLOED_artefacts/Release/AU/NAGLOED.component ~/Library/Audio/Plug-
 cp -R build/NAGLOED_artefacts/Release/VST3/NAGLOED.vst3      ~/Library/Audio/Plug-Ins/VST3/
 ```
 
-**Signed builds:** the 1.0.0 bundles are signed ad hoc, not notarised. If macOS
+**Signed builds:** the 1.0.x bundles are signed ad hoc, not notarised. If macOS
 quarantines a downloaded zip, right-click → Open once, or run
 `xattr -dr com.apple.quarantine NAGLOED.component` (or `.vst3`, `.app`) before
 copying it into the plug-in folder, then rescan in your host. The standalone app
@@ -146,7 +146,8 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 | Offline render | `./build/nagl_render_artefacts/Release/nagl_render` | PASS — writes `Demo/Nagloed-Demo.wav` |
 | Offscreen editor snapshot | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — writes `docs/ui-preview.png` |
 | Editor refresh in a host-style mount | `./build/nagl_preview_artefacts/Release/nagl_preview --embedded` | PASS — `EMBEDDED PASS` |
-| GitHub Actions CI (macOS) | `.github/workflows/ci.yml` | PASS — run `41698856335` |
+| Phosphor / grain-field soak (8 s) | `./build/nagl_preview_artefacts/Release/nagl_preview --soak` | PASS — `SOAK PASS` |
+| GitHub Actions CI (macOS) | `.github/workflows/ci.yml` | PASS — build + tests + auval on every tag |
 
 The full evidence (commands, observed output, CPU/latency figures) is in
 [docs/VALIDATION.md](docs/VALIDATION.md).
@@ -230,6 +231,6 @@ under GPL-3.0-or-later.
 
 - [Brand and design language](docs/BRAND.md)
 - [Manual](docs/MANUAL.md)
-- [Release notes — v1.0.0](docs/RELEASE_NOTES.md)
+- [Release notes — v1.0.2](docs/RELEASE_NOTES.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Preset guide](docs/PRESET_GUIDE.md)

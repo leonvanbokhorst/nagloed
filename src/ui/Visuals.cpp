@@ -577,11 +577,13 @@ void LfoVisual::paint (juce::Graphics& g)
     g.strokePath (wave, juce::PathStrokeType (1.15f * s, juce::PathStrokeType::curved,
                                                juce::PathStrokeType::rounded));
 
-    // Moving phase dot.
+    // Moving phase dot. The waveform is drawn over two cycles across the full
+    // plot, so the dot must traverse the full width and sample the shape at
+    // twice its phase; previously it only reached the middle of the scope.
     {
         const auto cycle = phase;
-        const auto x = plot.getX() + cycle * plot.getWidth() * 0.5f;
-        const auto y = centreY - lfoValue (shape, cycle) * amplitude;
+        const auto x = plot.getX() + cycle * plot.getWidth();
+        const auto y = centreY - lfoValue (shape, cycle * 2.0f) * amplitude;
 
         g.setColour (mint.withAlpha (0.28f));
         g.fillRect (x - 0.4f * s, plot.getY(), 0.8f * s, plot.getHeight());
