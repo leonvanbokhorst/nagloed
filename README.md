@@ -8,7 +8,7 @@ remains glow: Sintel grains, Ruimte space, EAR analog colour.
 
 > *nagloed* (Dutch, noun) — the light that stays in the room after the source is gone.
 
-Version **1.0.0** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
+Version **1.0.1** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
 UnlikeNoise Labs
 
 ![NAGLOED editor](docs/ui-preview.png)
@@ -145,6 +145,7 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 | pluginval, strictness 10 (VST3 + AU) | `pluginval --strictness-level 10 --validate …` | PASS |
 | Offline render | `./build/nagl_render_artefacts/Release/nagl_render` | PASS — writes `Demo/Nagloed-Demo.wav` |
 | Offscreen editor snapshot | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — writes `docs/ui-preview.png` |
+| Editor refresh in a host-style mount | `./build/nagl_preview_artefacts/Release/nagl_preview --embedded` | PASS — `EMBEDDED PASS` |
 | GitHub Actions CI (macOS) | `.github/workflows/ci.yml` | PASS — run `41698856335` |
 
 The full evidence (commands, observed output, CPU/latency figures) is in
