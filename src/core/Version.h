@@ -8,7 +8,7 @@ namespace nagloed
 {
 inline constexpr const char* kProductName   = "NAGLOED";
 inline constexpr const char* kCompanyName   = "Master Lonn & Little Wan";
-inline constexpr const char* kVersion       = "1.0.3";
+inline constexpr const char* kVersion       = "1.0.4";
 inline constexpr const char* kBundleId      = "com.masterlonn.littlewan.nagloed";
 inline constexpr int         kVersionHint   = 1;
 

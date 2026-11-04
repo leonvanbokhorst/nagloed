@@ -1,4 +1,4 @@
-# NAGLOED 1.0.3 — validation report
+# NAGLOED 1.0.4 — validation report
 
 Everything below was produced on the release candidate on the build machine
 described here. The point is not a badge: it is that the numbers can be
@@ -118,7 +118,10 @@ plug-in uses in a host.
 
 Renders the real `AudioProcessorEditor` offscreen to `docs/ui-preview.png`
 (2360 × 1360, i.e. 1180 × 680 at 2×) after loading a factory preset and feeding
-the engine audio, so the snapshot shows the live grain field.
+the engine audio, so the snapshot shows the live grain field. The editor advanced
+a fixed number of frames with the wall-clock timer stopped, the dust generator's
+fixed seed and pinned visualiser phases, so the PNG is **byte-reproducible for a
+given build and platform**; CI renders it twice on the runner and compares hashes.
 
 ### Grain-field phosphor soak
 
@@ -126,14 +129,17 @@ the engine audio, so the snapshot shows the live grain field.
 ./build/nagl_preview_artefacts/Release/nagl_preview --soak
 ```
 
-Runs the editor for eight seconds **with audio flowing** (so grains actually move)
-and asserts the phosphor buffer stayed opaque (`alphaOk`, checked before alpha is
-pinned), no near-white wash, and that clipped-ember pixels stay under 0.02% of the
-field while the field keeps animating. This is the regression test for the grain-field
-corruption: the decay's bit-trick subtracted from the alpha byte as well as the
-colour, so the opaque phosphor screen became translucent and the field washed out;
-independently, additive splats clipped bright channels to white discs. It prints
-`SOAK PASS`; the loose cap prints `SOAK FAIL`.
+Runs the editor for eight seconds **with audio flowing** (so grains actually move),
+stepping frames deterministically instead of relying on message-loop timer delivery
+(audio arrives in 0.1 s chunks, six frames each, to keep grain overlap at the live
+soak's density). It asserts the phosphor buffer stayed opaque (`alphaOk`, checked
+before alpha is pinned), no near-white wash, and that clipped-ember pixels stay
+under 0.02% of the field while the field keeps animating. This is the regression
+test for the grain-field corruption: the decay's bit-trick subtracted from the alpha
+byte as well as the colour, so the opaque phosphor screen became translucent and
+the field washed out; independently, additive splats clipped bright channels to
+white discs. It prints `SOAK PASS`; reverting the decay prints `alphaOk=0` /
+`SOAK FAIL`, and the loose colour cap prints `clippedRatio=0.00038` / `SOAK FAIL`.
 
 ### Editor refresh in a host-style mount
 
@@ -144,7 +150,22 @@ independently, additive splats clipped bright channels to white discs. It prints
 Mounts the editor as a child of a peer component (the way hosts mount plugin
 views), changes cutoff and LFO shape, and fails unless the EAR curve, LFO scope
 and grain field all repaint. This is the regression test for the 1.0.0 frozen
-visualiser bug; a passing run prints `EMBEDDED PASS`.
+visualiser bug; a passing run prints `EMBEDDED PASS`. It needs a desktop window
+server, so it stays a local/manual check.
+
+GitHub's macOS runners have no window server, so CI runs the CI-safe variant:
+
+```
+./build/nagl_preview_artefacts/Release/nagl_preview --headless-host
+```
+
+It performs the lifecycle a DAW performs on the editor (hide/show while
+`isShowing()` stays false because there is no peer), then asserts the animation
+timer is still running and drives a fixed number of visual frames to confirm the
+cloud, curve and scope repaint. Both checks are independent of message-loop timer
+delivery, so they are stable on headless runners. It prints `HEADLESS-HOST PASS`;
+restoring the 1.0.0 timer logic makes it print `HEADLESS-HOST FAIL`
+(`timerRunning=0`).
 
 One command reproduces everything above, provided pluginval is present in
 `.deps/pluginval` (the pluginval stage is optional and skipped otherwise):
@@ -154,10 +175,12 @@ One command reproduces everything above, provided pluginval is present in
 ```
 
 GitHub Actions CI (`.github/workflows/ci.yml`) builds the AU/VST3/Standalone
-targets, runs the suite and validates the AU; it runs on every `v*` tag (and on
-demand). The `v1.0.1` tag run and the `fix/phosphor-render` dispatch run were both
-green; a tag run is not cited by number here because it changes with every
-release.
+targets, runs the suite, validates the AU, runs the CI-safe `--headless-host` and
+`--soak` regressions (the windowed `--embedded` variant needs a desktop window
+server and stays local), checks the hero is byte-identical across two renders on
+the runner, and runs pluginval strictness 10 on VST3 and AU; it runs on every `v*`
+tag (and on demand). A tag run is not cited by number here because it changes with
+every release.
 
 ## Manual checks
 

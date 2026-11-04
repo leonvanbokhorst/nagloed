@@ -85,6 +85,8 @@ public:
 
     void setUiScale (float newScale);
     void tick (const VisualState& snapshot, double elapsedSeconds);
+    /** Deterministic-preview hook: pin the animated phase. */
+    void setPhaseForPreview (float newPhase) { phase = newPhase; repaint(); }
     void paint (juce::Graphics&) override;
 
 private:
@@ -114,6 +116,8 @@ public:
 
     void setUiScale (float newScale);
     void tick (const VisualState& snapshot, double elapsedSeconds);
+    /** Deterministic-preview hook: pin the animated phase. */
+    void setPhaseForPreview (float newPhase) { phase = newPhase; repaint(); }
     void paint (juce::Graphics&) override;
 
 private:

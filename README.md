@@ -8,7 +8,7 @@ remains glow: Sintel grains, Ruimte space, EAR analog colour.
 
 > *nagloed* (Dutch, noun) — the light that stays in the room after the source is gone.
 
-Version **1.0.3** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
+Version **1.0.4** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
 Master Lonn & Little Wan
 
 ![NAGLOED editor](docs/ui-preview.png)
@@ -145,18 +145,22 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 | AU validation | `auval -v aufx Nagl MLLW` | PASS |
 | pluginval, strictness 10 (VST3 + AU) | `pluginval --strictness-level 10 --validate …` | PASS |
 | Offline render | `./build/nagl_render_artefacts/Release/nagl_render` | PASS — writes `Demo/Nagloed-Demo.wav` |
-| Offscreen editor snapshot | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — writes `docs/ui-preview.png` |
+| Offscreen editor snapshot (deterministic) | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — byte-identical for a given build/platform |
 | Editor refresh in a host-style mount | `./build/nagl_preview_artefacts/Release/nagl_preview --embedded` | PASS — `EMBEDDED PASS` |
+| Editor refresh, headless (CI) | `./build/nagl_preview_artefacts/Release/nagl_preview --headless-host` | PASS — `HEADLESS-HOST PASS` |
 | Phosphor / grain-field soak (8 s) | `./build/nagl_preview_artefacts/Release/nagl_preview --soak` | PASS — `SOAK PASS` |
-| GitHub Actions CI (macOS) | `.github/workflows/ci.yml` | PASS — build + tests + auval on every tag |
+| GitHub Actions CI (macOS) | `.github/workflows/ci.yml` | PASS — build, tests, auval, headless harnesses, deterministic hero and pluginval on every tag |
 
 The full evidence (commands, observed output, CPU/latency figures) is in
 [docs/VALIDATION.md](docs/VALIDATION.md).
 
-`./scripts/validate.sh` rebuilds everything, runs the tests and then validates the
-AU component with `auval`. The CI workflow
-(`.github/workflows/ci.yml`) runs the same checks on a macOS runner; it is
-manual/release-only to keep runner minutes predictable.
+`./scripts/validate.sh` rebuilds everything, runs the tests, validates the AU
+component with `auval`, runs the `--embedded` host-mount test and the frame-stepped
+soak, and checks the deterministic hero. The CI workflow
+(`.github/workflows/ci.yml`) runs the build, tests, `auval`, the CI-safe
+`--headless-host` and `--soak` regressions, the deterministic-hero comparison and
+pluginval on a macOS runner (the windowed `--embedded` mount stays local); it runs
+on tags and on demand.
 
 `Demo/Nagloed-Demo.wav` is rendered through the full engine: 84 seconds,
 48 kHz / 24-bit stereo, peaking at −2.1 dBFS. Regenerate it with
@@ -240,6 +244,6 @@ under GPL-3.0-or-later.
 
 - [Brand and design language](docs/BRAND.md)
 - [Manual](docs/MANUAL.md)
-- [Release notes — v1.0.3](docs/RELEASE_NOTES.md)
+- [Release notes — v1.0.4](docs/RELEASE_NOTES.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Preset guide](docs/PRESET_GUIDE.md)

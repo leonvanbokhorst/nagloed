@@ -208,6 +208,43 @@ void NagloedEditor::verifyParameterCoverage()
 }
 
 // -----------------------------------------------------------------------------
+void NagloedEditor::stepVisualsForPreview (int frames, double dtSeconds)
+{
+    visual.copyVisual (snapshot);
+
+    for (int i = 0; i < frames; ++i)
+    {
+        grainCloud.tick (snapshot, dtSeconds);
+
+        if ((i & 1) == 0)
+        {
+            sintelPanel.tick (snapshot, dtSeconds * 2.0);
+            earPanel.tick (snapshot, dtSeconds * 2.0);
+            bottomPanel.tick (snapshot, dtSeconds * 2.0);
+            topBar.setStatus (snapshot.grainRate, snapshot.numGrains > 0);
+        }
+
+        if (i % 12 == 0)
+            topBar.refreshPresets();
+
+        if (i % 4 == 0)
+            topBar.tick();
+    }
+
+    repaint();
+}
+
+void NagloedEditor::advanceForPreview (int frames, double dtSeconds)
+{
+    stopTimer();   // no wall-clock frames mixed into the deterministic run
+    grainCloud.resetForDeterministicPreview();
+    stepVisualsForPreview (frames, dtSeconds);
+
+    // Pin the wall-clock-driven visualiser phases so the frame is reproducible.
+    bottomPanel.setPhasesForPreview (0.37f, 0.21f);
+    repaint();
+}
+
 void NagloedEditor::refreshOnce()
 {
     visual.copyVisual (snapshot);
@@ -258,7 +295,8 @@ void NagloedEditor::timerCallback()
     lastTickMs = now;
 
     if (! isVisible())
-        return;   // hidden editor: no snapshot reads, no repaints
+        return;   // editor hidden by its own flag: no snapshot reads, no repaints
+                  // (a host hiding the parent still ticks; the callback is cheap)
 
     dt = juce::jlimit (0.001, 0.1, dt);
 

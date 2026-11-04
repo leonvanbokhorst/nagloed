@@ -1,8 +1,29 @@
-# NAGLOED 1.0.3 — release notes
+# NAGLOED 1.0.4 — release notes
 
 Released 4 November 2026 · Master Lonn & Little Wan · macOS 12+ · AU / VST3 / Standalone
 
 > *nagloed* (Dutch, n.) — the light that stays in the room after the source is gone.
+
+## 1.0.4 — 4 November 2026
+
+**Engineering follow-up release: no sound or behaviour changes.**
+
+- `nagl_preview` now renders the documentation hero **deterministically** (fixed
+  frame count, fixed dust RNG seed, wall-clock timer stopped, visualiser phases
+  pinned), so `docs/ui-preview.png` is byte-reproducible for a given build and
+  platform. CI renders it twice on its own runner and fails if the hashes differ.
+- CI now runs the regression gates that were local-only: a headless host-mount
+  lifecycle test (`--headless-host`, the CI-safe form of `--embedded`; it asserts
+  the animation timer survives hide/show and drives fixed visual frames itself, so
+  it does not depend on runner timer delivery), the 8-second `--soak` phosphor
+  test (also frame-stepped), the deterministic-hero render comparison, and
+  **pluginval strictness 10** on VST3 and AU.
+- Docs/VALIDATION describe the deterministic snapshot and the expanded CI gate;
+  version stamps refreshed.
+
+Verified: 167 checks / 0 failures, `EMBEDDED PASS`, `SOAK PASS`, hero
+byte-identical across runs for a given build/platform, `auval -v aufx Nagl MLLW`
+PASS, pluginval SUCCESS on VST3 and AU, demo unchanged (sha256 `de987eed…`).
 
 ## 1.0.3 — 4 November 2026
 
