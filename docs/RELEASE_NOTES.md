@@ -11,16 +11,16 @@ Released 4 November 2026 · UnlikeNoise Labs · macOS 12+ · AU / VST3 / Standal
 Two rendering bugs in the phosphor field shipped in 1.0.0/1.0.1:
 
 - The phosphor decay used a bit-trick that also subtracted from the **alpha**
-  channel. JUCE composites ARGB images as premultiplied, so pixels whose alpha
-  decayed while their colour stayed bright became additive white ghosts; the field
-  washed out and flickered between black and white.
-- Per-frame additive splats could drive every channel to 255 within a few frames,
-  turning stationary grains into hard white discs.
+  channel. The phosphor screen is an opaque premultiplied ARGB image, so decaying
+  its alpha made the dark base drift and the field itself translucent: a washed
+  grey/white rectangle that flickered as splats reset alpha.
+- Independently, per-frame additive splats drove the bright channels to 255 within
+  a few frames, turning stationary grains into hard white discs.
 
-Fixes: RGB-only decay with the alpha byte pinned opaque; a per-splat colour
-ceiling so embers approach their colour instead of clipping to white; rebalanced
-grain/dust energies (the cloud stays lush); pitch colour capped at gold rather
-than pale ember.
+Fixes: RGB-only decay with the alpha byte pinned opaque; a tight per-splat colour
+ceiling (a little brighter than the ember colour) so repeated splats stay warm
+instead of clipping; grain/dust energies re-tuned so the cloud keeps its density;
+the pitch colour ramp capped at a warm gold rather than near-white pale ember.
 
 Also: the LFO phase dot now traverses the **full** scope width and samples the
 displayed two-cycle waveform (it previously turned around at the middle).

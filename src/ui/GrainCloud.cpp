@@ -130,10 +130,14 @@ void GrainCloud::PhosphorField::fade (int shift)
             // Subtract the high bits of each colour byte (1/16 .. 1/64 decay),
             // leaving the alpha byte untouched. Two ops, no division.
             const auto delta = (p >> step) & mask;
-            row[x] = (p - delta) | 0xFF000000u;   // keep the field opaque
+            const auto decayed = p - delta;
 
-            if ((row[x] >> 24) != 0xFFu)
+            // The invariant must be checked BEFORE forcing alpha, otherwise the
+            // QA flag could never trip (the bug this guards against decays alpha).
+            if ((decayed >> 24) != 0xFFu)
                 alphaBroken = true;
+
+            row[x] = decayed | 0xFF000000u;   // keep the field opaque
         }
     }
 }
@@ -167,12 +171,13 @@ void GrainCloud::PhosphorField::splat (float cx, float cy, float radius,
     const auto cg = (float) colour.getGreen() * energy;
     const auto cb = (float) colour.getBlue() * energy;
 
-    // Per-splat colour ceiling. Without it, pixels hit repeatedly by the same
-    // grain in consecutive frames keep adding until all channels clip to white;
-    // the field then flickers as white ghosts rather than glowing embers.
-    const auto capR = juce::jmin (255, juce::roundToInt ((float) colour.getRed() * 2.1f + 24.0f));
-    const auto capG = juce::jmin (255, juce::roundToInt ((float) colour.getGreen() * 2.1f + 24.0f));
-    const auto capB = juce::jmin (255, juce::roundToInt ((float) colour.getBlue() * 2.1f + 24.0f));
+    // Per-splat colour ceiling. Pixels hit repeatedly by a grain in consecutive
+    // frames keep adding, so a loose ceiling lets red/green clip to 255 and the
+    // ember turns into a hard pale disc. Cap close to the ember colour itself:
+    // bright cores stay warm, never white.
+    const auto capR = juce::jmin (255, juce::roundToInt ((float) colour.getRed()   * 1.15f + 10.0f));
+    const auto capG = juce::jmin (255, juce::roundToInt ((float) colour.getGreen() * 1.15f + 10.0f));
+    const auto capB = juce::jmin (255, juce::roundToInt ((float) colour.getBlue()  * 1.15f + 10.0f));
 
     for (int y = y0; y <= y1; ++y)
     {

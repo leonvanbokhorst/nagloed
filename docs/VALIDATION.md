@@ -126,11 +126,14 @@ the engine audio, so the snapshot shows the live grain field.
 ./build/nagl_preview_artefacts/Release/nagl_preview --soak
 ```
 
-Runs the editor for eight seconds and asserts the phosphor buffer stayed opaque
-(`alphaOk`), no near-white wash, sane field luminance, and that the field is still
-animating. This is the regression test for the 1.0.1 grain-field corruption
-(alpha channel decayed by the bit-trick fade, breaking premultiplied compositing);
-it prints `SOAK PASS`.
+Runs the editor for eight seconds **with audio flowing** (so grains actually move)
+and asserts the phosphor buffer stayed opaque (`alphaOk`, checked before alpha is
+pinned), no near-white wash, and that clipped-ember pixels stay under 0.02% of the
+field while the field keeps animating. This is the regression test for the grain-field
+corruption: the decay's bit-trick subtracted from the alpha byte as well as the
+colour, so the opaque phosphor screen became translucent and the field washed out;
+independently, additive splats clipped bright channels to white discs. It prints
+`SOAK PASS`; the loose cap prints `SOAK FAIL`.
 
 ### Editor refresh in a host-style mount
 
@@ -151,7 +154,7 @@ One command reproduces everything above, provided pluginval is present in
 ```
 
 GitHub Actions CI (`.github/workflows/ci.yml`) builds the AU/VST3/Standalone
-targets, runs the suite and validates the AU; run `41796859555` on the release
+targets, runs the suite and validates the AU; run `41804122764` on the release
 branch is green.
 
 ## Manual checks
