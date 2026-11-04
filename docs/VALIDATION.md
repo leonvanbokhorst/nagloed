@@ -120,6 +120,17 @@ Renders the real `AudioProcessorEditor` offscreen to `docs/ui-preview.png`
 (2360 × 1360, i.e. 1180 × 680 at 2×) after loading a factory preset and feeding
 the engine audio, so the snapshot shows the live grain field.
 
+### Editor refresh in a host-style mount
+
+```
+./build/nagl_preview_artefacts/Release/nagl_preview --embedded
+```
+
+Mounts the editor as a child of a peer component (the way hosts mount plugin
+views), changes cutoff and LFO shape, and fails unless the EAR curve, LFO scope
+and grain field all repaint. This is the regression test for the 1.0.0 frozen
+visualiser bug; a passing run prints `EMBEDDED PASS`.
+
 One command reproduces everything above, provided pluginval is present in
 `.deps/pluginval` (the pluginval stage is optional and skipped otherwise):
 

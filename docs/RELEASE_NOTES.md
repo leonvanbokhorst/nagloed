@@ -1,8 +1,34 @@
-# NAGLOED 1.0.0 — release notes
+# NAGLOED 1.0.1 — release notes
 
-Released 3 November 2026 · UnlikeNoise Labs · macOS 12+ · AU / VST3 / Standalone
+Released 4 November 2026 · UnlikeNoise Labs · macOS 12+ · AU / VST3 / Standalone
 
 > *nagloed* (Dutch, n.) — the light that stays in the room after the source is gone.
+
+## 1.0.1 — 4 November 2026
+
+**Fix: visualisers could freeze in hosts.**
+
+In 1.0.0, mounting the editor in Ableton Live or REAPER could leave the 60 Hz
+animation clock stopped: the editor stopped its timer in `visibilityChanged()`
+when a host reparented the view, and some hosts never deliver a matching
+visibility event afterwards. The knobs kept working (they repaint directly) while
+the grain field, filter curve, LFO scope, VU meters and buffer/scan readouts sat
+frozen — until a window switch forced a full repaint.
+
+- The animation timer now stays alive for the editor's lifetime; the callback is a
+  cheap no-op while hidden, and is restarted defensively from
+  `parentHierarchyChanged()` and `visibilityChanged()`.
+- Every parameter change — mouse or host automation — now schedules an immediate
+  async visual refresh through the APVTS listener, on top of the timer.
+- New regression harness: `nagl_preview --embedded` mounts the editor as a child
+  of a peer (the way hosts do) and fails if the filter curve, LFO scope or grain
+  field do not repaint. `./scripts/validate.sh` runs it.
+
+Verified: 167 checks / 0 failures, `auval` PASS, pluginval strictness 10 SUCCESS
+on VST3 and AU, embedded refresh PASS, demo unchanged
+(sha256 `de987eed…`, peak −2.13 dBFS).
+
+## 1.0.0 — 3 November 2026
 
 NAGLOED 1.0.0 is the first release: a granular effect and instrument built around
 a twelve-second capture buffer, a 256-grain engine, a space, and an analog output
