@@ -8,7 +8,7 @@ remains glow: Sintel grains, Ruimte space, EAR analog colour.
 
 > *nagloed* (Dutch, noun) — the light that stays in the room after the source is gone.
 
-Version **1.0.3** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
+Version **1.0.4** · macOS 12+ · AU / VST3 / Standalone · GPL-3.0-or-later ·
 Master Lonn & Little Wan
 
 ![NAGLOED editor](docs/ui-preview.png)
@@ -145,10 +145,10 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 | AU validation | `auval -v aufx Nagl MLLW` | PASS |
 | pluginval, strictness 10 (VST3 + AU) | `pluginval --strictness-level 10 --validate …` | PASS |
 | Offline render | `./build/nagl_render_artefacts/Release/nagl_render` | PASS — writes `Demo/Nagloed-Demo.wav` |
-| Offscreen editor snapshot | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — writes `docs/ui-preview.png` |
+| Offscreen editor snapshot (deterministic) | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — byte-identical `docs/ui-preview.png` |
 | Editor refresh in a host-style mount | `./build/nagl_preview_artefacts/Release/nagl_preview --embedded` | PASS — `EMBEDDED PASS` |
 | Phosphor / grain-field soak (8 s) | `./build/nagl_preview_artefacts/Release/nagl_preview --soak` | PASS — `SOAK PASS` |
-| GitHub Actions CI (macOS) | `.github/workflows/ci.yml` | PASS — build + tests + auval on every tag |
+| GitHub Actions CI (macOS) | `.github/workflows/ci.yml` | PASS — build, tests, auval, harnesses, deterministic hero and pluginval on every tag |
 
 The full evidence (commands, observed output, CPU/latency figures) is in
 [docs/VALIDATION.md](docs/VALIDATION.md).
@@ -240,6 +240,6 @@ under GPL-3.0-or-later.
 
 - [Brand and design language](docs/BRAND.md)
 - [Manual](docs/MANUAL.md)
-- [Release notes — v1.0.3](docs/RELEASE_NOTES.md)
+- [Release notes — v1.0.4](docs/RELEASE_NOTES.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Preset guide](docs/PRESET_GUIDE.md)

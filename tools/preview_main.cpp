@@ -20,6 +20,7 @@
 #include "plugin/Presets.h"
 #include "ui/EditorFactory.h"
 #include "ui/GrainCloud.h"
+#include "ui/NagloedEditor.h"
 
 namespace
 {
@@ -301,6 +302,11 @@ int main (int argc, char** argv)
     // Let the editor's timers ingest the engine's visual state and repaint
     // before we snapshot, so the grain field is alive in the capture.
     juce::MessageManager::getInstance()->runDispatchLoopUntil (700);
+
+    // Deterministic documentation frame: no wall-clock timer, fixed frame count,
+    // fixed RNG seed (the dust generator is seeded in GrainCloud).
+    if (auto* nagloedEditor = dynamic_cast<nagloed::ui::NagloedEditor*> (editor.get()))
+        nagloedEditor->advanceForPreview (240);
 
     const auto image = editor->createComponentSnapshot (editor->getLocalBounds(), true, 2.0f);
     const auto out = juce::File::getCurrentWorkingDirectory().getChildFile ("docs")

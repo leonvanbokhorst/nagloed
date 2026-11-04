@@ -1,4 +1,4 @@
-# NAGLOED 1.0.3 — validation report
+# NAGLOED 1.0.4 — validation report
 
 Everything below was produced on the release candidate on the build machine
 described here. The point is not a badge: it is that the numbers can be
@@ -118,7 +118,10 @@ plug-in uses in a host.
 
 Renders the real `AudioProcessorEditor` offscreen to `docs/ui-preview.png`
 (2360 × 1360, i.e. 1180 × 680 at 2×) after loading a factory preset and feeding
-the engine audio, so the snapshot shows the live grain field.
+the engine audio, so the snapshot shows the live grain field. The editor advanced
+a fixed number of frames with the wall-clock timer stopped and the dust generator's
+fixed seed, so the PNG is **byte-reproducible**; CI renders it twice and compares
+hashes.
 
 ### Grain-field phosphor soak
 
@@ -154,8 +157,9 @@ One command reproduces everything above, provided pluginval is present in
 ```
 
 GitHub Actions CI (`.github/workflows/ci.yml`) builds the AU/VST3/Standalone
-targets, runs the suite and validates the AU; it runs on every `v*` tag (and on
-demand). The `v1.0.1` tag run and the `fix/phosphor-render` dispatch run were both
+targets, runs the suite, validates the AU, runs `--embedded` and `--soak`, checks
+the hero is byte-identical across two renders, and runs pluginval strictness 10 on
+VST3 and AU; it runs on every `v*` tag (and on demand). The `v1.0.1` tag run and the `fix/phosphor-render` dispatch run were both
 green; a tag run is not cited by number here because it changes with every
 release.
 

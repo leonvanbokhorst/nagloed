@@ -111,6 +111,8 @@ public:
     BottomPanel (juce::AudioProcessorValueTreeState& apvts, AfterglowLookAndFeel& lookAndFeel);
 
     void setUiScale (float newScale);
+    /** Deterministic-preview hook: pin the animated visualiser phases. */
+    void setPhasesForPreview (float spacePhase, float lfoPhase);
     void tick (const VisualState& snapshot, double elapsedSeconds);
     void paint (juce::Graphics&) override;
     void resized() override;

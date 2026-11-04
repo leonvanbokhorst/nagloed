@@ -44,6 +44,10 @@ public:
     /** Current visual frame. Called from the editor's 60 Hz timer. */
     void tick (const VisualState& snapshot, double elapsedSeconds);
 
+    /** Deterministic-preview hook: clear all animated/random visual state and
+        reseed the dust generator, so a fixed frame advance is reproducible. */
+    void resetForDeterministicPreview();
+
     /** QA hook: false means the phosphor buffer lost its opacity invariant. */
     bool alphaInvariantHeld() const noexcept { return ! phosphor.hasBrokenAlpha(); }
 

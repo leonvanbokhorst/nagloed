@@ -698,6 +698,24 @@ void GrainCloud::simulateWarmupFrames (int frames)
     }
 }
 
+void GrainCloud::resetForDeterministicPreview()
+{
+    rng.seed (0x4e41474cu);
+    motes.clear();
+    phosphor.clear();
+    warmupFramesLeft = 0;
+    smoothedInit = false;
+    dustActivity = 0.0f;
+    windPhase = 0.0f;
+    shownFocus = 0.5f;
+    shownSpray = 0.25f;
+    shownPitch = 0.0f;
+    shownBufferFill = 0.0f;
+    headerInfoText.clear();
+    timelineInfoText.clear();
+    repaint();
+}
+
 void GrainCloud::tick (const VisualState& snapshot, double elapsedSeconds)
 {
     visual = snapshot;

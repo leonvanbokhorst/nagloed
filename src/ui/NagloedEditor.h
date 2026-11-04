@@ -43,6 +43,11 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+
+    /** Deterministic preview/test hook: stop the wall-clock timer and advance the
+        visualisers by a fixed number of frames. Used by nagl_preview so the
+        documentation hero is byte-reproducible and by the soak harness. */
+    void advanceForPreview (int frames, double dtSeconds = 1.0 / 60.0);
     void parentHierarchyChanged() override;
     void visibilityChanged() override;
 
