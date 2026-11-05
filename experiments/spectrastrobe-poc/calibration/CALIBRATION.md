@@ -192,7 +192,12 @@ fade to black, the investigation continued separately:
   `lr-m48p1` (~24.8%, below the former 25% research ceiling). The higher levels
   in the same directory (−42, −36, −30, −24 dBFS) are offline-only/gated and
   must not be played until a separate explicit decision. Offline verification is
-  72/72 PASS; hardware observation is pending.
+  117/117 PASS; hardware observation is pending.
+- The 24.8% figure is **per active carrier**, not total emitted light or
+  physiological exposure. Composite colours and crossfades drive multiple LED
+  channels at once. `ab/AB-PROTOCOL.md` documents this, including the proposed
+  minimum revision to the binding hardware protocol for Lonn's review; it does
+  not certify multi-colour optical safety.
 
 Those files do not change this calibration's levels or its report; they are a
 separate diagnostic for the transition question.

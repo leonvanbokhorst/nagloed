@@ -717,6 +717,255 @@ def write_transition_csv(path, measurements):
             writer.writerow(row)
 
 
+def build_multicolour(ab, measurements):
+    """Plateau/crossfade carrier counts and measured midpoints for the annotation."""
+    states = ab["states"]
+    plateaus = [{
+        "index": state["index"],
+        "name": state["name"],
+        "start_s": state["start_s"],
+        "end_s": state["end_s"],
+        "active_carriers": list(state["active_carriers"]),
+        "simultaneous_channels": len(state["active_carriers"]),
+    } for state in states]
+    transitions = []
+    for index in range(len(states) - 1):
+        prev_state, next_state = states[index], states[index + 1]
+        prev_set = set(prev_state["active_carriers"])
+        next_set = set(next_state["active_carriers"])
+        outgoing = sorted(prev_set - next_set)
+        incoming = sorted(next_set - prev_set)
+        shared = sorted(prev_set & next_set)
+        union = prev_set | next_set
+        midpoints = {}
+        for variant_id in ("direct-m48p1", "overlap-m48p1"):
+            rows = (measurements["variants"].get(variant_id) or {}).get("transitions", [])
+            row = next((item for item in rows if item["transition_index"] == index), None)
+            midpoints[variant_id] = (None if row is None else {
+                "outgoing": row["midpoint_outgoing_rel"],
+                "incoming": row["midpoint_incoming_rel"],
+                "shared": row["midpoint_shared_rel"],
+            })
+        transitions.append({
+            "index": index,
+            "boundary_s": round(0.3 + (index + 1) * 1.0, 3),
+            "from_state": prev_state["name"],
+            "to_state": next_state["name"],
+            "outgoing_only": outgoing,
+            "incoming_only": incoming,
+            "shared": shared,
+            "max_simultaneous_carriers": len(union),
+            "midpoints": midpoints,
+        })
+    under_ceiling = [variant["id"] for variant in ab["variants"]
+                     if variant.get("hardware_exposure") == "under_ceiling"]
+    main_under_ceiling = [variant["id"] for variant in ab["variants"]
+                          if variant.get("hardware_exposure") == "under_ceiling"
+                          and variant.get("sequence") == "main"]
+    combined_peaks = []
+    for variant in ab["variants"]:
+        data = measurements["variants"].get(variant["id"], {})
+        combined_peaks.append({
+            "id": variant["id"],
+            "hardware_exposure": variant.get("hardware_exposure"),
+            "digital_sample_peak_dbfs": data.get("peak_dbfs"),
+            "digital_true_peak_dbtp": data.get("true_peak_dbtp"),
+        })
+    return {
+        "csv": "ab-multicolour.csv",
+        "plateaus": plateaus,
+        "transitions": transitions,
+        "under_ceiling_variants": under_ceiling,
+        "main_under_ceiling_variants": main_under_ceiling,
+        "combined_digital_peaks": combined_peaks,
+        "per_carrier_rule": ("Percentages/ratios are per active carrier relative to the -36 dBFS "
+                             "reference, not total emitted light, perceived brightness or "
+                             "physiological exposure. Do not sum them and call it optical "
+                             "exposure."),
+        "unknown_physical_output": ("Decoder thresholds, LED spectra/efficiency, the diffuser, "
+                                    "per-colour balance, Kasina LED brightness and AUX gain are "
+                                    "unmeasured. No optical dosage formula is claimed; "
+                                    "per-carrier digital ratios do not certify multi-colour "
+                                    "safety."),
+        "revised_observational_order": [
+            "direct level comparison first: direct-m54p1 vs direct-m48p1",
+            "only if the physical-safety controls cover simultaneous channels: fixed-ratio "
+            "shape comparison direct-m48p1 vs overlap-m48p1",
+            "L/R comparison after that (lr-m48p1)",
+            "keep the >25%-per-carrier gate; gated variants are not for hardware playback "
+            "without a separate explicit decision",
+        ],
+    }
+
+
+MULTICOLOUR_FIELDS = [
+    "row_type", "variant", "hardware_exposure", "colour_level_dbfs",
+    "state_index", "state_name", "start_s", "end_s", "active_carriers",
+    "simultaneous_channels", "transition_index", "boundary_s", "from_state",
+    "to_state", "outgoing_only", "incoming_only", "shared",
+    "max_simultaneous_carriers", "measured_red_dbfs",
+    "measured_red_percent_of_reference", "measured_green_dbfs",
+    "measured_green_percent_of_reference", "measured_blue_dbfs",
+    "measured_blue_percent_of_reference", "midpoint_outgoing_rel",
+    "midpoint_incoming_rel", "midpoint_shared_rel", "digital_sample_peak_dbfs",
+    "digital_true_peak_dbtp", "note",
+]
+
+
+def write_multicolour_csv(path, ab, measurements):
+    """Write the plateau/crossfade/combined-peak annotation table."""
+    data = measurements["multicolour"]
+    states = ab["states"]
+    variants = {variant["id"]: variant for variant in ab["variants"]}
+    rows = []
+    for variant_id in data["main_under_ceiling_variants"]:
+        variant = variants[variant_id]
+        variant_states = {row["index"]: row
+                          for row in measurements["variants"][variant_id]["states"]}
+        for state in states:
+            state_row = variant_states[state["index"]]
+            row = {field: "" for field in MULTICOLOUR_FIELDS}
+            row.update({
+                "row_type": "plateau",
+                "variant": variant_id,
+                "hardware_exposure": variant.get("hardware_exposure"),
+                "colour_level_dbfs": variant["colour_level_dbfs"],
+                "state_index": state["index"],
+                "state_name": state["name"],
+                "start_s": state["start_s"],
+                "end_s": state["end_s"],
+                "active_carriers": "|".join(state["active_carriers"]),
+                "simultaneous_channels": len(state["active_carriers"]),
+                "note": ("per-carrier digital ratio; not total emitted light or optical "
+                         "exposure"),
+            })
+            for key in CARRIER_KEYS:
+                dbfs = state_row["measured_dbfs"][key]
+                percent = 10.0 ** (state_row["ratio_db"][key] / 20.0) * 100.0
+                row[f"measured_{key}_dbfs"] = round(dbfs, 3) if dbfs > -900 else ""
+                row[f"measured_{key}_percent_of_reference"] = round(percent, 4)
+            rows.append(row)
+    for variant_id in ("direct-m48p1", "overlap-m48p1"):
+        variant = variants[variant_id]
+        for transition in data["transitions"]:
+            midpoint = transition["midpoints"].get(variant_id) or {}
+            row = {field: "" for field in MULTICOLOUR_FIELDS}
+            row.update({
+                "row_type": "crossfade",
+                "variant": variant_id,
+                "hardware_exposure": variant.get("hardware_exposure"),
+                "colour_level_dbfs": variant["colour_level_dbfs"],
+                "transition_index": transition["index"],
+                "boundary_s": transition["boundary_s"],
+                "from_state": transition["from_state"],
+                "to_state": transition["to_state"],
+                "outgoing_only": "|".join(transition["outgoing_only"]),
+                "incoming_only": "|".join(transition["incoming_only"]),
+                "shared": "|".join(transition["shared"]),
+                "max_simultaneous_carriers": transition["max_simultaneous_carriers"],
+                "midpoint_outgoing_rel": midpoint.get("outgoing"),
+                "midpoint_incoming_rel": midpoint.get("incoming"),
+                "midpoint_shared_rel": midpoint.get("shared"),
+                "note": ("measured 10 ms envelope midpoint; per-carrier fraction of the "
+                         "variant colour level, not optical exposure"),
+            })
+            rows.append(row)
+    for peak in data["combined_digital_peaks"]:
+        row = {field: "" for field in MULTICOLOUR_FIELDS}
+        row.update({
+            "row_type": "variant_peak",
+            "variant": peak["id"],
+            "hardware_exposure": peak["hardware_exposure"],
+            "digital_sample_peak_dbfs": peak["digital_sample_peak_dbfs"],
+            "digital_true_peak_dbtp": peak["digital_true_peak_dbtp"],
+            "note": ("combined digital sample/true peak of the rendered WAV; not optical or "
+                     "physiological exposure"),
+        })
+        rows.append(row)
+    with open(path, "w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=MULTICOLOUR_FIELDS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+    data["csv_rows"] = len(rows)
+    data["csv_row_types"] = {row_type: sum(1 for row in rows if row["row_type"] == row_type)
+                             for row_type in ("plateau", "crossfade", "variant_peak")}
+    data["csv_sha256"] = parent_verify.sha256(path)
+    return rows
+
+
+def annotation_checks(checks, measurements, out_dir, ab):
+    data = measurements["multicolour"]
+    plateaus_ok = (len(data["plateaus"]) == len(ab["states"]) == 9
+                   and all(item["simultaneous_channels"] >= 1 for item in data["plateaus"]))
+    transitions_ok = (len(data["transitions"]) == 8
+                      and all(item["max_simultaneous_carriers"] >= 2
+                              for item in data["transitions"]))
+    under_ok = len(data["under_ceiling_variants"]) == 4
+    notes_ok = bool(data["per_carrier_rule"]) and bool(data["unknown_physical_output"])
+    checks.ok("multicolour", "multicolour-annotation",
+              "every plateau and crossfade is annotated with carrier counts",
+              "9 plateaus, 8 transitions, 4 under-ceiling variants, per-carrier and "
+              "unknown-output notes present",
+              f"plateaus {len(data['plateaus'])}, transitions {len(data['transitions'])}, "
+              f"under-ceiling {len(data['under_ceiling_variants'])}",
+              plateaus_ok and transitions_ok and under_ok and notes_ok,
+              "counts are per active carrier; not optical exposure")
+
+    csv_path = out_dir / data["csv"]
+    expected_rows = (len(data["main_under_ceiling_variants"]) * len(ab["states"])
+                     + 2 * 8 + len(ab["variants"]))
+    exists = csv_path.exists()
+    row_types = {}
+    rows_seen = 0
+    if exists:
+        with open(csv_path, "r", encoding="utf-8", newline="") as handle:
+            for row in csv.DictReader(handle):
+                rows_seen += 1
+                row_types[row["row_type"]] = row_types.get(row["row_type"], 0) + 1
+    checks.ok("multicolour", "multicolour-csv",
+              "multi-colour annotation CSV exists with plateau, crossfade and peak rows",
+              f"{expected_rows} data rows; row types plateau/crossfade/variant_peak; "
+              f"sha256 recorded",
+              f"{rows_seen} rows {row_types}" if exists else "missing",
+              exists and rows_seen == expected_rows
+              and {"plateau", "crossfade", "variant_peak"} <= set(row_types),
+              f"{data['csv']} sha256 {data.get('csv_sha256', '')[:16]}")
+
+    peaks = {item["id"]: item for item in data["combined_digital_peaks"]}
+    missing = [vid for vid in data["under_ceiling_variants"] if vid not in peaks]
+    over = [vid for vid in data["under_ceiling_variants"]
+            if vid in peaks and (peaks[vid]["digital_sample_peak_dbfs"] is None
+                                 or peaks[vid]["digital_true_peak_dbtp"] is None
+                                 or peaks[vid]["digital_sample_peak_dbfs"] > -6.0
+                                 or peaks[vid]["digital_true_peak_dbtp"] > -6.0)]
+    checks.ok("multicolour", "under-ceiling-peaks",
+              "combined digital peaks are present for all under-ceiling variants",
+              "sample/true peak present and ≤ -6 dBFS/dBTP; labelled digital, not optical",
+              f"{len(data['under_ceiling_variants']) - len(missing)} present, "
+              f"over -6 dBFS: {len(over)}",
+              not missing and not over,
+              "digital levels only, not optical or physiological exposure")
+
+
+def report_content_check(checks, out_dir):
+    path = out_dir / "ab-report.md"
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    required = [
+        "## Multi-colour activity and combined digital levels",
+        "not optical",
+        "unknown physical output",
+        "direct level comparison first",
+        "ab-multicolour.csv",
+    ]
+    missing = [phrase for phrase in required if phrase.lower() not in text.lower()]
+    checks.ok("multicolour", "multicolour-report",
+              "report contains the multi-colour annotation and unknown-output note",
+              "section heading, per-carrier/not-optical statement, unknown physical output, "
+              "revised order, CSV reference",
+              "present" if not missing else f"missing: {missing}", not missing)
+
+
 def _state_fill(rgb):
     red, green, blue = rgb
     if red and green and blue:
@@ -964,6 +1213,101 @@ def write_reports(out_dir, ab, checks, measurements, summary, determinism):
     lines += ["", "The direct and overlap files are the same sequence, reference and level; "
               "only the transition shaping differs. The midpoint columns are relative to the "
               "per-carrier colour level.", ""]
+    multicolour = measurements.get("multicolour")
+    if multicolour:
+        def level_cell(row, key):
+            if key not in row["active"]:
+                return "—"
+            dbfs = row["measured_dbfs"][key]
+            percent = 10.0 ** (row["ratio_db"][key] / 20.0) * 100.0
+            return f"{dbfs:.2f} dBFS / {percent:.2f}%"
+
+        def midpoint_cell(value):
+            return "n/a" if value is None else f"{value:.2f}"
+
+        lines += ["## Multi-colour activity and combined digital levels", "",
+                  multicolour["per_carrier_rule"], "",
+                  "**Combined digital peaks** shown here are digital levels of the rendered "
+                  "WAV, not optical or physiological exposure.", "",
+                  "### Plateau activity (9 states)", "",
+                  "| # | State | Time | Active carriers | Simultaneous colour channels |",
+                  "|---|---|---|---|---|"]
+        for plateau in multicolour["plateaus"]:
+            lines.append(f"| {plateau['index']} | {plateau['name']} | "
+                         f"{plateau['start_s']:.2f}–{plateau['end_s']:.2f} s | "
+                         f"{', '.join(plateau['active_carriers'])} | "
+                         f"{plateau['simultaneous_channels']} |")
+        lines += ["", "### Under-ceiling per-carrier plateau levels", "",
+                  "Per-carrier level and ratio for the three main under-ceiling variants "
+                  "(direct-m54p1, direct-m48p1, overlap-m48p1). Percentages are per active "
+                  "carrier relative to the -36 dBFS reference and are **not** summed into an "
+                  "optical exposure.", "",
+                  "| Variant | State | Active | R (level / ratio) | G (level / ratio) | B (level / ratio) |",
+                  "|---|---|---|---|---|---|"]
+        for variant_id in multicolour["main_under_ceiling_variants"]:
+            variant_states = {row["index"]: row
+                              for row in measurements["variants"][variant_id]["states"]}
+            for state in ab["states"]:
+                row = variant_states[state["index"]]
+                lines.append(f"| {variant_id} | {state['name']} | "
+                             f"{', '.join(row['active'])} | "
+                             f"{level_cell(row, 'red')} | {level_cell(row, 'green')} | "
+                             f"{level_cell(row, 'blue')} |")
+        lines += ["", "### Crossfade activity and measured midpoints (8 boundaries)", "",
+                  "The direct and overlap midpoint figures are measured 10 ms envelope values "
+                  "relative to the variant's per-carrier colour level (not optical exposure).",
+                  "",
+                  "| # | Boundary | From → To | Outgoing | Incoming | Shared | Max simultaneous | direct-m48p1 mid out/in/shared | overlap-m48p1 mid out/in/shared |",
+                  "|---|---|---|---|---|---|---|---|---|"]
+        for transition in multicolour["transitions"]:
+            direct = transition["midpoints"].get("direct-m48p1") or {}
+            overlap = transition["midpoints"].get("overlap-m48p1") or {}
+
+            def mid_text(item):
+                return (f"{midpoint_cell(item.get('outgoing'))} / "
+                        f"{midpoint_cell(item.get('incoming'))} / "
+                        f"{midpoint_cell(item.get('shared'))}")
+
+            lines.append(f"| {transition['index']} | {transition['boundary_s']:.1f} s | "
+                         f"{transition['from_state']} → {transition['to_state']} | "
+                         f"{', '.join(transition['outgoing_only']) or '—'} | "
+                         f"{', '.join(transition['incoming_only']) or '—'} | "
+                         f"{', '.join(transition['shared']) or '—'} | "
+                         f"{transition['max_simultaneous_carriers']} | "
+                         f"{mid_text(direct)} | {mid_text(overlap)} |")
+        lines += ["", "At a **direct** midpoint the outgoing-only and incoming-only carriers "
+                  "are ≈47%/53% of the variant colour level while shared carriers remain "
+                  "≈100%. With the **overlap** shape both are ≈99–100% (both sides near full "
+                  "at the midpoint). These are per-carrier fractions, not optical exposure.", "",
+                  "### Combined digital levels per variant (digital, not optical)", "",
+                  "| Variant | Hardware exposure | Digital sample peak | Digital true peak |",
+                  "|---|---|---|---|"]
+        for peak in multicolour["combined_digital_peaks"]:
+            sample = peak["digital_sample_peak_dbfs"]
+            true = peak["digital_true_peak_dbtp"]
+            lines.append(f"| {peak['id']} | {peak['hardware_exposure']} | "
+                         f"{'n/a' if sample is None else f'{sample:+.2f} dBFS'} | "
+                         f"{'n/a' if true is None else f'{true:+.2f} dBTP'} |")
+        lines += ["", "### Unknown physical output", "",
+                  multicolour["unknown_physical_output"], "",
+                  "These combined digital peaks are not optical or physiological exposure; "
+                  "no optical dosage formula is claimed.", "",
+                  "### Revised observational order", "",
+                  "Keep the **>25%-per-carrier gate** (gated variants are not for hardware "
+                  "playback without a separate explicit decision).", ""]
+        for step in multicolour["revised_observational_order"]:
+            lines.append(f"- {step}")
+        lines += ["", "### Annotation file", "",
+                  f"`out/{multicolour['csv']}` (sha256 "
+                  f"`{multicolour.get('csv_sha256', '')}`; "
+                  f"{multicolour.get('csv_rows', 0)} data rows: "
+                  + ", ".join(f"{count} {row_type}"
+                              for row_type, count in sorted(
+                                  (multicolour.get('csv_row_types') or {}).items()))
+                  + "). The CSV contains plateau, crossfade and combined-digital-peak rows; "
+                  "all percentages are per active carrier unless explicitly labelled as a "
+                  "combined digital level.", ""]
+
     lr_data = measurements["variants"].get("lr-24")
     if lr_data:
         lines += ["## L/R alternation (matched at -24 dBFS)", "",
@@ -1104,8 +1448,15 @@ def main(argv=None) -> int:
         measurements["determinism"] = determinism
     provenance_check(checks, measurements, out_dir)
 
+    measurements["multicolour"] = build_multicolour(ab, measurements)
+    write_multicolour_csv(out_dir / "ab-multicolour.csv", ab, measurements)
+    annotation_checks(checks, measurements, out_dir, ab)
+
     write_transition_csv(out_dir / "ab-transition-envelopes.csv", measurements)
     write_timeline_svg(out_dir / "ab-timeline.svg", ab, measurements)
+    summary = checks.summary()
+    write_reports(out_dir, ab, checks, measurements, summary, determinism)
+    report_content_check(checks, out_dir)
     summary = checks.summary()
     write_reports(out_dir, ab, checks, measurements, summary, determinism)
 

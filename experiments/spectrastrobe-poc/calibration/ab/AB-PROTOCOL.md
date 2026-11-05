@@ -115,9 +115,77 @@ and `lr-24`. All six above-ceiling variants are **offline-only/gated diagnostic
 stimuli**: do not play them on hardware, even at lower physical controls, until
 Lonn makes a separate explicit decision and a revised safety rationale exists.
 The under-ceiling files (`direct-m54p1`, `direct-m48p1`, `overlap-m48p1`,
-`lr-m48p1`) are the only files intended for the first hardware pass; they do
-not change the production/exposure ceiling, any preset, any score or the base
-calibration.
+`lr-m48p1`) are the only files intended for hardware exposure; the **first
+pass is restricted to the direct level comparison** `direct-m54p1` vs
+`direct-m48p1` (see §5). They do not change the production/exposure ceiling,
+any preset, any score or the base calibration.
+
+### Multi-colour activity and combined digital levels
+
+The per-carrier ceiling is **not** a statement about total emitted light,
+perceived brightness or physiological exposure. Composite states and
+crossfades drive several colour channels simultaneously. The tables below
+describe the **under-ceiling boundary set** (−48.1 dBFS colour, 24.83% of the
+−36 dBFS reference, per active carrier).
+
+**Plateaus.** Colour level per active carrier is 24.83% of reference.
+
+| State | Active carriers | Simultaneous colour channels | Per-carrier level |
+|---|---|---:|---|
+| Red | red | 1 | 24.83% of ref |
+| Green | green | 1 | 24.83% |
+| Blue | blue | 1 | 24.83% |
+| Yellow | red + green | 2 | 24.83% each |
+| Cyan | green + blue | 2 | 24.83% each |
+| Magenta | red + blue | 2 | 24.83% each |
+| White | red + green + blue | 3 | 24.83% each |
+
+**Crossfades (boundary set).** Direct midpoint: outgoing-only and incoming-only
+carriers are ~47–53% of the variant's colour level (≈11.7–13.2% of the
+reference); shared carriers remain at 100% (24.83%). Overlap midpoint:
+outgoing/incoming are ~99–100% (≈24.6–24.8% each); shared carriers remain at
+100%.
+
+| Transition | Outgoing | Incoming | Shared | Max simultaneous carriers during crossfade |
+|---|---|---|---|---:|
+| Red → Green | red | green | — | 2 |
+| Green → Blue | green | blue | — | 2 |
+| Blue → Yellow | blue | red + green | — | 3 |
+| Yellow → Cyan | red | blue | green | 3 |
+| Cyan → Magenta | green | red | blue | 3 |
+| Magenta → White | — | green | red + blue | 3 |
+| White → Red | green + blue | — | red | 3 |
+| Red → Green | red | green | — | 2 |
+
+**Combined digital levels (measured from the WAV, not optical exposure).**
+
+| Variant | Sample peak | True peak |
+|---|---:|---:|
+| `direct-m54p1` | −33.34 dBFS | −33.34 dBTP |
+| `direct-m48p1` | −31.31 dBFS | −31.24 dBTP |
+| `overlap-m48p1` | −31.31 dBFS | −31.31 dBTP |
+| `lr-m48p1` | −34.08 dBFS | −34.08 dBTP |
+
+These are **digital signal peaks**. They say nothing directly about emitted
+optical power, spectral composition, LED efficiency, diffuser behaviour or
+physiological effect. The composite states and crossfades can drive two or
+three LED colour channels at once. Do **not** add the per-carrier percentages
+and call the result optical exposure, and do not treat a per-carrier pass as a
+multi-colour safety certification.
+
+**Generated annotation.** `out/ab-report.md` carries the same plateau/
+crossfade activity table, per-carrier levels and combined digital peaks, plus the
+explicit unknown-output note; `out/ab-multicolour.csv` holds the machine-readable
+annotation (plateau, crossfade and variant-peak rows). The verifier checks their
+presence and the under-ceiling peak bounds. The current run is **117 checks,
+0 FAIL**.
+
+**Unknown physical output.** The Kasina decoder threshold/transfer, the LED
+spectra and per-colour efficiency, the diffuser/glasses response, the per-colour
+hardware balance, the Kasina LED brightness setting and the AUX gain are all
+**unmeasured**. No optical dosage formula is claimed here. The hardware
+protocol below must therefore be treated as a minimum-exposure qualitative
+procedure, not as a calibrated safety certificate.
 
 ### Timing (identical to the base calibration)
 
@@ -173,30 +241,80 @@ Binding safety reference: `../../HARDWARE-PROTOCOL.md`. In addition:
 4. **Play one pass, then pause.** Each file has a 300 ms fade-in/out; a gapless
    loop turns the file boundary into a quiet gap. Pause between variants and
    replay only if needed. Do not loop while judging a transition.
-5. **First hardware pass — under-ceiling files only.** Start with
-   `direct-m54p1` (the level at which the fade-to-black was first observed),
-   then `direct-m48p1` (the boundary case), then `overlap-m48p1` (same boundary
-   ratio, overlap shape) and `lr-m48p1` (same boundary ratio, L/R). These are
-   the only files for this pass. **Do not play any variant marked `gated
-   (above)`** — `direct-m42p0`, `direct-m36p0`, `direct-m30p0`,
-   `direct-m24p0`, `overlap-24` or `lr-24` — even with lower physical controls.
-   Those require a separate explicit decision and a revised safety rationale.
-6. **Separate the A/B from physical light brightness.** This A/B compares
+5. **First hardware pass — direct level comparison only.**
+   Start with `direct-m54p1` (the level at which the fade-to-black was first
+   observed), then `direct-m48p1` (the under-ceiling boundary). These two files
+   isolate the relative-level question. **Do not play the shape or L/R files in
+   this first pass.** Only after the direct comparison is complete, comfortable
+   and the simultaneous-channel safety controls below are explicitly accepted
+   may `overlap-m48p1` (fixed-ratio shape) follow; `lr-m48p1` comes after that.
+   **Do not play any variant marked `gated (above)`** — `direct-m42p0`,
+   `direct-m36p0`, `direct-m30p0`, `direct-m24p0`, `overlap-24` or `lr-24` —
+   even with lower physical controls. Those require a separate explicit
+   decision and a revised safety rationale.
+6. **Simultaneous colour channels.** Every file already contains composite
+   plateaus (Yellow, Cyan, Magenta, White) and crossfades with up to three
+   colour channels active; the per-carrier percentages are not a combined
+   optical limit. Keep the fixed low Kasina brightness and moderate AUX, one
+   pass per file, pause between files, and stop at any discomfort. If the
+   multi-colour exposure basis is not accepted by the binding safety reference,
+   do not start the session. The 25% research ceiling is not a certificate of
+   multi-colour optical safety.
+7. **Separate the A/B from physical light brightness.** This A/B compares
    encoded ratios and shapes at **one fixed physical brightness/AUX setting**;
    do not change Kasina brightness or AUX between files, and do not use the
    hardware brightness control to emulate a higher signal ratio. Record the
    actual settings. A physical-brightness comparison at a fixed file is a
    different, gated experiment; it is not part of this A/B.
-7. **Standard Ganzframes (eyes closed) first.** DeepVision (eyes open) only if
+8. **Standard Ganzframes (eyes closed) first.** DeepVision (eyes open) only if
    the session is comfortable, and at the same or a *lower* Kasina brightness.
-8. **Immediate stop:** stop playback, Kasina brightness to minimum, glasses off
+9. **Immediate stop:** stop playback, Kasina brightness to minimum, glasses off
    or cover one eye. Stop at any discomfort, headache, dizziness, an
    unexplained flash or loss of detection. Stopping is always allowed.
-9. **No medical/wellness claim.** This is a perceptual/technical diagnostic.
-10. **One variable at a time.** Keep physical brightness, AUX level, routing,
+10. **No medical/wellness claim.** This is a perceptual/technical diagnostic.
+11. **One variable at a time.** Keep physical brightness, AUX level, routing,
     seating and glasses type fixed between the under-ceiling variants. If
     something must change, note it and restart the comparison from
     `direct-m54p1`.
+
+### Proposed minimum hardware-protocol revision (for Lonn review — not applied)
+
+**Gap in the binding protocol.** `../../HARDWARE-PROTOCOL.md` covers a
+single-file brightness ladder, stop rules and general light safety, but it does
+not explicitly address **simultaneous multi-colour/light-mixing exposure**, and
+its "max colour" values are per file, not a combined-channel or optical limit.
+It also does not say that a per-carrier ratio passing the research ceiling says
+nothing about total emitted light or physiological exposure. That gap must be
+closed before the calibration A/B is played.
+
+**Minimum conservative addendum proposed for Lonn's review:**
+
+1. **Scope.** Only the under-ceiling calibration files in this directory; no
+   gated above-ceiling file. The 25%-per-carrier gate remains absolute.
+2. **Explicit multi-colour statement.** Yellow/Cyan/Magenta/White and the
+   crossfades drive two or three LED colour channels at once. The 25% and 24.83%
+   figures are per-carrier digital ratios; they are not a combined optical or
+   physiological limit. Do not sum percentages and do not claim multi-colour
+   safety from a file-level pass.
+3. **First session = direct level comparison only.** One pass of
+   `direct-m54p1`, pause, one pass of `direct-m48p1`; no shape or L/R file until
+   that comparison is complete and the multi-colour controls are accepted.
+4. **Fixed physical settings.** One low Kasina LED brightness and one moderate
+   AUX level, recorded and unchanged for all files; no maximum settings; no
+   normalisation; same routing; one operator; stop within reach.
+5. **Minimum exposure.** No looping, no repeated passes by default, pause
+   between files, stop at the first discomfort/headache/dizziness/unexplained
+   flicker; keep the session short and end rather than escalate.
+6. **Unknown optical output.** Decoder/LED/diffuser behaviour and optical
+   output are unmeasured. If the observation would require higher brightness,
+   longer exposure or a gated ratio to be meaningful, stop and require an
+   optical/photodiode measurement first; do not escalate.
+7. **Shape and L/R are later.** Only after the direct comparison and explicit
+   acceptance of this multi-colour addendum: `overlap-m48p1` for shape, then
+   `lr-m48p1` for the expected one-eye-dark control.
+
+This is a proposal for review, not a change to the binding protocol. It does not
+certify the multi-colour stimulus as safe and does not authorise any gated file.
 
 ## 6. Observation log per transition
 

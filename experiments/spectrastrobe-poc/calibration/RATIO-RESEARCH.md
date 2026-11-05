@@ -5,7 +5,7 @@
 > `calibration.json`, the calibration renderer/verifier, *Eerste Gloed*, NAGLOED
 > v1.0.4, production DSP or release planning. The A/B ladder described in §6 is
 > **implemented** in `calibration/ab/` (see `ab/AB-PROTOCOL.md`); its offline
-> verification is 72/72 PASS. Hardware observation is still pending, so no
+> verification is 117/117 PASS. Hardware observation is still pending, so no
 > causal conclusion is claimed. Any hardware exposure remains bound by
 > `../HARDWARE-PROTOCOL.md`; this note is not medical or legal advice.
 >
@@ -76,6 +76,24 @@ Supporting evidence for L2/L3 separation:
 
 Consequence: "the file has no black gap" and "the light went black" can both be
 true. The task is to find which layer introduces the dip.
+
+### 2.1 What the 25% research ceiling does — and does not — mean
+
+- It is a **per-active-carrier digital amplitude ratio**: colour carrier peak
+  versus 18.2 kHz reference peak, measured in the WAV.
+- It is **not** a statement about total emitted light, perceived brightness,
+  multi-colour optical output or physiological exposure. Yellow, cyan, magenta
+  and white drive two or three LED colour channels at once; a crossfade can do
+  the same. Do not sum the per-carrier percentages and call that optical
+  exposure.
+- Passing the per-carrier ceiling does **not** certify a multi-colour stimulus
+  as safe. The decoder/LED/diffuser transfer, per-colour balance and actual
+  hardware brightness are unmeasured; no optical dosage formula is claimed.
+- `AB-PROTOCOL.md` contains the plateau/crossfade activity table, the combined
+  **digital** peak/true-peak checks and an explicit unknown-physical-output
+  note. It also flags a gap in `../HARDWARE-PROTOCOL.md` regarding simultaneous
+  colour channels and proposes the minimum conservative revision for Lonn's
+  review; the binding protocol is not changed here.
 
 ---
 

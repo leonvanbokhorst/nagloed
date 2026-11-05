@@ -347,6 +347,51 @@ def main(argv=None) -> int:
                  "changed."),
     }
 
+    states = ab["states"]
+    transition_counts = []
+    for index in range(len(states) - 1):
+        union = set(states[index]["active_carriers"]) | set(states[index + 1]["active_carriers"])
+        transition_counts.append({
+            "boundary_s": round(0.3 + (index + 1) * 1.0, 3),
+            "from_state": states[index]["name"],
+            "to_state": states[index + 1]["name"],
+            "max_simultaneous_carriers": len(union),
+        })
+    multicolour_annotation = {
+        "csv": "ab-multicolour.csv",
+        "generated_by": "verify_ab.py",
+        "plateaus": len(states),
+        "transitions_per_main_variant": len(states) - 1,
+        "plateau_simultaneous_channels": [
+            {"state": state["name"],
+             "active_carriers": state["active_carriers"],
+             "simultaneous_channels": len(state["active_carriers"])}
+            for state in states
+        ],
+        "transition_max_simultaneous_carriers": transition_counts,
+        "under_ceiling_variants": [variant["id"] for variant in ab["variants"]
+                                   if variant.get("hardware_exposure") == "under_ceiling"],
+        "per_carrier_rule": ("Percentages and ratios are per active carrier relative to the "
+                             "-36 dBFS reference. They are not total emitted light, perceived "
+                             "brightness or physiological exposure; do not sum them and call "
+                             "it optical exposure."),
+        "combined_digital_peak_rule": ("Combined sample/true peaks are digital levels of the "
+                                       "rendered WAV, not optical or physiological exposure."),
+        "unknown_physical_output": ("Decoder thresholds, LED spectra/efficiency, the "
+                                    "diffuser, per-colour balance, Kasina LED brightness and "
+                                    "AUX gain are unmeasured. No optical dosage formula is "
+                                    "claimed; per-carrier digital ratios do not certify "
+                                    "multi-colour safety."),
+        "revised_observational_order": [
+            "1. direct level comparison first: direct-m54p1 vs direct-m48p1",
+            "2. only if the physical-safety controls cover simultaneous channels: "
+            "fixed-ratio shape comparison direct-m48p1 vs overlap-m48p1",
+            "3. L/R comparison (lr-m48p1) after that",
+            "Keep the >25%-per-carrier gate; gated variants are not for hardware playback "
+            "without a separate explicit decision.",
+        ],
+    }
+
     manifest = {
         "generator": "render_ab.py",
         "experiment": "SpectraStrobe A/B colour calibration (DIAGNOSTIC, issue #31)",
@@ -368,6 +413,7 @@ def main(argv=None) -> int:
         "correction": ab.get("correction"),
         "hardware_exposure_policy": ab.get("hardware_exposure_policy"),
         "provenance": provenance,
+        "multicolour_annotation": multicolour_annotation,
         "level_documentation": ab["level_documentation"],
         "variants": ab["variants"],
         "states": ab["states"],
