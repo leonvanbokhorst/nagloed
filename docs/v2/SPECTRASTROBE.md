@@ -57,9 +57,19 @@ during playback and routes them to the LED glasses. **[evidence]** —
   - a forum reply from a Lumasonic developer states "RGB at -24 dB = 100%
     brightness" and "reference = 1/4 of the colour tones" (so 1:4).
   **[open]** — [MindPlace forum thread](https://mindplacesupport.com/forum/showthread.php?3173-Recommendations-on-maintaining-precise-SpectraStrobe-control-for-given-audio-content)
-- Our PoC does not have to resolve this conflict: with a **maximum brightness
-  ratio of 25% of the reference**, brightness remains conservative under both
-  interpretations (25% at 1:1, 6.25% at 1:4). See §7.
+- Our PoC does not have to resolve this conflict for safety, but **issue #31
+  changed the research picture**: MindPlace developer guidance (Scott
+  Hendrickson / *neuroasis*, 2015–2019) states the reference is normalised to
+  **-36 dB** and each light channel to **-24 dB**, a **4:1 (12 dB) dynamic
+  range** — i.e. colour = 4× reference at full brightness. Under that reading,
+  the base calibration's reference -30 dBFS with colours at 6.25% of reference
+  (~-54.1 dBFS) is about **30 dB below the full-brightness colour level** and a
+  1/16 reference ratio, not a conservative full-brightness setting. This is a
+  **hypothesis explaining the observed fade-to-black crossfades**, not a
+  confirmed decoder specification; the Lumasonic production table still implies
+  1:1. See
+  `experiments/spectrastrobe-poc/calibration/RATIO-RESEARCH.md` and the
+  controlled A/B in `experiments/spectrastrobe-poc/calibration/ab/`.
 - The reference panning is also one of the safety risks: in the raw carrier the
   LFO produces a left/right rhythm of 10–50 per second. That is not visible as
   colour brightness, but it must not leak into the colour channels. See

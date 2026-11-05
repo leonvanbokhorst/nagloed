@@ -176,3 +176,21 @@ this offline diagnostic.
   not with a printed colour chart.
 - This document and the generated report make no medical, therapeutic or
   wellness claim.
+
+## Follow-up — issue #31 (fade-to-black crossfades)
+
+This document and the 41/41 report remain the historical record of the first
+calibration. After the hardware observation that the transitions appeared to
+fade to black, the investigation continued separately:
+
+- `RATIO-RESEARCH.md` — primary-source research on the intended reference/colour
+  scaling, the three levels (digital ratio, hardware output, perception), and the
+  hypothesis that the base calibration is underdriven.
+- `ab/` — a controlled A/B stimulus set with reference fixed at −36 dBFS and
+  colour levels −54.1 / −42 / −36 / −30 / −24 dBFS, plus an overlap-shape and a
+  matched L/R control; offline verification 72/72 PASS, hardware observation
+  pending.
+
+Those files do not change this calibration's levels or its report; they are a
+separate diagnostic for the transition question.
+
