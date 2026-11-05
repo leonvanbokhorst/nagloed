@@ -145,6 +145,10 @@ Colour emberRamp (float t);
 /** Map a pitch in semitones to the cloud colour ramp. */
 Colour pitchColour (float semitones);
 
+/** Eight distinguishable Gloop lane colours, warm-biased so a lane ring still
+    reads as an ember rather than a rainbow: copper -> ember -> gold -> mint. */
+Colour gloopLaneColour (int lane) noexcept;
+
 /** Cheap cached 128x128 monochrome noise tile (alpha only, drawn by atmosphere). */
 const juce::Image& noiseTile();
 

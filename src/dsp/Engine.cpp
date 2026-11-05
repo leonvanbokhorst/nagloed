@@ -29,4 +29,10 @@ void Engine::getVisual (VisualState& out) const noexcept { impl->getVisual (out)
 
 int Engine::getLatencySamples() const noexcept { return impl->getLatencySamples(); }
 
+bool Engine::publishGloopGesture (int lane, const float* offsets, int count,
+                                  float durationSeconds) noexcept
+{
+    return impl->publishGloopGesture (lane, offsets, count, durationSeconds);
+}
+
 } // namespace nagloed

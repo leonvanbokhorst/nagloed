@@ -290,3 +290,34 @@ every release.
   issue #32 on 5 November 2026; the automated checks prove motion, render
   integrity, silence, density contrast, determinism and cost — not whether it
   *feels* alive.
+
+## Development branch: Gloop (issue #33)
+
+The Gloop feature branch adds eight independent gesture loopers. Its automated
+evidence, run on the branch before hand-over:
+
+- `nagl_tests`: **767 checks, 0 failures** (~4 s), including the existing DSP
+  suite, 15 Gloop engine suites and the processor/recorder suites.
+- Gloop engine evidence: silence for empty/Off/motionless/amount-0 lanes; amount
+  linearity; speed 0.25x/2x ratio 8.00 and continuous mid-play speed changes;
+  monotonic 2.5 s fade to Idle; seam wrap max per-frame step 0.0054 on a
+  discontinuous take; live-centre mapping around two knob values; bounded
+  two-lane summing (0.9 + 0.9 -> 1.24, max step 0.0036); gradual Randomize
+  (max per-frame amount step 1.8e-4) with idle lanes untouched; SPSC hand-off
+  full/empty/retry; **0 audio-thread allocations** over 512 blocks with fades,
+  mode changes and Randomize; **~2.2 % of one core** at 48 kHz / 128 samples /
+  stereo with all eight lanes playing a 64-grain cloud (pre-Gloop baseline in
+  the same run: 1.93 %).
+- Processor evidence: record/finalise, target-Off settling, mode transitions,
+  and session state round-trip (including a restore before `prepareToPlay`).
+- `nagl_preview --gloop` writes `docs/gloop-preview.png`; `--soak`,
+  `--headless-host` and `--motion` remain PASS with unchanged determinism
+  (`MOTION-HASH baf8b4e3c0e843fb`).
+
+Not run locally on this branch: the AU/VST3 install step, `auval` and
+pluginval. The source, shared library and all tools link and run; the sandbox
+cannot write `~/Library/Audio/Plug-Ins`, so the bundle copy target fails after
+linking. CI (and the owner's normal build) runs those validators.
+
+Artistic acceptance is Lonn's playing/listening feedback, not a claim from these
+checks.

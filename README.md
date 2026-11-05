@@ -57,6 +57,11 @@ moment and play what remains, read on.
 
 - Five gesture macros: Glow (tape warmth), Drift (instability), Grain (cloud
   shape), Space (room), Shimmer (octave sparkle).
+- Eight asynchronous **Gloop** gesture loopers: record a knob's movement, let it
+  orbit the knob's live value indefinitely, set per-lane amount and speed
+  (0.25×–2×), fade a lane out, and gently randomise the moving relationships.
+  The target knob shows the movement as a live ring; empty or motionless lanes
+  stay silent.
 - One LFO (six shapes, six destinations plus Off) and Auto-motion for long evolves.
 - Resizable editor (1180 × 680 default) with a live grain cloud.
 - Full host automation and session state; presets exposed as plug-in programs.
@@ -141,11 +146,12 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 
 | Check | Command | Status |
 |---|---|---|
-| DSP + unit tests (167 checks) | `./build/nagl_tests_artefacts/Release/nagl_tests` | PASS |
+| DSP + unit tests (767 checks) | `./build/nagl_tests_artefacts/Release/nagl_tests` | PASS |
 | AU validation | `auval -v aufx Nagl MLLW` | PASS |
 | pluginval, strictness 10 (VST3 + AU) | `pluginval --strictness-level 10 --validate …` | PASS |
 | Offline render | `./build/nagl_render_artefacts/Release/nagl_render` | PASS — writes `Demo/Nagloed-Demo.wav` |
 | Offscreen editor snapshot (deterministic) | `./build/nagl_preview_artefacts/Release/nagl_preview` | PASS — byte-identical for a given build/platform |
+| Gloop overlay + knob rings (deterministic layout preview) | `./build/nagl_preview_artefacts/Release/nagl_preview --gloop` | PASS — writes `docs/gloop-preview.png` (synthetic lane frame) |
 | Editor refresh in a host-style mount | `./build/nagl_preview_artefacts/Release/nagl_preview --embedded` | PASS — `EMBEDDED PASS` |
 | Editor refresh, headless (CI) | `./build/nagl_preview_artefacts/Release/nagl_preview --headless-host` | PASS — `HEADLESS-HOST PASS` |
 | Phosphor / grain-field soak (8 s) | `./build/nagl_preview_artefacts/Release/nagl_preview --soak` | PASS — `SOAK PASS` |
@@ -245,6 +251,7 @@ under GPL-3.0-or-later.
 
 - [Brand and design language](docs/BRAND.md)
 - [Manual](docs/MANUAL.md)
+- [Gloop design and trade-offs](docs/GLOOP.md)
 - [Release notes — v1.0.5](docs/RELEASE_NOTES.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Preset guide](docs/PRESET_GUIDE.md)

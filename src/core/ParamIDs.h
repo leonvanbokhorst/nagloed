@@ -58,4 +58,23 @@ inline constexpr const char* autoMotion   = "mod.auto";
 inline constexpr const char* pressureDest = "mod.pressure";
 inline constexpr const char* slideDest    = "mod.slide";
 inline constexpr const char* expression   = "mod.expression";
+
+// --- Gloop: eight asynchronous gesture loopers ------------------------------
+// Stable ids. The lane arrays are indexed 0..7 (lane 1..8 in the UI).
+inline constexpr const char* gloopSmooth = "gloop.smooth";
+
+inline constexpr const char* gloopTarget[8] = {
+    "gloop.1.target", "gloop.2.target", "gloop.3.target", "gloop.4.target",
+    "gloop.5.target", "gloop.6.target", "gloop.7.target", "gloop.8.target"
+};
+
+inline constexpr const char* gloopAmount[8] = {
+    "gloop.1.amount", "gloop.2.amount", "gloop.3.amount", "gloop.4.amount",
+    "gloop.5.amount", "gloop.6.amount", "gloop.7.amount", "gloop.8.amount"
+};
+
+inline constexpr const char* gloopSpeed[8] = {
+    "gloop.1.speed", "gloop.2.speed", "gloop.3.speed", "gloop.4.speed",
+    "gloop.5.speed", "gloop.6.speed", "gloop.7.speed", "gloop.8.speed"
+};
 } // namespace nagloed::pid

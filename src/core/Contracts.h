@@ -3,6 +3,8 @@
 #include <juce_core/juce_core.h>
 #include <array>
 
+#include "Gloop.h"
+
 namespace nagloed
 {
 
@@ -46,6 +48,11 @@ struct VisualState
     float drive        = 0.0f;   // 0..1 normalised
     float mpePressure  = 0.0f;
     int   activeNotes  = 0;
+
+    // Eight independent gesture loops: playhead, effective offset and actual
+    // state. Target knobs use this to draw their moving ring.
+    gloop::Visual gloop {};
+
     juce::uint32 frame = 0;
 };
 
@@ -73,6 +80,23 @@ struct PresetAccess
     virtual PresetInfo  getPresetInfo (int index) const = 0;
     virtual int         getCurrentPreset() const = 0;
     virtual void        loadPreset (int index) = 0;
+};
+
+// -----------------------------------------------------------------------------
+// Performance actions the Gloop panel needs. Modes are deliberately not host
+// parameters (REC/FADE are gestures, not automation lanes), so the GUI talks to
+// the processor through this small interface; the recorded data itself is
+// persisted in the processor's state blob.
+// -----------------------------------------------------------------------------
+struct GloopControl
+{
+    virtual ~GloopControl () = default;
+
+    virtual void setGloopMode (int lane, int mode) = 0;
+    virtual int  getGloopMode (int lane) const = 0;
+
+    /** Gentle, gradual transformation of the lanes that are already moving. */
+    virtual void gloopRandomize() = 0;
 };
 
 } // namespace nagloed

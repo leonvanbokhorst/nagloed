@@ -2,9 +2,11 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "AfterglowLookAndFeel.h"
+#include "core/Gloop.h"
 
 namespace nagloed::ui
 {
@@ -66,6 +68,12 @@ public:
     /** Called on every resize; keeps painted geometry in sync with the scale. */
     void setUiScale (float newScale);
 
+    /** Feed the live Gloop state to the knobs that are a lane's target.
+        Each affected slider receives the component properties the LookAndFeel
+        reads to draw its ring ("gloopPhases", "gloopAmounts", "gloopOffset");
+        sliders whose lanes all stopped are cleared and repainted once. */
+    void applyGloopVisual (const gloop::Visual& visual);
+
     /** Parameter ids that have a live attachment in this set (for coverage tests). */
     void collectParameterIds (juce::StringArray& ids) const;
 
@@ -77,12 +85,16 @@ public:
 private:
     juce::RangedAudioParameter* findParam (const char* id) const;
 
+    ParamSlider* findKnob (const char* paramId) const;
+
     juce::AudioProcessorValueTreeState& apvts;
     AfterglowLookAndFeel& lnf;
     float uiScale = 1.0f;
 
     std::vector<std::unique_ptr<juce::Component>> controls;
     juce::StringArray attachedIds;
+    std::vector<std::pair<juce::String, ParamSlider*>> knobsByParamId;
+    std::vector<ParamSlider*> gloopRinged;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachments;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>> comboAttachments;
 

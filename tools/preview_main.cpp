@@ -19,6 +19,9 @@
 //                                   after evidence (same harness, old and new renderer)
 //   nagl-preview --motion        -> deterministic motion-QA checks with PASS/FAIL
 //                                   (needs the GrainCloud QA hooks, issue #32)
+//   nagl-preview --gloop         -> docs/gloop-preview.png: the Gloop overlay open,
+//                                   with a fixed synthetic lane state so the layout
+//                                   and the target-knob rings are reviewable (issue #33)
 //
 // --embedded/--headless-host catch the 1.0.0 frozen-visualiser bug; --soak catches
 // the 1.0.2 alpha-decay/white-disc bug.
@@ -1283,6 +1286,72 @@ int main (int argc, char** argv)
         return runEmbeddedTest (processor, editor, width, height);
 
     editor->setVisible (true);
+
+    // --gloop: documentation frame for the Gloop overlay (issue #33). Once the
+    // wall clock is stopped the overlay, its lane rings and the knob rings are
+    // all a pure function of the lane state, so that state is injected instead
+    // of depending on a live recording session. Audio still flows, so the
+    // instrument behind the overlay is plainly playing.
+    if (hasArg (argc, argv, "--gloop"))
+    {
+        auto* nagloedEditor = dynamic_cast<nagloed::ui::NagloedEditor*> (editor.get());
+        if (nagloedEditor == nullptr)
+        {
+            std::fprintf (stderr, "gloop: editor type mismatch\n");
+            return 1;
+        }
+
+        nagloedEditor->advanceForPreview (0);   // stop the timer, reset visuals
+        nagloedEditor->setGloopPanelOpen (true);
+
+        // A plausible performance state: three lanes moving, one READY, one
+        // empty, one withdrawing.
+        setParam (processor, nagloed::pid::gloopTarget[0], 3.0f);   // Cutoff
+        setParam (processor, nagloed::pid::gloopTarget[1], 1.0f);   // Focus
+        setParam (processor, nagloed::pid::gloopTarget[2], 4.0f);   // Space
+        setParam (processor, nagloed::pid::gloopTarget[3], 6.0f);   // Spray
+        setParam (processor, nagloed::pid::gloopTarget[5], 2.0f);   // Pitch
+
+        nagloed::gloop::Visual lanes;
+
+        const auto setLane = [&lanes] (int i, nagloed::gloop::Target target,
+                                       nagloed::gloop::Mode mode, bool hasGesture,
+                                       float phase, float offset, float amount)
+        {
+            auto& l = lanes.lanes[(size_t) i];
+            l.target = (int) target;
+            l.mode = (int) mode;
+            l.hasGesture = hasGesture;
+            l.phase = phase;
+            l.offset = offset;
+            l.amount = amount;
+            l.durationSeconds = 2.4f;
+        };
+
+        setLane (0, nagloed::gloop::Target::Cutoff, nagloed::gloop::Mode::Loop,   true, 0.42f,  0.17f, 0.65f);
+        setLane (1, nagloed::gloop::Target::Focus,  nagloed::gloop::Mode::Record, true, 0.13f, -0.09f, 0.50f);
+        setLane (2, nagloed::gloop::Target::Space,  nagloed::gloop::Mode::Loop,   true, 0.78f,  0.06f, 0.80f);
+        setLane (3, nagloed::gloop::Target::Spray,  nagloed::gloop::Mode::Idle,   true, 0.00f,  0.00f, 0.40f);
+        setLane (5, nagloed::gloop::Target::Pitch,  nagloed::gloop::Mode::Fade,   true, 0.61f, -0.03f, 0.30f);
+
+        for (int chunk = 0; chunk < 24; ++chunk)
+        {
+            feedChordFrom (processor, sampleRate, blockSize, chunk * 0.1, 0.1);
+            nagloedEditor->stepVisualsForPreview (6);
+        }
+
+        // Injected last, so no frame step can overwrite it.
+        nagloedEditor->setGloopVisualForPreview (lanes);
+
+        const auto image = editor->createComponentSnapshot (editor->getLocalBounds(), true, 2.0f);
+        const auto out = juce::File::getCurrentWorkingDirectory().getChildFile ("docs")
+                             .getChildFile ("gloop-preview.png");
+        writePng (out, image);
+
+        std::printf ("wrote %s (%d x %d, synthetic gloop lanes)\n",
+                     out.getFullPathName().toRawUTF8(), image.getWidth(), image.getHeight());
+        return 0;
+    }
 
     // --motion: deterministic motion-QA checks using the GrainCloud QA hooks
     // (issue #32). Prints PASS/FAIL per check; needs the post-change renderer.

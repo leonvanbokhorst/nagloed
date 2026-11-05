@@ -32,6 +32,10 @@
 * GUI never includes `src/dsp/`; DSP never includes `src/ui/`.
 * Parameter ids in `src/core/ParamIDs.h` are permanent API.
 * `VisualState::grains` is a *display* copy: the engine may emit a subset.
+* Gloop gestures are recorded on the message thread and handed to the audio
+  thread through a preallocated SPSC queue (`Engine::publishGloopGesture`).
+  The audio thread never reads the APVTS or allocates; the processor owns the
+  authoritative takes for session persistence. See `docs/GLOOP.md`.
 
 ## Build & tools
 

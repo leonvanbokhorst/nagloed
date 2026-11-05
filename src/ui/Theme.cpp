@@ -418,4 +418,23 @@ Colour pitchColour (float semitones)
     return emberRamp (0.12f + 0.62f * t);
 }
 
+Colour gloopLaneColour (int lane) noexcept
+{
+    // Deliberately warm and low-chroma: eight rings on one knob still have to
+    // read as one instrument, not as a colour wheel. The cold steel at the end
+    // is there so the eighth lane stays distinguishable from the seventh.
+    static const Colour lanes[8] {
+        Colour (0xffff6b1a),   // ember
+        Colour (0xffffb347),   // gold
+        Colour (0xffb87333),   // copper
+        Colour (0xffff8f5e),   // coral
+        Colour (0xff7ce8c7),   // mint
+        Colour (0xffe8c07c),   // brass
+        Colour (0xffd97a3a),   // burnt orange
+        Colour (0xff9fb8c8)    // steel
+    };
+
+    return lanes[(size_t) (((lane % 8) + 8) % 8)];
+}
+
 } // namespace nagloed::ui::theme

@@ -11,6 +11,7 @@
 
 #include "AnalogChain.h"
 #include "DspUtil.h"
+#include "GloopEngine.h"
 #include "GrainEngine.h"
 #include "Modulation.h"
 #include "RuimteReverb.h"
@@ -59,6 +60,11 @@ public:
     void getVisual (VisualState&) const noexcept;
     int  getLatencySamples() const noexcept;
 
+    /** Message thread: hand a finished Gloop take to the audio thread. Lock-free
+        (SPSC); false means the queue was full and the caller should retry. */
+    bool publishGloopGesture (int lane, const float* offsets, int count,
+                              float durationSeconds) noexcept;
+
     // -------------------------------------------------------------------------
     // QA probes for the safety net. The public output is always finite and
     // clamped to +/-6 dBFS; these expose the signal *before* that final safety
@@ -106,6 +112,7 @@ private:
     dsp::RuimteReverb   reverb;
     dsp::AnalogChain    analogChain;
     dsp::Modulation     modulation;
+    dsp::GloopEngine    gloop;
     SmoothedParams      smooth;
 
     // --- per-chunk buffers (allocated in prepare) ----------------------------

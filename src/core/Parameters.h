@@ -1,9 +1,11 @@
 #pragma once
 
+#include <array>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Version.h"
 #include "ParamIDs.h"
 #include "EngineParams.h"
+#include "Gloop.h"
 
 namespace nagloed
 {
@@ -64,6 +66,10 @@ inline constexpr ParamRange lfoRate      { 0.01f, 20.0f, 0.15f, 1.0f };
 inline constexpr ParamRange lfoAmount    { -1.0f, 1.0f, 0.0f };
 inline constexpr ParamRange autoMotion   { 0.0f, 1.0f, 0.15f };
 inline constexpr ParamRange expression   { 0.0f, 1.0f, 1.0f };
+
+inline constexpr ParamRange gloopAmount  { 0.0f, 1.0f, 0.5f };
+inline constexpr ParamRange gloopSpeed   { 0.25f, 2.0f, 1.0f };
+inline constexpr ParamRange gloopSmooth  { 0.0f, 1.0f, 0.35f };
 } // namespace ranges
 
 // --- Choice tables -----------------------------------------------------------
@@ -97,6 +103,153 @@ inline juce::AudioParameterFloatAttributes attrs (const char* label)
 } // namespace detail
 
 // -----------------------------------------------------------------------------
+// Gloop target table.
+//
+// This is the single source of truth for what a lane can orbit, for the range
+// used to normalise a recorded gesture, and for the parameter id the GUI draws
+// its ring around. The order MUST match gloop::Target.
+// -----------------------------------------------------------------------------
+inline constexpr std::array<const char*, (size_t) gloop::kNumTargets> kGloopTargetNames {
+    "Off", "Focus", "Pitch", "Cutoff", "Space", "Density", "Spray",
+    "Width", "Shape", "Drive", "Tone", "Reso", "Wow", "Tape",
+    "Feedback", "Spread"
+};
+static_assert (kGloopTargetNames.size() == (size_t) gloop::kNumTargets,
+               "Gloop target name table and gloop::Target are out of sync");
+
+inline juce::StringArray gloopTargetNames()
+{
+    juce::StringArray names;
+
+    for (const auto* name : kGloopTargetNames)
+        names.add (name);
+
+    return names;
+}
+
+inline const char* gloopTargetName (int target)
+{
+    if (target < 0 || target >= gloop::kNumTargets)
+        return kGloopTargetNames[0];
+
+    return kGloopTargetNames[(size_t) target];
+}
+
+// Parameter id whose knob should show the lane's moving ring, or nullptr for Off.
+inline const char* gloopTargetParamId (int target)
+{
+    switch ((gloop::Target) target)
+    {
+        case gloop::Target::Focus:    return pid::focus;
+        case gloop::Target::Pitch:    return pid::pitch;
+        case gloop::Target::Cutoff:   return pid::cutoff;
+        case gloop::Target::Space:    return pid::spaceMix;
+        case gloop::Target::Density:  return pid::density;
+        case gloop::Target::Spray:    return pid::spray;
+        case gloop::Target::Width:    return pid::width;
+        case gloop::Target::Shape:    return pid::shape;
+        case gloop::Target::Drive:    return pid::drive;
+        case gloop::Target::Tone:     return pid::tone;
+        case gloop::Target::Reso:     return pid::reso;
+        case gloop::Target::Wow:      return pid::wow;
+        case gloop::Target::Tape:     return pid::tape;
+        case gloop::Target::Feedback: return pid::feedback;
+        case gloop::Target::Spread:   return pid::spread;
+        case gloop::Target::Off:
+        case gloop::Target::Count:
+            break;
+    }
+
+    return nullptr;
+}
+
+// The normalisable range of the target's knob. Recording stores offsets in this
+// normalised space, so a gesture keeps its musical shape when the live centre
+// moves (and a cutoff sweep stays a sweep in octaves, not in linear Hz).
+inline juce::NormalisableRange<float> gloopTargetRange (int target)
+{
+    switch ((gloop::Target) target)
+    {
+        case gloop::Target::Focus:    return detail::makeRange (ranges::focus);
+        case gloop::Target::Pitch:    return detail::makeRange (ranges::pitch);
+        case gloop::Target::Cutoff:   return detail::makeRange (ranges::cutoff);
+        case gloop::Target::Space:    return detail::makeRange (ranges::spaceMix);
+        case gloop::Target::Density:  return detail::makeRange (ranges::density);
+        case gloop::Target::Spray:    return detail::makeRange (ranges::spray);
+        case gloop::Target::Width:    return detail::makeRange (ranges::width);
+        case gloop::Target::Shape:    return detail::makeRange (ranges::shape);
+        case gloop::Target::Drive:    return detail::makeRange (ranges::drive);
+        case gloop::Target::Tone:     return detail::makeRange (ranges::tone);
+        case gloop::Target::Reso:     return detail::makeRange (ranges::reso);
+        case gloop::Target::Wow:      return detail::makeRange (ranges::wow);
+        case gloop::Target::Tape:     return detail::makeRange (ranges::tape);
+        case gloop::Target::Feedback: return detail::makeRange (ranges::feedback);
+        case gloop::Target::Spread:   return detail::makeRange (ranges::spread);
+        case gloop::Target::Off:
+        case gloop::Target::Count:
+            break;
+    }
+
+    return juce::NormalisableRange<float> (0.0f, 1.0f);
+}
+
+inline float gloopTargetValue (const EngineParams& p, int target)
+{
+    switch ((gloop::Target) target)
+    {
+        case gloop::Target::Focus:    return p.focus;
+        case gloop::Target::Pitch:    return p.pitchSemis;
+        case gloop::Target::Cutoff:   return p.cutoffHz;
+        case gloop::Target::Space:    return p.spaceMix;
+        case gloop::Target::Density:  return p.density;
+        case gloop::Target::Spray:    return p.spray;
+        case gloop::Target::Width:    return p.width;
+        case gloop::Target::Shape:    return p.shape;
+        case gloop::Target::Drive:    return p.driveDb;
+        case gloop::Target::Tone:     return p.tone;
+        case gloop::Target::Reso:     return p.reso;
+        case gloop::Target::Wow:      return p.wow;
+        case gloop::Target::Tape:     return p.tape;
+        case gloop::Target::Feedback: return p.feedback;
+        case gloop::Target::Spread:   return p.pitchSpread;
+        case gloop::Target::Off:
+        case gloop::Target::Count:
+            break;
+    }
+
+    return 0.0f;
+}
+
+inline float gloopTargetNorm (const EngineParams& p, int target)
+{
+    return gloopTargetRange (target).convertTo0to1 (gloopTargetValue (p, target));
+}
+
+inline float gloopValueToNorm (int target, float value)
+{
+    return gloopTargetRange (target).convertTo0to1 (value);
+}
+
+inline float gloopNormToValue (int target, float norm)
+{
+    return gloopTargetRange (target).convertFrom0to1 (juce::jlimit (0.0f, 1.0f, norm));
+}
+
+// Add a normalised offset to a live parameter value and return the result in
+// real units. Used by the engine to translate a lane's orbit around the knob's
+// current centre while respecting the parameter's own range and skew.
+inline float gloopApplyOffset (int target, float value, float offset) noexcept
+{
+    if (target <= (int) gloop::Target::Off || target >= gloop::kNumTargets
+        || offset == 0.0f)
+        return value;
+
+    const auto range = gloopTargetRange (target);
+    const auto norm = juce::jlimit (0.0f, 1.0f, range.convertTo0to1 (value) + offset);
+    return range.convertFrom0to1 (norm);
+}
+
+// -----------------------------------------------------------------------------
 // The parameter layout. Order matters only for browsing ergonomics.
 // -----------------------------------------------------------------------------
 inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
@@ -126,6 +279,10 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     const auto db = [] (float v, int) { return (v >= 0.0f ? "+" : "") + juce::String (v, 1) + " dB"; };
     const auto pc = [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + "%"; };
     const auto gps = [] (float v, int) { return juce::String (v, v < 10.0f ? 2 : 1) + " g/s"; };
+    const auto spd = [] (float v, int)
+    {
+        return juce::String (v, 2) + juce::String::charToString ((juce::juce_wchar) 0x00d7);
+    };
 
     // Sintel
     addF (pid::density,  "Density",     ranges::density,  "g/s", gps);
@@ -182,6 +339,21 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     addC (pid::pressureDest, "Pressure", pressureDestNames(), 0);
     addC (pid::slideDest,    "Slide",    slideDestNames(), 0);
     addF (pid::expression,   "Expression", ranges::expression, "%", pc);
+
+    // Gloop: eight independent lanes. Target/amount/speed are ordinary
+    // parameters (so a preset can prepare the orbits); REC/LOOP/FADE state and
+    // the recorded gesture itself are performance state, persisted separately.
+    for (int lane = 0; lane < gloop::kNumLanes; ++lane)
+    {
+        const auto n = juce::String (lane + 1);
+        addC (pid::gloopTarget[lane], ("Gloop " + n + " Target").toRawUTF8(),
+              gloopTargetNames(), 0);
+        addF (pid::gloopAmount[lane], ("Gloop " + n + " Amount").toRawUTF8(),
+              ranges::gloopAmount, "%", pc);
+        addF (pid::gloopSpeed[lane], ("Gloop " + n + " Speed").toRawUTF8(),
+              ranges::gloopSpeed, "x", spd);
+    }
+    addF (pid::gloopSmooth, "Gloop Smooth", ranges::gloopSmooth, "%", pc);
 
     return layout;
 }
@@ -249,6 +421,18 @@ inline EngineParams readParams (const juce::AudioProcessorValueTreeState& apvts)
     e.pressureDest = juce::roundToInt (raw (pid::pressureDest));
     e.slideDest    = juce::roundToInt (raw (pid::slideDest));
     e.expression   = raw (pid::expression);
+
+    for (int lane = 0; lane < gloop::kNumLanes; ++lane)
+    {
+        auto& l = e.gloopLanes[(size_t) lane];
+        l.target = juce::roundToInt (raw (pid::gloopTarget[lane]));
+        l.amount = juce::jlimit (0.0f, 1.0f, raw (pid::gloopAmount[lane]));
+        l.speed  = juce::jlimit (gloop::kMinSpeed, gloop::kMaxSpeed,
+                                 raw (pid::gloopSpeed[lane]));
+        // l.mode is injected by the processor from its performance-state atomics.
+    }
+    e.gloopSmoothing = juce::jlimit (0.0f, 1.0f, raw (pid::gloopSmooth));
+
     return e;
 }
 

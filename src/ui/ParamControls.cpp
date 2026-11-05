@@ -1,5 +1,6 @@
 #include "ParamControls.h"
 #include "Theme.h"
+#include "core/Parameters.h"
 
 namespace nagloed::ui
 {
@@ -132,6 +133,7 @@ ParamSlider& ParamControlSet::addKnob (juce::Component& parent, const char* para
 
     s.getProperties().set ("uiScale", (double) uiScale);
     s.getProperties().set ("caption", caption);
+    s.getProperties().set ("paramId", juce::String (paramId));
 
     if (param != nullptr)
     {
@@ -165,6 +167,8 @@ ParamSlider& ParamControlSet::addKnob (juce::Component& parent, const char* para
         }
     }
 
+    knobsByParamId.emplace_back (juce::String (paramId), &s);
+
     parent.addAndMakeVisible (s);
     controls.push_back (std::move (slider));
 
@@ -183,6 +187,7 @@ juce::Slider& ParamControlSet::addRibbon (juce::Component& parent, const char* p
     s.setSliderStyle (juce::Slider::LinearHorizontal);
     s.getProperties().set ("uiScale", (double) uiScale);
     s.getProperties().set ("caption", caption);
+    s.getProperties().set ("paramId", juce::String (paramId));
 
     if (param != nullptr)
     {
@@ -270,6 +275,124 @@ void ParamControlSet::collectParameterIds (juce::StringArray& ids) const
 {
     for (const auto& id : attachedIds)
         ids.addIfNotAlreadyThere (id);
+}
+
+ParamSlider* ParamControlSet::findKnob (const char* paramId) const
+{
+    if (paramId == nullptr)
+        return nullptr;
+
+    const juce::String wanted (paramId);
+
+    for (const auto& entry : knobsByParamId)
+        if (entry.first == wanted)
+            return entry.second;
+
+    return nullptr;
+}
+
+void ParamControlSet::applyGloopVisual (const gloop::Visual& visual)
+{
+    // One knob can carry several lanes (a common gesture: two orbits on Cutoff).
+    // The ring data is therefore a fixed 8-slot array per knob, indexed by lane,
+    // so the LookAndFeel can draw one dot per active lane and sum the influence.
+    struct RingData
+    {
+        std::array<float, (size_t) gloop::kNumLanes> phase {};
+        std::array<float, (size_t) gloop::kNumLanes> amount {};
+        float offset = 0.0f;
+        std::array<bool, (size_t) gloop::kNumLanes> used {};
+
+        RingData()
+        {
+            phase.fill (-1.0f);
+            amount.fill (0.0f);
+        }
+    };
+
+    std::vector<std::pair<ParamSlider*, RingData>> affected;
+
+    for (int lane = 0; lane < gloop::kNumLanes; ++lane)
+    {
+        const auto& l = visual.lanes[(size_t) lane];
+        const auto mode = (gloop::Mode) l.mode;
+
+        // Only a lane that is actually moving modulates its target; a READY
+        // (Idle + gesture) lane contributes nothing, so it draws no ring.
+        if (mode != gloop::Mode::Record && mode != gloop::Mode::Loop && mode != gloop::Mode::Fade)
+            continue;
+
+        auto* slider = findKnob (gloopTargetParamId (l.target));
+
+        if (slider == nullptr)
+            continue;   // target without a knob in this panel
+
+        RingData* data = nullptr;
+
+        for (auto& entry : affected)
+            if (entry.first == slider)
+                data = &entry.second;
+
+        if (data == nullptr)
+        {
+            affected.emplace_back (slider, RingData {});
+            data = &affected.back().second;
+        }
+
+        const auto idx = (size_t) lane;
+        data->phase[idx] = juce::jlimit (-1.0f, 1.0f, l.phase);
+        data->amount[idx] = juce::jlimit (0.0f, 1.0f, l.amount);
+        // LaneVisual::offset is already the *effective* normalised offset
+        // (gesture * amount * fade * random): sum it as-is. Scaling by amount
+        // here would apply the lane's gain twice. `amount` only drives the
+        // dot/track intensity.
+        data->offset += l.offset;
+        data->used[idx] = true;
+    }
+
+    // Knobs that dropped out of the active set lose their ring once.
+    for (auto* slider : gloopRinged)
+    {
+        bool stillActive = false;
+
+        for (const auto& entry : affected)
+            if (entry.first == slider)
+                stillActive = true;
+
+        if (! stillActive)
+        {
+            auto& props = slider->getProperties();
+            props.remove ("gloopPhases");
+            props.remove ("gloopAmounts");
+            props.remove ("gloopOffset");
+            slider->repaint();
+        }
+    }
+
+    gloopRinged.clear();
+
+    for (auto& entry : affected)
+    {
+        auto* slider = entry.first;
+        const auto& data = entry.second;
+
+        juce::Array<juce::var> phases, amounts;
+
+        for (int lane = 0; lane < gloop::kNumLanes; ++lane)
+        {
+            const auto idx = (size_t) lane;
+            phases.add (juce::var (data.used[idx] ? data.phase[idx] : -1.0f));
+            amounts.add (juce::var (data.amount[idx]));
+        }
+
+        auto& props = slider->getProperties();
+        props.set ("gloopPhases", juce::var (phases));
+        props.set ("gloopAmounts", juce::var (amounts));
+        props.set ("gloopOffset", juce::var (juce::jlimit (-1.0f, 1.0f, data.offset)));
+
+        gloopRinged.push_back (slider);
+        slider->repaint();
+    }
 }
 
 void ParamControlSet::setUiScale (float newScale)
