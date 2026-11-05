@@ -144,11 +144,12 @@ aantasten; de corruptiematrix meet dat effect juist expliciet.
   volledig ≈20%, gemeten via probes; de referentie blijft in alle varianten
   gelijk.
 - De 20 Hz-panning is per sample aanwezig met de vereiste diepte; de
-  referentie is in de "uit"-fase ver onder de drempel.
+  referentie is in de "uit"-fase gemeten ≥ 30 dB onder de drempel.
 - **Inter-drager-isolatie** is gemeten met een aparte probe (één kleur
   tegelijk): inactieve kleurbanden zijn ver onder −40 dB.
 - Er is geen noemenswaardige crosstalk, het programma lekt niet in de
-  controlebrand en 17–20 kHz is ver onder −60 dBFS.
+  controlebrand en 17–20 kHz is voor dit smalbandige materiaal ver onder
+  −60 dBFS (voor breedbandig v1-materiaal is dat niet aangetoond; zie INFO).
 - Er is ruime headroom, geen clipping en de render is deterministisch
   (twee renders byte-identiek, manifest met script-sha256's).
 - De volledige M4/M7/M8-set is ook op de **44,1 kHz/16-bit** variant gedraaid.

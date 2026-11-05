@@ -42,11 +42,13 @@
   van leeftijd, gehoor, transducers en weergaveniveau (open aanname **U15**).
 - Kies **één vast, genoteerd playbackniveau** (niet "zo hard als nodig om het
   programma te horen"). Noteer het in het formulier.
-- **Comfortbeluistering (10 s, dragers-only)** op het bedoelde niveau: speel
-  `spectrastrobe-dim-44k1-16bit.wav` of de eerste seconden van de master, vraag
-  naar hoorbaarheid, scherpte of ongemak. Bij tinnitus, hyperacusis, jonge oren
-  of twijfel: lager niveau of niet deelnemen. Dit is een comfort- en
-  gehoorspreventiemaatregel, geen medische test.
+- **Comfortbeluistering (10 s, dragers-only)** op het bedoelde niveau:
+  genereer daarvoor een dragers-only fragment in een aparte map:
+  `python3 render.py --carriers-only --colour-scale 0.3125 --out-dir out/carriers-only`.
+  Speel 10 s op het bedoelde niveau; dit bestand bevat alleen de vier dragers,
+  geen programma. Vraag naar hoorbaarheid, scherpte of ongemak. Bij tinnitus,
+  hyperacusis, jonge oren of twijfel: lager niveau of niet deelnemen. Dit is een
+  comfort- en gehoorspreventiemaatregel, geen medische test.
 
 ## 3. Materiaal
 
@@ -78,8 +80,9 @@ Elke trede: **10–15 s**, daarna 5 s donker. Bij twijfel: terug naar 0 en stopp
 | T5 | `spectrastrobe-44k1-16bit.wav` | 20% | **DeepVision, ogen open**, op **lagere** Kasina-helderheid dan T3 (DeepVision komt veel feller over). Alleen na T0–T4. |
 | T6 | `program-only-44k1-16bit.wav` | n.v.t. | **A/B zonder Ganzfeld**: alleen luisteren. Staat het geluid op zichzelf? Draagt de stilte? |
 
-Daarna optioneel: **tweede keer kijken** (wetend wat er komt) om te horen of
-herkenning de verwantschap verandert.
+Daarna optioneel, als aparte fase-0-observatie (geen bewijs): een **tweede keer
+kijken** (wetend wat er komt) om te horen of herkenning de verwantschap
+verandert. Doe dit niet als extra technische trede en niet binnen de fase-1-toets.
 
 ## 5. Observatieformulier
 
@@ -94,25 +97,30 @@ Vul dit in tijdens of direct na elke trede. Kort mag.
 | Abrupte extinctie (20 ms) gezien | | | | | | | n.v.t. |
 | Impact als antwoord ervaren | | | | | | | n.v.t. |
 | Stilte 28–46 s gedragen | | | | | | | |
-| Onbeantwoord grain om 38 s opgemerkt | | | | | | | n.v.t. |
 | Late echo herkenbaar | | | | | | | n.v.t. |
 | Eén oog bedekt getest (R11) | | | | | | | n.v.t. |
 | Comfort (1–5) | | | | | | | |
 | Opmerkingen | | | | | | | |
 
+Deze tabel is voor de **technische ladder** en de fase-0-auteurstest. Er staat
+bewust **geen** vraag in over het onbeantwoorde grain: dat zou de waarnemer
+vooraf cueën. Deel de 38 s-gebeurtenis ook niet vooraf.
+
 Vast te leggen context: firmwareversie, Kasina-helderheidsstand, playbackniveau,
 sample rate, Ganzframe-type, volgorde van de treden, datum. Zonder die context
 is de observatie niet reproduceerbaar.
 
-Vijf perceptuele vragen (uit `docs/v2/EXPERIMENT-01.md` §5), na afloop:
+**Artistieke observatie, fase 0 (auteurstest, verkennend, geen bewijs).** Stel
+achteraf eerst één open vraag: "Wat merkte je op?" Noteer het antwoord letterlijk
+en in eigen woorden. Pas daarna mogen de gerichte vragen uit
+`docs/v2/EXPERIMENT-01.md` §5 worden gesteld. Deze fase is één persoon (Lonn),
+niet geblindeerd en geen bewijs; ze mag de compositie bijsturen.
 
-1. Waren licht en geluid voor jou verwant, of leken het twee losse dingen?
-2. Merkte je dat ze niet synchroon liepen — stoorde dat, of maakte het de
-   relatie interessanter?
-3. Wat deed de stilte tussen 28 en 46 seconden?
-4. Merkte je dat het lichtgrain om 38 seconden geen antwoord kreeg? Voelde dat
-   als intentie of als gemis?
-5. Wat bleef er hangen: het licht, het geluid, de stilte, of niets?
+**Fase 1 (vooraf geregistreerd, onafhankelijke deelnemers)** gebruikt een apart
+formulier met open-eerst-vragen, gerandomiseerde/blinde condities en
+beslissingsregels uit `docs/v2/EXPERIMENT-01.md` §5. Die fase wordt pas
+uitgevoerd als de controleversies zijn gerenderd en het formulier vooraf is
+vastgelegd. Ze hoort **niet** in deze eerste hardware-sessie.
 
 ## 6. Stop- en acceptatiecriteria
 

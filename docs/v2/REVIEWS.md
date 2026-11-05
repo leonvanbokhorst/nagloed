@@ -12,12 +12,12 @@
 | Basis | `develop` @ `983d48c` = NAGLOED 1.0.4, tag `v1.0.4` |
 | Reviewpunt | commit `0f6422e` (PoC) op `034f7cb` (docs), branch `feature/v2-exploration` |
 | Reviewers | reviewer A (technische haalbaarheid en signaalintegriteit), reviewer B (artistieke intentie, veiligheid en scope) |
-| Onafhankelijkheid | beide reviewers zijn met een verse context gestart, hebben niet aan de inhoud meegewerkt en hebben de documenten en PoC niet vertrouwd zonder eigen metingen |
-| Bewijs | reviewbestanden [REVIEW-A.md](reviews/REVIEW-A.md) en [REVIEW-B.md](reviews/REVIEW-B.md); beide reviewers hebben de v1-basislijn, de tests en de PoC zelf gedraaid |
+| Onafhankelijkheid | beide reviewers zijn met een verse context gestart en hebben niet aan de inhoud meegewerkt |
+| Bewijs | reviewbestanden [REVIEW-A.md](reviews/REVIEW-A.md) en [REVIEW-B.md](reviews/REVIEW-B.md). Reviewer A heeft de v1-testsuite en de PoC gedraaid; reviewer B heeft de v1-basislijn gecontroleerd en de PoC in een eigen uitvoermap gerenderd en geverifieerd. Beide hebben eigen metingen gedaan. |
 
 Beide reviewers kwamen op het reviewpunt tot **REQUEST CHANGES**. De
-reviewbestanden zijn als historisch bewijs ongewijzigd bewaard; de verwerking
-staat hieronder.
+oorspronkelijke reviewtekst is ongewijzigd bewaard; de hercontrole-addenda zijn
+eraan toegevoegd.
 
 ## 2. Wat de reviewers vaststelden
 
@@ -94,14 +94,37 @@ Deze punten zijn **niet** weggepoetst; ze zijn de volgende poorten.
 6. **Cross-platform determinisme.** Alleen op deze machine/CPython getest;
    bit-identieke renders op een tweede platform zijn niet aangetoond (U22).
 
-## 5. Conclusie
+## 5. Hercontrole na verwerking
+
+De reviewers is gevraagd de blockers en belangrijkste majors opnieuw te
+controleren op commit `6c9e831` (delta `0f6422e..6c9e831`). Beiden hebben dat
+gericht gedaan, met eigen metingen; de addenda staan onderaan
+[REVIEW-A.md](reviews/REVIEW-A.md) en [REVIEW-B.md](reviews/REVIEW-B.md).
+
+| Reviewer | Bijgewerkt verdict | Wat opnieuw is gecontroleerd |
+|---|---|---|
+| A (technisch) | **APPROVE WITH COMMENTS** | Blocker B1 opgelost (clamp, 20 ms/50 ms-envelopes, stop-claim, ladder), M1–M8 opgelost, v1 onaangetast, eigen PoC-run 52 PASS / 1 INFO / 0 FAIL, eigen adversariële clamptest |
+| B (artistiek/veiligheid/scope) | **APPROVE WITH COMMENTS** | B1 en B2 inhoudelijk opgelost; majors M1–M6 opgelost; PoC opnieuw gerenderd/geverifieerd in eigen map; v1-diff leeg |
+
+De hercontrole liet nog een klein aantal niet-blokkerende punten staan. Die zijn
+daarna verwerkt: het hardwareprotocol is in lijn gebracht met het herschreven
+`EXPERIMENT-01.md` §5 (pre-cue eruit, fase-0-label, fase 1 apart), de
+R4-onderbouwing voor de eenmalige 20 ms-extinctie is toegevoegd, de
+dragers-only-comforttest heeft nu een echte dragers-only-render, de
+coderingsonafhankelijkheid in fase 1 is aangescherpt, en de tellingen/claims in
+`README.md` en dit bestand zijn feitelijk gemaakt. Die laatste wijzigingen zijn
+niet opnieuw door de reviewers gecontroleerd; ze zijn administratief of
+protocol-airtightheid, geen nieuwe inhoudelijke claim.
+
+## 6. Conclusie
 
 Op het reviewpunt waren er twee blockers: één in de veiligheids-/verificatie-
 claims en één in het perceptuele ontwerp. Beide zijn in de documenten en de PoC
-verwerkt; de technische reviewer had vooraf aangegeven dat de wijzigingen klein
-en concreet waren en na verwerking tot APPROVE zouden leiden. De artistieke
-reviewer vroeg vooral een eerlijker en falsifieerbaar experimentontwerp; dat
-staat er nu, met de expliciete beperking dat fase 1 nog moet worden uitgevoerd.
+verwerkt. In de gerichte hercontrole gaven **beide reviewers APPROVE WITH
+COMMENTS**: de blockers zijn inhoudelijk opgelost, met eigen metingen als
+bewijs. De overgebleven punten zijn verwerkt of staan expliciet als open
+restrisico in §4. De belangrijkste inhoudelijke beperking blijft: fase 1 van de
+perceptuele toets is nog niet uitgevoerd en de hardware is niet gemeten.
 
 Wat **niet** is veranderd: er is geen v2 gebouwd, geen DSP-contract gewijzigd,
 geen releasebranch aangeraakt en geen hardware geclaimd. De eerstvolgende

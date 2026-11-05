@@ -129,10 +129,11 @@ controleversies bestaan. Ze wordt vooraf vastgelegd:
   items. De deelnemer krijgt vooraf geen uitleg over de 38 s-gebeurtenis of over
   de verwachte relatie. De observator noteert letterlijk.
 - **Analyse:** per conditie en per vraag worden antwoorden onafhankelijk
-  gecodeerd door twee codeerders (of door Lonn en één buitenstaander) op
-  "verwant / los / weet niet" en op "intentie / gemis / niets". De codering en
-  de beslissingsregels worden vóór de sessie vastgelegd. Geen statistische claim
-  bij N=5; wel een duidelijke richting en een lijst met tegenvoorbeelden.
+  gecodeerd door twee codeerders. Minstens één codeur is **blind voor de
+  conditie** en codeert op geanonimiseerde fragmenten; Lonn is auteur en codeert
+  niet als enige. De codering en de beslissingsregels worden vóór de sessie
+  vastgelegd. Geen statistische claim bij N=5; wel een duidelijke richting en
+  een lijst met tegenvoorbeelden.
 
 #### De vragen (open eerst, dan gericht)
 

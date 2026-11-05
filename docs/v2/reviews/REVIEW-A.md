@@ -437,3 +437,74 @@ afgerond werk dat nog niet af is.
    event-engine", en vul `REVIEWS.md` / verwijder de placeholder.
 5. **m1–m5, m12**: trek de overclaims in ("onhoorbaar", "geen flikkering in
    3–30 Hz", "veilig"), trek de toleranties gelijk en fix de twee citaties.
+
+---
+
+## 9. Addendum — gerichte hercontrole na verwerking
+
+**Datum:** 2026-11-05. **Commit:** `6c9e831` ("fix(v2): address independent
+review findings"), delta `0f6422e..6c9e831`. **Methode:** gerichte hercontrole
+van alleen de blocker en de belangrijkste majors, geen volledige herreview.
+Ik heb de gewijzigde code en documenten opnieuw gelezen, `./run.sh` zelf
+gedraaid (exit 0, 52 PASS / 1 INFO / 0 FAIL, 15-rij corruptiematrix), de
+adversariële clamp onafhankelijk nagerekend, en de v1-basislijn opnieuw
+gecontroleerd.
+
+### Opgelost?
+
+| Punt | Status | Bewijs |
+|---|---|---|
+| **B1.1** 25 %-kleurplafond afgedwongen | **JA** | `render.py:398-411`: `requested = rgb × colour_scale`, `applied = min(requested, max_ratio)`, clamp-log + manifest. Onafhankelijke test (eigen script, score `rgb=0,90`): alle 12 aanvragen gelogd met `applied_ratio = 0,25`; kleurdrager = exact 0,25 × referentiepiekamplitude. `sa-clamp-adversarieel` PASS, gemeten max 24,44 %. |
+| **B1.2** Envelopes R4/R5 | **JA** | `score.json`: L1-extinctie 20 ms (`[5.98,1.0]→[6.0,0.0]`), L2-fade-in 50 ms (`[0,0]→[0.05,0.35]`). `render.py:133-196` (`validate_score`) weigert score als env niet op (0,0)/(duur,0) begint/eindigt of attack/release < 20 ms. `score-envelope-regels` PASS, `score-L1-extinctie` 20,0 ms PASS, `score-L2-fadein` 50 ms PASS. |
+| **B1.3** Panic-stop-claim | **JA** (correct ingetrokken) | `score.json` safety.stop: "GEEN encoder-panic en GEEN geteste 50 ms-softwareramp"; `SPECTRASTROBE.md:332-336` en `:357`; `HARDWARE-PROTOCOL.md:34-37,138`. De 50 ms-eis staat expliciet in fase B. |
+| **B1.4** Helderheidsladder | **JA** | `render.py:45-47` exposures full 20 % / mid 12,5 % / dim 6,25 %; aparte `spectrastrobe-{full,mid,dim}-44k1-16bit.wav` (aanwezig in `out/`); `ladder-full/mid/dim` PASS (max afwijking ≤ 0,10 dB) en `ladder-orde` PASS (6,20 % < 12,38 % < 19,79 %). |
+| **M1** M2 piek i.p.v. RMS | **JA** | `SPECTRASTROBE.md:168` meet nu "piekamplitude van de 18,2 kHz-band"; band-RMS apart informatief. `m2-referentieniveau-48k` PASS: piek −29,96 dBFS, band-RMS −36,02 dBFS informatief. |
+| **M2** M7 breedband | **JA** (eerlijk INFO) | Nieuwe breedbandprobe (ruis door dezelfde LPF): 17 kHz −19,2 dB, 18,2 kHz −34,0 dB, 19,7 kHz −56,3 dB, gelabeld **INFO** (`m7-breedband-eerlijk`), met expliciete tekst dat de −60 dBFS-eis voor breedbandig v1-materiaal niet is aangetoond. Geen valse PASS. |
+| **M3** M6 inter-drager | **JA** | `verify.py:734-757` + `intercarrier_probe`: rendert per kleur één probe met één kleur tegelijk en meet de andere dragerbanden. `m6-inter-drager-isolatie` PASS: −159,1 / −151,1 / −152,4 dB; meetondergrens en open decoderbandbreedte expliciet genoteerd. |
+| **M4** M14 uitgebreid + kleuren | **JA** | 15 rijen, inclusief `mp3_128_joint` (EXPECTED-DEGRADED, kleurfout 14,5 dB), `naive_src` (EXPECTED-DEGRADED), `lr_swap`; `preserved()` toetst nu kleurfrequenties ±1 Hz én kleurverhoudingen ±2 dB. Matrix blijft adviserend (gedocumenteerd), kleurfouten worden per rij gerapporteerd. |
+| **M5** A1-scope | **JA** | `ARCHITECTURE-OPTIONS.md:250-259,281` en `docs/v2/README.md:184-188` zeggen nu expliciet dat A1 alleen de signaalhelft dekt (encoder + integriteit), niet de event-engine, het geheugen of de budgetten; poort 3 is "pas toetsbaar zodra er een event-engine bestaat". |
+| **M6** A2-buildpad | **JA** (als open punt) | Geregistreerd als U30 (`TECHNICAL-UNCERTAINTIES.md`), met expliciete noot dat A2 een apart buildproject of CMake-uitzondering vraagt en het A1-programma niet letterlijk hergebruikt (`ARCHITECTURE-OPTIONS.md:261-266`, `docs/v2/README.md:193-196`). |
+| **M7** 44,1/16 volledige set | **JA** | `m4-balans-44k1`, `m7-programmaleak-44k1`, `m8-ruisvloer-44k1` draaien nu; extra `program-only-44k1-16bit.wav` aanwezig. |
+| **M8** reviewclaim/REVIEWS.md | **JA** | `docs/v2/REVIEWS.md` bestaat en verwerkt de bevindingen; `docs/v2/README.md:344-356` verwijst naar het reviewpunt en de restrisico's; placeholder weg. |
+| **m1/m2/m3/m5** overclaims | **JA** | "onhoorbaar hoog", "geen flikkering in 3–30 Hz" en "Het is veilig" zijn uit de PoC-README/EXPERIMENT-01 verdwenen; `SAFETY-PRIVACY.md`/`SPECTRASTROBE.md` scherpen de referentiepanning aan als open aanname. |
+| **m8** 20 % vs 25 % per drager | **JA** | `SPECTRASTROBE.md:303-306` expliciteert "per kleurdrager"; `m3-max-koppeling` rapporteert per drager (rood 20,0 %, groen 7,5 %, blauw 10,0 %) én de som per oor (L 22,7 % / R 29,5 %). |
+| **m12** citaties | **JA** | `CONTRIBUTING.md` → `docs/CONTRIBUTING.md`, `preview_main.cpp` → `tools/preview_main.cpp`; beide gecorrigeerd. |
+
+Verder gecontroleerd: manifest bevat nu `scripts`-hashes van `render.py` en
+`verify.py`, `poc_version 0.2.0`, de clamp-status en de exposures-ladder;
+`m10-manifest` PASS. v1.0.4 nog steeds onaangetast
+(`git diff develop -- src CMakeLists.txt CMakePresets.json presets tests scripts
+.github README.md .gitignore` leeg; `nagl_tests` opnieuw **167 checks,
+0 failures**).
+
+### Resterende punten (niet-blokkerend)
+
+- **m4 blijft**: `experiments/spectrastrobe-poc/README.md:147` zegt nog "ver
+  onder de drempel" voor de rust, terwijl de gemeten waarde −38,2 dB bij een
+  drempel van −30 dB is (8 dB marge). Formuleer als "≥ 30 dB onder de drempel".
+- **M14 blijft adviserend**: de matrix beïnvloedt de exitcode niet. Dat is nu
+  expliciet gedocumenteerd en de kern (M1–M10) is hard; voor een
+  hardware-poort zouden de integriteitsrijen wat mij betreft hard moeten zijn.
+  Aanvaardbaar als bewuste keuze, niet als bewijs.
+- **M5-rust** blijft een analyse-artefact (1 ms-blokgrid, geen echte
+  restdrager-meting); robuust over blokgroottes, maar de meetconventie is nog
+  niet in het rapport benoemd.
+- **M4-probes** (middenbalans/hard-pan) heb ik niet opnieuw gecontroleerd; die
+  waren tautologisch ten opzichte van de score en lijken ongewijzigd.
+- **Niet opnieuw gecontroleerd**: de volledige documentdelta, de
+  EXPERIMENT-01-herziening (fase 0/1, N≥5, blinde controles, niet-antwoordregel)
+  en het uitgebreide veiligheidsprotocol. Dat is het terrein van REVIEW-B; ik
+  heb alleen de onderdelen gecontroleerd die de encoder raken (stop-claim,
+  clamp, ladder, envelopes). Ook hardware, DAW/host en decoder blijven
+  ongeverifieerd.
+
+### Bijgewerkt verdict
+
+**APPROVE WITH COMMENTS.**
+
+De blocker is opgelost en alle majors die ik had gemeld zijn aantoonbaar
+verwerkt, met eigen metingen als bewijs. De resterende punten zijn klein en
+gedocumenteerd; ze zijn geen reden om de verkenning of de hardwarestap tegen te
+houden. De eerder gemaakte opmerking blijft staan: het audiosignaal is schoon,
+maar de decoder- en ketenvragen (per-oor referentieschaal, U12/U13) zijn en
+blijven open en horen als zodanig in `REVIEWS.md` te staan.

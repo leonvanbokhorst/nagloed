@@ -117,6 +117,16 @@ helderheid. Waar een mapping wordt gebruikt, heeft ze een plafond, een
 snelheidslimiet en een dode zone (geen licht bij stilte of lage niveaus), zodat
 de installatie niet continu flikkert. **[technische oplossing]**
 
+**Waarom de 20 ms-extinctie mag.** R4's "artistieke" 50 ms is een
+voorzichtigheidsmarge voor herhaalde bewegingen; R2 ziet op herhaling en op
+3–30 Hz, niet op één geïsoleerde overgang. De eenmalige 20 ms-extinctie in
+*Eerste Gloed* is daarom toegestaan, maar blijft een **te verifiëren aanname**:
+pas als de M12-meting op hardware aantoont dat de decoder geen extra
+luminantiemodulatie toevoegt, is ze ook empirisch onderbouwd. Zonder die meting
+is dit een bewuste uitzondering, geen bewezen veiligheid. De extinctie is
+verder nooit herhaald binnen 3 seconden en de kleurkanalen blijven onder het
+25 %-plafond.
+
 ---
 
 ## 4. Direct stoppen en bediening

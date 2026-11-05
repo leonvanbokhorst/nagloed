@@ -39,7 +39,7 @@ ook door niets te doen.
 - **Eerste experiment: *Eerste Gloed*.** Een offline studie van 72 seconden met
   één geschreven paar (lichtextinctie + 180 ms late audio-respons), één late
   herinnering en één onbeantwoord lichtgrain. SpectraStrobe-WAV, vooraf
-  geverifieerd (52/52 kernchecks PASS, 1 eerlijke INFO), met een conservatief
+  geverifieerd (52 van 53 PASS, 1 eerlijke INFO, 0 FAIL), met een conservatief
   hardwareprotocol en een eerlijke scheiding tussen "geschreven verwantschap" en
   "systeem-autonomie".
 - **Architectuur: v1 onaantastbaar.** Eerste stap is een losse offline renderer
@@ -229,8 +229,8 @@ belangrijkste:
 | U10 | De 12 s capture-ring is te kort voor herinneringen op compositieschaal | Open | Scenariotest: fragment op t=0, terugkeer op t=90 s |
 | U12/U13 | SpectraStrobe overleeft de destructieve keten en host-bounce niet; routing is onbewezen | Fase 1/2 | Corruptiematrix en hostmatrix met de analyzer uit de PoC |
 | U15 | Dragers zijn "onhoorbaar" en acceptabel voor omstanders | Open | Sinustest, spectrumanalyse, comfortmeting |
-| U17/U18 | Een bounded event-engine kan realtime-veilig en zonder allocaties | Fase 2 | Prototype met allocatieteller en CPU-meting |
-| U19 | Refractaire periodes en budgets voorkomen runaway tussen audio en licht | Fase 2 | Adversariële scores, invariantencheck |
+| U17/U18 | Een bounded event-engine kan realtime-veilig en zonder allocaties | Later te toetsen | Prototype met allocatieteller en CPU-meting |
+| U19 | Refractaire periodes en budgets voorkomen runaway tussen audio en licht | Later te toetsen | Adversariële scores, invariantencheck |
 | U22 | Eén seed geeft reproduceerbare audio- én licht-renders | Deels | Byte-identieke rerender; tweede platform met tolerantie |
 | U23 | AI blijft buiten de realtime loop | Open | Score-compiler-PoC; review van de datastroom |
 | U30 | A2 kan zonder CMake-wijziging en met dezelfde score | Open | Buildpad uitwerken; v1-bronnen vertalen |
@@ -288,7 +288,7 @@ korte duur, en een menselijke stop in het protocol. Alles staat in
 amplitudes, echte inter-drager-isolatie, de 20 Hz-panmodulatie,
 programma-energie boven 17 kHz (inclusief een eerlijke breedbandprobe),
 piek/true peak, clipping, veiligheidsclamp, envelopes en determinisme. Laatste
-run: **52/52 kernchecks PASS, 1 INFO, 0 FAIL**; corruptiematrix 15 rijen
+run: **52 van 53 PASS, 1 INFO, 0 FAIL**; corruptiematrix 15 rijen
 (9 PASS, 5 EXPECTED-DEGRADED, 1 INFO). Daarna volgt pas het hardwareprotocol:
 Kasina + DeepVision Ganzfeld, helderheidsladder **dim 6,25 % → mid 12,5 % →
 volledig 20 %**, eerst 44,1 kHz/16-bit, dan 48 kHz, DeepVision pas na comfort.
@@ -349,7 +349,9 @@ haalbaarheid en signaalintegriteit, één op artistieke intentie, veiligheid en
 scope. Beide kwamen tot **REQUEST CHANGES**. Hun blockers — de
 veiligheids-/verificatieclaims (clamp, envelopes, stop, ladder, meetdefinities)
 en het perceptuele ontwerp (N=1, cueing, niet-falsifieerbaar) — zijn verwerkt.
-De restrisico's staan expliciet open: hardware M11–M13, decoder-helderschaal,
+Na een gerichte hercontrole op commit `6c9e831` gaven **beide reviewers
+APPROVE WITH COMMENTS**; hun addenda staan in de reviewbestanden. De
+restrisico's staan expliciet open: hardware M11–M13, decoder-helderschaal,
 host-/DAW-keten, breedbandige M7 voor A2, de nog niet uitgevoerde perceptuele
 fase 1 en cross-platform determinisme. Zie [REVIEWS.md](REVIEWS.md) voor de
 volledige verwerking en de originele reviewbestanden in

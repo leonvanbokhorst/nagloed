@@ -239,3 +239,68 @@ Ook de verhouding artistiek/technisch is scheef: de technische en veiligheidsdoc
 - De juridische houdbaarheid van de privacy- en consentparagraaf; dat vraagt een jurist, zoals `SAFETY-PRIVACY.md:191-192` zelf zegt.
 
 Er is niets buiten dit bestand gewijzigd; er zijn geen git write-commando's uitgevoerd en er is geen code of documentatie gefixt.
+
+---
+
+# Addendum — hercontrole na verwerking
+
+**Datum:** 5 november 2026
+**Reviewpunt:** commit `6c9e831`, delta `0f6422e..6c9e831`, branch `feature/v2-exploration`.
+**Scope van deze hercontrole:** alleen de twee blockers (B1, B2) en de zes majors (M1–M6); geen volledige herreview. De oorspronkelijke reviewtekst hierboven is inhoudelijk ongewijzigd gelaten als historisch bewijs; dit addendum is toegevoegd na de verwerking.
+**Methode:** delta-diff gelezen; `git diff 0f6422e..6c9e831 -- src presets tools tests CMakeLists.txt CMakePresets.json scripts .github Demo README.md docs/ARCHITECTURE.md docs/BRAND.md` is leeg (v1.0.4 onaangetast); de PoC opnieuw gerenderd en geverifieerd in `/tmp/review-b-out2` (niet `./run.sh` in de gedeelde map): render exit 0, verify exit 0, `KERN: PASS (52 PASS, 0 FAIL, 1 INFO, 0 SKIP van 53)`.
+
+## B1 — opgelost: JA
+
+Bewijs dat de eerdere blocker is weggenomen:
+
+- **20 ms in plaats van 8 ms.** `score.json:111` heeft `[5.98, 1.0], [6.0, 0.0]`; `score.json:26-32` legt `min_attack_ms`/`min_release_ms` op 20 ms. Verify: `score-L1-extinctie` PASS, 20,0 ms; `score-envelope-regels` PASS (`verify.py:550,559`).
+- **50 ms fade-in voor L2.** `score.json:122`: `[0.0, 0.0], [0.05, 0.35]`; de start is geen stap meer.
+- **Encoder clampt echt.** `render.py:133` (`validate_score`) en `render.py:346-413` begrenzen elk kleurkanaal hard op 25 % van de referentiepiek en loggen de aanvraag; verify `sa-clamp-adversarieel` PASS met gemeten max 24,44 % en 3 clamp-regels (`verify.py:953-991`); het manifest bevat clamp- en exposure-informatie.
+- **Ladder in het uitvoerbare protocol.** `HARDWARE-PROTOCOL.md:67-79`: T0/T1 dim 6,25 %, T2 mid 12,5 %, T3 volledig 20 %, daarna pas 48 kHz en DeepVision; verify `ladder-dim/mid/full/orde` PASS (6,20 % / 12,38 % / 19,79 %).
+- **Panic-claim ingetrokken.** `score.json:163`, `HARDWARE-PROTOCOL.md:34-36` en `SPECTRASTROBE.md:234,334,357` zeggen nu expliciet dat de offline WAV geen encoder-panic en geen geteste 50 ms-ramp heeft; de 50 ms-eis staat in fase B en de menselijke stop is primair.
+
+Restpunten bij B1 (niet blocker):
+
+- R4 is aangepast om de extinctie toe te staan (`SAFETY-PRIVACY.md:103`: "Een eenmalige, geïsoleerde extinctie van 20 ms is toegestaan"). Dat is een bewuste beleidswijziging om het kunstwerk te laten passen. Onderbouw in het veiligheidsdocument waarom 20 ms in een volledig gezichtsveld aanvaardbaar is (koppel het expliciet aan R2, dat op herhaling ziet, en aan een M12-meting op hardware), anders leest dit als een regel die zich naar de compositie voegt.
+- De "comfortbeluistering (10 s, dragers-only)" (`HARDWARE-PROTOCOL.md:45-49`) speelt `spectrastrobe-dim-44k1-16bit.wav` of de master — dat zijn mengsels met programma, geen dragers-only. Render een `carriers-only-44k1-16bit.wav` (de optie bestaat al: `render.py:706`) of corrigeer de tekst.
+
+## B2 — opgelost in het ontwerp: JA; de uitvoerbare bijlage loopt nog achter
+
+Bewijs dat de kern van de blocker is weggenomen:
+
+- **Fase 0 versus fase 1.** `EXPERIMENT-01.md:106` maakt fase 0 expliciet tot auteurstest zonder bewijs; `EXPERIMENT-01.md:113-166` beschrijft fase 1 als vooraf geregistreerde toets: N ≥ 5 niet-auteurs, gerandomiseerde en blinde condities A/B/C/D, en B en C als controles die nog gerenderd moeten worden (`:126-127`).
+- **Open vóór gericht.** De vragen zijn herschreven (`EXPERIMENT-01.md:136-148`): eerst open ("Wat merkte je op?"), de 38 s-vraag pas daarna.
+- **Falsifieerbaar.** `EXPERIMENT-01.md:156-159`: "Als niemand het opmerkt, is de niet-antwoordconditie voor deze uitvoering **niet geslaagd**; dat is een uitkomst, geen succes." Plus coderings- en beslissingsregels (`:150-166`).
+- De oude sturende vragen zijn uit `EXPERIMENT-01.md` verdwenen.
+
+Restpunten bij B2 (major, vóór een sessie):
+
+- **Het uitvoerbare protocol is niet bijgewerkt.** `HARDWARE-PROTOCOL.md:97` bevat nog het pre-cue-item "Onbeantwoord grain om 38 s opgemerkt", en `HARDWARE-PROTOCOL.md:107-113` bevat nog de oude vijf sturende vragen, met de verwijzing "uit `docs/v2/EXPERIMENT-01.md` §5" — die §5 is herschreven en bevat die vragen niet meer. Label §5 expliciet als fase-0-auteurstest (waar cueing geen bewijs is), of vervang het door de open-eerst-vragen en maak een apart fase-1-formulier; haal in elk geval de pre-cue uit het observeerformulier.
+- **Coderonafhankelijkheid.** Fase 1 noemt "twee codeerders (of Lonn en één buitenstaander)" (`EXPERIMENT-01.md:131-133`). Lonn is de auteur en kent de condities; minimaal één codeur moet blind zijn voor conditie (of er moet op geanonimiseerde fragmenten worden gecodeerd). Leg dat in het fase-1-plan vast.
+
+## Majors — status
+
+| Major | Status | Bewijs / restpunt |
+|---|---|---|
+| M1 — uitvoerbare veiligheid (stop/consent/leeftijd/gehoor/R11/niveau) | **Opgelost** | `HARDWARE-PROTOCOL.md:14-52`: toestemming en instructie vooraf, kinderen alleen met begeleiding, ruimte verlicht, één oog bedekken (R11), stopmiddelen, geen panic-claim, vast playbackniveau en 10 s comfortbeluistering. Restpunt: dragers-only-test speelt een mengsel (zie B1). |
+| M2 — visie overclaimt; criteria niet toetsbaar; toon | **Opgelost** | `ARTISTIC-VISION.md:22` "scherpt de vraag aan"; `ARTISTIC-VISION.md:185-188` criteria expliciet "een kompas, geen meetlat" dat per experiment geoperationaliseerd moet worden. |
+| M3 — geschreven versus emergent; 12 s-ring | **Opgelost** | `EXPERIMENT-01.md:24-38`: relaties zijn "geschreven, niet emergent"; de "herinnering" op 46 s past niet in de 12 s-ring; "één gedeeld gebaar" is expliciet "één paar". |
+| M4 — audio-reactive mapping en vocabulairesturing | **Opgelost** | `SAFETY-PRIVACY.md:113-119`: begrensde mapping is "hoogstens één optionele modus, nooit de default en nooit het conceptuele model"; `ARCHITECTURE-OPTIONS.md:303-314`: getallen illustratief, twee alternatieven expliciet open. |
+| M5 — scope/roadmap/activering | **Opgelost** | `README.md:6-8` legt de activering door Lonn op 5 november 2026 vast; `README.md:13-16` scheidt kern en bijlagen ("geen poort en geen backlog"); `README.md:179` noemt de architectuurtabel "geen fasering of backlog"; `DISTRIBUTED.md:118-126` idem. Restpunt: `README.md:232-233` gebruikt nog "Fase 2" als status; hernoem naar "later te toetsen" als de claim "geen fasering" hard moet blijven. |
+| M6 — documentintegriteit | **Opgelost** | Stale "zolang SAFETY-PRIVACY niet bestaat"-teksten weg; `SPECTRASTROBE.md:168` definieert M2 nu als piekamplitude; 20 % (score) versus 25 % (plafond) is verduidelijkt in `EXPERIMENT-01.md:76` en `experiments/spectrastrobe-poc/README.md:54-57`; `README.md:344-355` en `REVIEWS.md` bestaan nu en de reviewclaim is gecorrigeerd. |
+
+Restpunten bij M6/REVIEWS.md (minor):
+
+- `REVIEWS.md:16` stelt dat "beide reviewers de v1-basislijn, de tests en de PoC zelf [hebben] gedraaid". Reviewer B heeft de PoC zelf gerenderd en geverifieerd en de v1-diff/het issue gecontroleerd, maar niet de v1-testsuite gedraaid. Maak de zin per reviewer feitelijk of schrap het "tests"-deel.
+- `REVIEWS.md:19-20` zegt dat de reviewbestanden "ongewijzigd bewaard" zijn. Door dit addendum is dat niet meer letterlijk waar; formuleer "de oorspronkelijke reviewtekst is ongewijzigd bewaard; het hercontrole-addendum is toegevoegd".
+- `README.md:42,291` meldt "52/52 kernchecks PASS, 1 INFO". Het rapport zegt 52 PASS van 53 checks, met 1 INFO. Schrijf "52 van 53 PASS, 1 INFO, 0 FAIL".
+
+## Bijgewerkt verdict
+
+**APPROVE WITH COMMENTS.**
+
+Beide blockers zijn inhoudelijk opgelost: de PoC respecteert nu de eigen veiligheidsregels en de verificatie beloont die niet langer; het perceptuele ontwerp onderscheidt auteurstest en vooraf geregistreerde toets met controles en falsifieerbare criteria. Er is geen nieuwe blocker bij gekomen en v1.0.4 is aantoonbaar onaangetast.
+
+Voorwaardelijk: één major restpunt moet worden opgelost vóór een daadwerkelijke sessie — `HARDWARE-PROTOCOL.md` §5 moet in lijn worden gebracht met het herschreven `EXPERIMENT-01.md` §5 (fase-0-label of open-eerst-formulier, pre-cue eruit). Daarnaast een korte lijst minors (R4-onderbouwing, dragers-only-test, REVIEWS-feitelijkheid, 52/53-telling, "Fase 2"-labels). Fase 1 mag pas worden uitgevoerd nadat de controleversies zijn gerenderd en het fase-1-formulier is vastgelegd; dat staat al expliciet in `EXPERIMENT-01.md:126-127`.
+
+Ik heb niets buiten dit addendum gewijzigd; geen git write-commando's, geen fixes aan code of documentatie.
