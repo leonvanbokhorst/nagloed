@@ -23,11 +23,14 @@
     "no_normalisation": true,
     "files": [
       "ab-direct-m54p1-44k1-16bit.wav",
+      "ab-direct-m48p1-44k1-16bit.wav",
       "ab-direct-m42p0-44k1-16bit.wav",
       "ab-direct-m36p0-44k1-16bit.wav",
       "ab-direct-m30p0-44k1-16bit.wav",
       "ab-direct-m24p0-44k1-16bit.wav",
+      "ab-overlap-m48p1-44k1-16bit.wav",
       "ab-overlap-24-44k1-16bit.wav",
+      "ab-lr-m48p1-44k1-16bit.wav",
       "ab-lr-24-44k1-16bit.wav"
     ]
   },
@@ -544,7 +547,30 @@
       "ratio_percent_of_reference": 12.445,
       "percent_of_mindplace_full_brightness": 3.126,
       "duration_s": 9.6,
-      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%"
+      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%",
+      "hardware_exposure": "under_ceiling",
+      "ceiling_percent_of_reference": 25.0,
+      "ceiling_colour_level_dbfs": -48.0412,
+      "relative_to_former_25pct_ceiling": "below",
+      "hardware_note": "under the former 25% conservative research ceiling; the ceiling is a conservative research convention, not a proven physical safety threshold or a decoder specification"
+    },
+    {
+      "id": "direct-m48p1",
+      "file": "ab-direct-m48p1-44k1-16bit.wav",
+      "sequence": "main",
+      "crossfade_shape": "direct",
+      "colour_level_dbfs": -48.1,
+      "ratio_to_reference_db": -12.1,
+      "ratio_percent_of_reference": 24.831,
+      "percent_of_mindplace_full_brightness": 6.237,
+      "duration_s": 9.6,
+      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%",
+      "hardware_exposure": "under_ceiling",
+      "ceiling_percent_of_reference": 25.0,
+      "ceiling_colour_level_dbfs": -48.0412,
+      "relative_to_former_25pct_ceiling": "below",
+      "hardware_note": "under the former 25% conservative research ceiling; boundary variant, 24.83% of the reference peak (ceiling -48.04 dBFS); the ceiling is a conservative research convention, not a proven physical safety threshold or a decoder specification",
+      "boundary_variant": true
     },
     {
       "id": "direct-m42p0",
@@ -556,7 +582,12 @@
       "ratio_percent_of_reference": 50.119,
       "percent_of_mindplace_full_brightness": 12.589,
       "duration_s": 9.6,
-      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%"
+      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%",
+      "hardware_exposure": "gated",
+      "ceiling_percent_of_reference": 25.0,
+      "ceiling_colour_level_dbfs": -48.0412,
+      "relative_to_former_25pct_ceiling": "above",
+      "hardware_note": "above the former 25% conservative research ceiling (50.12% of the reference peak); gated — not for hardware playback without a separate explicit decision; the ceiling is a conservative research convention, not a proven physical safety threshold or a decoder specification"
     },
     {
       "id": "direct-m36p0",
@@ -568,7 +599,12 @@
       "ratio_percent_of_reference": 100.0,
       "percent_of_mindplace_full_brightness": 25.119,
       "duration_s": 9.6,
-      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%"
+      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%",
+      "hardware_exposure": "gated",
+      "ceiling_percent_of_reference": 25.0,
+      "ceiling_colour_level_dbfs": -48.0412,
+      "relative_to_former_25pct_ceiling": "above",
+      "hardware_note": "above the former 25% conservative research ceiling (100.00% of the reference peak); gated — not for hardware playback without a separate explicit decision; the ceiling is a conservative research convention, not a proven physical safety threshold or a decoder specification"
     },
     {
       "id": "direct-m30p0",
@@ -580,7 +616,12 @@
       "ratio_percent_of_reference": 199.526,
       "percent_of_mindplace_full_brightness": 50.119,
       "duration_s": 9.6,
-      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%"
+      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%",
+      "hardware_exposure": "gated",
+      "ceiling_percent_of_reference": 25.0,
+      "ceiling_colour_level_dbfs": -48.0412,
+      "relative_to_former_25pct_ceiling": "above",
+      "hardware_note": "above the former 25% conservative research ceiling (199.53% of the reference peak); gated — not for hardware playback without a separate explicit decision; the ceiling is a conservative research convention, not a proven physical safety threshold or a decoder specification"
     },
     {
       "id": "direct-m24p0",
@@ -592,7 +633,30 @@
       "ratio_percent_of_reference": 398.107,
       "percent_of_mindplace_full_brightness": 100.0,
       "duration_s": 9.6,
-      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%"
+      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%",
+      "hardware_exposure": "gated",
+      "ceiling_percent_of_reference": 25.0,
+      "ceiling_colour_level_dbfs": -48.0412,
+      "relative_to_former_25pct_ceiling": "above",
+      "hardware_note": "above the former 25% conservative research ceiling (398.11% of the reference peak); gated — not for hardware playback without a separate explicit decision; the ceiling is a conservative research convention, not a proven physical safety threshold or a decoder specification"
+    },
+    {
+      "id": "overlap-m48p1",
+      "file": "ab-overlap-m48p1-44k1-16bit.wav",
+      "sequence": "main",
+      "crossfade_shape": "overlap",
+      "colour_level_dbfs": -48.1,
+      "ratio_to_reference_db": -12.1,
+      "ratio_percent_of_reference": 24.831,
+      "percent_of_mindplace_full_brightness": 6.237,
+      "duration_s": 9.6,
+      "expected_midpoint": "outgoing-only and incoming-only carriers both ~100% of the colour level (held overlap); shared carriers remain 100%",
+      "hardware_exposure": "under_ceiling",
+      "ceiling_percent_of_reference": 25.0,
+      "ceiling_colour_level_dbfs": -48.0412,
+      "relative_to_former_25pct_ceiling": "below",
+      "hardware_note": "under the former 25% conservative research ceiling; boundary variant, 24.83% of the reference peak (ceiling -48.04 dBFS); the ceiling is a conservative research convention, not a proven physical safety threshold or a decoder specification",
+      "boundary_variant": true
     },
     {
       "id": "overlap-24",
@@ -604,7 +668,30 @@
       "ratio_percent_of_reference": 398.107,
       "percent_of_mindplace_full_brightness": 100.0,
       "duration_s": 9.6,
-      "expected_midpoint": "outgoing-only and incoming-only carriers both ~100% of the colour level (held overlap); shared carriers remain 100%"
+      "expected_midpoint": "outgoing-only and incoming-only carriers both ~100% of the colour level (held overlap); shared carriers remain 100%",
+      "hardware_exposure": "gated",
+      "ceiling_percent_of_reference": 25.0,
+      "ceiling_colour_level_dbfs": -48.0412,
+      "relative_to_former_25pct_ceiling": "above",
+      "hardware_note": "above the former 25% conservative research ceiling (398.11% of the reference peak); gated — not for hardware playback without a separate explicit decision; the ceiling is a conservative research convention, not a proven physical safety threshold or a decoder specification"
+    },
+    {
+      "id": "lr-m48p1",
+      "file": "ab-lr-m48p1-44k1-16bit.wav",
+      "sequence": "lr",
+      "crossfade_shape": "direct",
+      "colour_level_dbfs": -48.1,
+      "ratio_to_reference_db": -12.1,
+      "ratio_percent_of_reference": 24.831,
+      "percent_of_mindplace_full_brightness": 6.237,
+      "duration_s": 6.6,
+      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%",
+      "hardware_exposure": "under_ceiling",
+      "ceiling_percent_of_reference": 25.0,
+      "ceiling_colour_level_dbfs": -48.0412,
+      "relative_to_former_25pct_ceiling": "below",
+      "hardware_note": "under the former 25% conservative research ceiling; boundary variant, 24.83% of the reference peak (ceiling -48.04 dBFS); the ceiling is a conservative research convention, not a proven physical safety threshold or a decoder specification",
+      "boundary_variant": true
     },
     {
       "id": "lr-24",
@@ -616,12 +703,48 @@
       "ratio_percent_of_reference": 398.107,
       "percent_of_mindplace_full_brightness": 100.0,
       "duration_s": 6.6,
-      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%"
+      "expected_midpoint": "outgoing-only and incoming-only carriers ~50% of the colour level (linear amplitude crossfade); shared carriers remain 100%",
+      "hardware_exposure": "gated",
+      "ceiling_percent_of_reference": 25.0,
+      "ceiling_colour_level_dbfs": -48.0412,
+      "relative_to_former_25pct_ceiling": "above",
+      "hardware_note": "above the former 25% conservative research ceiling (398.11% of the reference peak); gated — not for hardware playback without a separate explicit decision; the ceiling is a conservative research convention, not a proven physical safety threshold or a decoder specification"
     }
   ],
   "peak_policy": {
     "max_total_sample_peak_dbfs": -6.0,
     "max_total_true_peak_dbfs": -6.0,
     "note": "Every variant must stay at or below -6 dBFS sample peak and -6 dBTP; the renderer hard-fails otherwise and applies no normalisation."
+  },
+  "hardware_exposure_policy": {
+    "reference_level_dbfs": -36.0,
+    "former_ceiling_percent_of_reference": 25.0,
+    "former_ceiling_colour_level_dbfs": -48.0412,
+    "under_ceiling": [
+      "direct-m54p1",
+      "direct-m48p1",
+      "overlap-m48p1",
+      "lr-m48p1"
+    ],
+    "gated": [
+      "direct-m42p0",
+      "direct-m36p0",
+      "direct-m30p0",
+      "direct-m24p0",
+      "overlap-24",
+      "lr-24"
+    ],
+    "ceiling_note": "The 25% ceiling is the former conservative research convention: 25% of the -36 dBFS reference peak per active colour carrier, i.e. colour at -48.04 dBFS. It is not a proven physical safety threshold and not a decoder specification.",
+    "gated_note": "Gated variants are offline-verified but are not for hardware playback without a separate explicit decision.",
+    "mindplace_scale_note": "The MindPlace -24 dBFS full-brightness scale is a different scale from the -36 dBFS reference and the 25% ceiling; percentages must not be conflated across scales."
+  },
+  "correction": {
+    "date": "2026-11-05",
+    "display_date": "5 Nov 2026",
+    "owner_decision": true,
+    "issue": "#31",
+    "summary": "Correction — owner decision 5 Nov 2026. The former 25% conservative ceiling is 25% of the -36 dBFS reference peak per active colour carrier, i.e. colour at -48.04 dBFS. Only direct-m54p1 (12.45% of ref) and the new -48.1 boundary variants (24.83%) are under the ceiling. direct-m42p0 (50.12%), direct-m36p0 (100%), direct-m30p0 (199.53%) and direct-m24p0/overlap-24/lr-24 (398.11%) are ABOVE the ceiling and gated.",
+    "previous_error": "The earlier protocol/report text labelled only m30/m24/overlap/LR as above the ceiling; m42p0 (50.1% of ref) and m36p0 (100% of ref) were also above and are now gated.",
+    "ceiling_status": "conservative research convention; not a proven physical safety threshold and not a decoder specification"
   }
 }

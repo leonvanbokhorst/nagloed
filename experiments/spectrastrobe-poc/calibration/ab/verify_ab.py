@@ -89,6 +89,19 @@ def cell(value):
     return fmt(value).replace("|", "\\|").replace("\n", " ")
 
 
+def classify_exposure(ratio_percent: float, ceiling_percent: float):
+    """Map a measured ratio percentage to the declared exposure classification."""
+    exposure = "under_ceiling" if ratio_percent <= ceiling_percent else "gated"
+    if ratio_percent < ceiling_percent - 0.05:
+        relative = "below"
+    elif ratio_percent > ceiling_percent + 0.05:
+        relative = "above"
+    else:
+        relative = "at"
+    return exposure, relative
+
+
+
 # --------------------------------------------------------------------------- #
 # Windowing and measurements
 # --------------------------------------------------------------------------- #
@@ -281,6 +294,27 @@ def verify_main_variant(checks, ab, variant, fs, width, left, right):
               "inactive carriers ≤ -40 dB relative to the active level",
               f"worst {worst_unintended:.1f} dB", worst_unintended <= -40.0)
 
+    # Ceiling / hardware-exposure classification (owner correction 5 Nov 2026).
+    ceiling_pct = float((ab.get("hardware_exposure_policy") or {}).get(
+        "former_ceiling_percent_of_reference", 25.0))
+    measured_pcts = [10.0 ** (row["ratio_db"][key] / 20.0) * 100.0
+                     for row in per_state for key in row["active"]]
+    measured_pct = sum(measured_pcts) / len(measured_pcts) if measured_pcts else 0.0
+    computed_exposure, computed_relative = classify_exposure(measured_pct, ceiling_pct)
+    declared_exposure = variant.get("hardware_exposure")
+    declared_relative = variant.get("relative_to_former_25pct_ceiling")
+    exposure_ok = (declared_exposure == computed_exposure
+                   and declared_relative == computed_relative)
+    checks.ok("exposure", f"{vid}-exposure",
+              f"{vid}: hardware-exposure classification matches the measured ratio",
+              f"measured ratio ≤ {ceiling_pct:.0f}% of reference → under_ceiling, above → gated; "
+              f"declared label matches",
+              f"measured {measured_pct:.2f}% of ref → {computed_exposure} "
+              f"({computed_relative}); declared {declared_exposure} "
+              f"({declared_relative})", exposure_ok,
+              "former 25% ceiling is a conservative research convention, not a proven "
+              "physical safety threshold or decoder specification")
+
     envelopes, block_s = fine_envelopes(fs, left, right, duration_s)
     block_ms = block_s * 1000.0
 
@@ -374,6 +408,12 @@ def verify_main_variant(checks, ab, variant, fs, width, left, right):
         "measured_level_error_worst_db": round(worst_level, 3),
         "measured_ratio_error_worst_db": round(worst_ratio, 3),
         "unintended_worst_db": round(worst_unintended, 2),
+        "hardware_exposure": computed_exposure,
+        "declared_hardware_exposure": declared_exposure,
+        "ceiling_percent_of_reference": ceiling_pct,
+        "measured_ratio_percent_of_reference": round(measured_pct, 4),
+        "relative_to_former_25pct_ceiling": computed_relative,
+        "hardware_note": variant.get("hardware_note", ""),
         "peak_dbfs": round(peak_db, 3),
         "true_peak_dbtp": round(true_peak_db, 3),
         "clipped": peak >= 1.0,
@@ -495,6 +535,26 @@ def verify_lr_variant(checks, ab, variant, fs, width, left, right):
             "status": "PASS" if (intended_ok and other_ok) else "FAIL",
         })
 
+    ceiling_pct = float((ab.get("hardware_exposure_policy") or {}).get(
+        "former_ceiling_percent_of_reference", 25.0))
+    measured_pcts = [10.0 ** ((row["intended_ear_db"] - amp_ref_db) / 20.0) * 100.0
+                     for row in per_state]
+    measured_pct = sum(measured_pcts) / len(measured_pcts) if measured_pcts else 0.0
+    computed_exposure, computed_relative = classify_exposure(measured_pct, ceiling_pct)
+    declared_exposure = variant.get("hardware_exposure")
+    declared_relative = variant.get("relative_to_former_25pct_ceiling")
+    exposure_ok = (declared_exposure == computed_exposure
+                   and declared_relative == computed_relative)
+    checks.ok("exposure", f"{vid}-exposure",
+              f"{vid}: hardware-exposure classification matches the measured ratio",
+              f"measured ratio ≤ {ceiling_pct:.0f}% of reference → under_ceiling, above → gated; "
+              f"declared label matches",
+              f"measured {measured_pct:.2f}% of ref → {computed_exposure} "
+              f"({computed_relative}); declared {declared_exposure} "
+              f"({declared_relative})", exposure_ok,
+              "former 25% ceiling is a conservative research convention, not a proven "
+              "physical safety threshold or decoder specification")
+
     peak = max(max(left), -min(left), max(right), -min(right))
     true_peak_value = parent_verify.true_peak(left, right, fs)
     peak_db = parent_verify.amp_db(peak)
@@ -508,6 +568,12 @@ def verify_lr_variant(checks, ab, variant, fs, width, left, right):
         "file": variant["file"],
         "colour_level_dbfs": level_db,
         "reference_peak_amplitude_dbfs": round(amp_ref_db, 3),
+        "hardware_exposure": computed_exposure,
+        "declared_hardware_exposure": declared_exposure,
+        "ceiling_percent_of_reference": ceiling_pct,
+        "measured_ratio_percent_of_reference": round(measured_pct, 4),
+        "relative_to_former_25pct_ceiling": computed_relative,
+        "hardware_note": variant.get("hardware_note", ""),
         "lfo": {k: round(v, 4) if isinstance(v, float) else v for k, v in lfo.items()},
         "peak_dbfs": round(peak_db, 3),
         "true_peak_dbtp": round(true_peak_db, 3),
@@ -554,6 +620,38 @@ def determinism_check(checks, ab_path, out_dir, names, timeout=300):
                   "identical" if not mismatches else f"differs: {', '.join(mismatches)}",
                   not mismatches)
         return compared
+
+
+def provenance_check(checks, measurements, out_dir):
+    path = out_dir / "ab-manifest.json"
+    if not path.exists():
+        checks.ok("provenance", "provenance", "existing A/B WAVs unchanged",
+                  "manifest with provenance present", "manifest missing", False)
+        return
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    provenance = manifest.get("provenance") or {}
+    compared = provenance.get("existing_files_compared") or []
+    problems = []
+    for item in compared:
+        target = out_dir / item["file"]
+        actual = parent_verify.sha256(target) if target.exists() else None
+        if (not item.get("identical")
+                or item.get("sha256_before") != item.get("sha256_after")
+                or actual != item.get("sha256_after")):
+            problems.append(item["file"])
+    ok = bool(compared) and not problems
+    measurements["provenance"] = {
+        "previous_manifest_present": provenance.get("previous_manifest_present"),
+        "existing_files_compared": compared,
+        "new_files": provenance.get("new_files", []),
+        "all_existing_files_identical": provenance.get("all_existing_files_identical"),
+        "note": provenance.get("note", ""),
+    }
+    checks.ok("provenance", "provenance",
+              "existing A/B WAVs are byte-identical to the previous manifest",
+              "every existing file: sha256_before == sha256_after == current file",
+              f"{len(compared)} existing files compared, all identical={not problems}",
+              ok, "no existing file was altered; new boundary variants were added")
 
 
 def cross_variant_check(checks, measurements):
@@ -747,19 +845,48 @@ def write_reports(out_dir, ab, checks, measurements, summary, determinism):
              f"**Outcome:** {summary['verdict']} — {summary['pass']} PASS, {summary['fail']} FAIL "
              f"of {summary['total']} checks.",
              ""]
+    correction = ab.get("correction") or {}
+    policy = ab.get("hardware_exposure_policy") or {}
+    lines += ["## Correction — owner decision 5 Nov 2026", "",
+              correction.get("summary", "Ceiling classification corrected."),
+              "",
+              f"**Previous error:** {correction.get('previous_error', '')}",
+              "",
+              f"**Ceiling:** {policy.get('former_ceiling_percent_of_reference', 25.0):.0f}% of "
+              f"the {float(ab['reference']['level_dbfs']):+.0f} dBFS reference peak per active "
+              f"colour carrier = colour at "
+              f"{policy.get('former_ceiling_colour_level_dbfs', -48.04):.2f} dBFS. "
+              f"{policy.get('ceiling_note', '')}",
+              "",
+              f"**Gating:** {policy.get('gated_note', '')}",
+              "",
+              "The **% of MindPlace full scale** column uses the different -24 dBFS "
+              "full-brightness scale and must not be conflated with the % of the -36 dBFS "
+              "reference or with the 25% ceiling. See also "
+              "`../../HARDWARE-PROTOCOL.md` (binding safety reference) and "
+              "`AB-PROTOCOL.md` (research protocol; corrected by the Lead).", ""]
     lines += ["## Variants", "",
-              "| Variant | Colour | Ratio to ref | % of ref | % of MindPlace full | Shape | Expected midpoint |",
+              "| Variant | Colour dBFS | Ratio to ref | % of ref | % of MindPlace -24 full scale (different scale) | Hardware exposure | Shape |",
               "|---|---|---|---|---|---|---|"]
     for variant in ab["variants"]:
-        lines.append(f"| {variant['id']} | {variant['colour_level_dbfs']:+.1f} dBFS | "
+        lines.append(f"| {variant['id']} | {variant['colour_level_dbfs']:+.1f} | "
                      f"{variant['ratio_to_reference_db']:+.2f} dB | "
                      f"{variant['ratio_percent_of_reference']:.2f}% | "
                      f"{variant['percent_of_mindplace_full_brightness']:.2f}% | "
-                     f"{variant['crossfade_shape']} | {variant['expected_midpoint']} |")
-    lines += ["", "Reference is fixed at "
+                     f"**{variant['hardware_exposure']}** "
+                     f"({variant['relative_to_former_25pct_ceiling']} former 25% ceiling"
+                     + ("; boundary variant" if variant.get("boundary_variant") else "")
+                     + ") | "
+                     f"{variant['crossfade_shape']} |")
+    under = sum(1 for variant in ab["variants"]
+                if variant.get("hardware_exposure") == "under_ceiling")
+    gated = sum(1 for variant in ab["variants"]
+                if variant.get("hardware_exposure") == "gated")
+    lines += ["", f"Reference is fixed at "
               f"{float(ab['reference']['level_dbfs']):+.1f} dBFS peak with a "
-              f"{float(ab['reference']['pan_lfo_hz']):g} Hz sine pan LFO. The colour levels "
-              "are a controlled diagnostic ladder, not artistic settings and not a "
+              f"{float(ab['reference']['pan_lfo_hz']):g} Hz sine pan LFO. "
+              f"Classification: **{under} under_ceiling**, **{gated} gated**. The colour "
+              "levels are a controlled diagnostic ladder, not artistic settings and not a "
               "recommendation.", ""]
     lines += ["### Primary-source scale and three levels", "",
               "Primary source: MindPlace Support Forum thread 3173, guidance by Scott "
@@ -773,16 +900,18 @@ def write_reports(out_dir, ab, checks, measurements, summary, determinism):
               "measured) and **perception** (what the observer sees; not measured). A correct "
               "digital ratio does not imply the same hardware ratio or perceived colour.", ""]
     lines += ["## Per-variant measurements", "",
-              "| Variant | Ref dBFS | Active level error | Ratio error | Unintended | Peak | Gap | Fade rise/fall | Status |",
-              "|---|---|---|---|---|---|---|---|---|"]
+              "| Variant | Exposure | Ref dBFS | Active level error | Ratio error | Unintended | Peak | Gap | Fade rise/fall | Status |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
     for variant in ab["variants"]:
         data = measurements["variants"].get(variant["id"], {})
         if variant["sequence"] == "lr":
-            lines.append(f"| {variant['id']} | {data.get('reference_peak_amplitude_dbfs', float('nan')):+.2f} | "
+            lines.append(f"| {variant['id']} | {variant.get('hardware_exposure')} | "
+                         f"{data.get('reference_peak_amplitude_dbfs', float('nan')):+.2f} | "
                          f"see L/R table | n/a | n/a | {data.get('peak_dbfs', float('nan')):+.2f} dBFS | n/a | n/a | "
                          f"**{data.get('status', 'PASS')}** |")
         else:
-            lines.append(f"| {variant['id']} | {data.get('reference_peak_amplitude_dbfs', float('nan')):+.2f} | "
+            lines.append(f"| {variant['id']} | {variant.get('hardware_exposure')} | "
+                         f"{data.get('reference_peak_amplitude_dbfs', float('nan')):+.2f} | "
                          f"{data.get('measured_level_error_worst_db', float('nan')):.2f} dB | "
                          f"{data.get('measured_ratio_error_worst_db', float('nan')):.2f} dB | "
                          f"{data.get('unintended_worst_db', float('nan')):.1f} dB | "
@@ -897,6 +1026,26 @@ def write_reports(out_dir, ab, checks, measurements, summary, determinism):
               "and require Lonn's explicit authorisation under `../../HARDWARE-PROTOCOL.md`; "
               "they do not change any production ceiling, preset or score.",
               ""]
+    lines += ["## Provenance and hash evidence", "",
+              "Existing A/B WAVs were re-rendered deterministically and their SHA256 was "
+              "compared against the previous manifest **before** any file was replaced. The "
+              "new manifest records the before/after hashes; no existing file was altered. "
+              "The three -48.1 boundary variants were added as new files.", ""]
+    provenance = measurements.get("provenance") or {}
+    compared = provenance.get("existing_files_compared") or []
+    if compared:
+        lines += ["| File | SHA256 before | SHA256 after | Identical |",
+                  "|---|---|---|---|"]
+        for item in compared:
+            lines.append(f"| {item['file']} | `{item['sha256_before']}` | "
+                         f"`{item['sha256_after']}` | "
+                         f"{'yes' if item['identical'] else 'NO'} |")
+        new_files = provenance.get("new_files") or []
+        lines += ["", f"New files added: {len(new_files)}"
+                  + (": " + ", ".join(f"`{name}`" for name in new_files) if new_files else "")
+                  + ". Existing files changed: **none**.", ""]
+    else:
+        lines += ["No previous manifest was available for comparison in this run.", ""]
     lines += ["## Commands", "",
               "```bash",
               "cd experiments/spectrastrobe-poc/calibration/ab",
@@ -953,6 +1102,7 @@ def main(argv=None) -> int:
         names = [variant["file"] for variant in ab["variants"]]
         determinism = determinism_check(checks, ab_path, out_dir, names)
         measurements["determinism"] = determinism
+    provenance_check(checks, measurements, out_dir)
 
     write_transition_csv(out_dir / "ab-transition-envelopes.csv", measurements)
     write_timeline_svg(out_dir / "ab-timeline.svg", ab, measurements)

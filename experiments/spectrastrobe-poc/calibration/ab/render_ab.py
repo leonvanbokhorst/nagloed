@@ -27,6 +27,7 @@ import array
 import hashlib
 import json
 import math
+import os
 import sys
 from pathlib import Path
 
@@ -246,6 +247,22 @@ def main(argv=None) -> int:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     ab = load_ab(ab_path)
+    baseline = {}
+    baseline_path = AB_DIR / "provenance-baseline.json"
+    if baseline_path.exists():
+        try:
+            baseline = (json.loads(baseline_path.read_text(encoding="utf-8")) or {}).get("files", {})
+        except Exception:  # noqa: BLE001 - a broken baseline must not block rendering
+            baseline = {}
+    prior_outputs = {}
+    prior_present = (out_dir / "ab-manifest.json").exists()
+    if prior_present:
+        try:
+            prior_manifest = json.loads((out_dir / "ab-manifest.json").read_text(encoding="utf-8"))
+            prior_outputs = {name: info.get("sha256")
+                             for name, info in (prior_manifest.get("outputs") or {}).items()}
+        except Exception:  # noqa: BLE001 - a broken prior manifest must not block rendering
+            prior_outputs = {}
     fs = int(ab["audio"]["sample_rate_hz"])
     bits = int(ab["audio"]["bit_depth"])
     duration_s = float(ab["meta"]["duration_s"])
@@ -282,13 +299,53 @@ def main(argv=None) -> int:
             raise RuntimeError(f"{variant['id']}: rendered peak {peak_dbfs:.2f} dBFS "
                                f"exceeds {peak_limit:.1f} dBFS")
         file_name = variant["file"]
-        written_peak = parent_render.write_pcm(out_dir / file_name, fs, bits, left, right)
+        tmp_path = out_dir / (file_name + ".tmp")
+        written_peak = parent_render.write_pcm(tmp_path, fs, bits, left, right)
+        new_hash = sha256_file(tmp_path)
+        before_hash = ((baseline.get(file_name) or {}).get("sha256")
+                       or prior_outputs.get(file_name))
+        if before_hash is not None and before_hash != new_hash:
+            tmp_path.unlink(missing_ok=True)
+            raise RuntimeError(
+                f"provenance check failed: {file_name} would change "
+                f"({before_hash[:16]} -> {new_hash[:16]}); aborting without overwriting")
+        os.replace(tmp_path, out_dir / file_name)
         outputs[file_name] = {
-            "sha256": sha256_file(out_dir / file_name),
+            "sha256": new_hash,
             "bytes": (out_dir / file_name).stat().st_size,
             "peak_dbfs": round(written_peak, 2),
             "duration_s": round(len(left) / fs, 6),
         }
+
+    # Provenance is derived only from the static pre-correction baseline, so the
+    # manifest stays byte-identical on a fresh rerender (determinism) while still
+    # recording the old and new hashes of the existing seven WAVs.
+    existing_compared = []
+    new_files = []
+    for name, info in outputs.items():
+        baseline_entry = baseline.get(name)
+        if baseline_entry is not None:
+            existing_compared.append({
+                "file": name,
+                "source": "pre-correction manifest baseline",
+                "sha256_before": baseline_entry["sha256"],
+                "sha256_after": info["sha256"],
+                "identical": baseline_entry["sha256"] == info["sha256"],
+            })
+        else:
+            new_files.append(name)
+    provenance = {
+        "baseline_file": baseline_path.name if baseline else "",
+        "baseline_captured_from": ("out/ab-manifest.json (pre-correction state)" if baseline else ""),
+        "baseline_captured_on": ("2026-11-05" if baseline else ""),
+        "existing_files_compared": existing_compared,
+        "new_files": new_files,
+        "all_existing_files_identical": all(item["identical"] for item in existing_compared),
+        "note": ("Existing A/B WAVs were not altered: their SHA256 is unchanged versus the "
+                 "pre-correction out/ab-manifest.json. The new -48.1 boundary variants were "
+                 "added as new files; no existing variant definition, filename or byte was "
+                 "changed."),
+    }
 
     manifest = {
         "generator": "render_ab.py",
@@ -308,6 +365,9 @@ def main(argv=None) -> int:
         "timing": timing,
         "reference": ab["reference"],
         "primary_source_guidance": ab["primary_source_guidance"],
+        "correction": ab.get("correction"),
+        "hardware_exposure_policy": ab.get("hardware_exposure_policy"),
+        "provenance": provenance,
         "level_documentation": ab["level_documentation"],
         "variants": ab["variants"],
         "states": ab["states"],
@@ -329,7 +389,11 @@ def main(argv=None) -> int:
         print(f"  {variant['id']:<14} colour {variant['colour_level_dbfs']:>6.1f} dBFS  "
               f"ratio {variant['ratio_to_reference_db']:>+6.2f} dB ({variant['ratio_percent_of_reference']:7.2f}% of ref)  "
               f"{variant['percent_of_mindplace_full_brightness']:6.2f}% of full  "
-              f"peak {info['peak_dbfs']:+6.2f} dBFS")
+              f"peak {info['peak_dbfs']:+6.2f} dBFS  {variant['hardware_exposure']:<13} "
+              f"({variant['relative_to_former_25pct_ceiling']} ceiling)")
+    print(f"provenance    : {len(existing_compared)} existing WAVs compared, "
+          f"all identical = {provenance['all_existing_files_identical']}; "
+          f"new files: {len(new_files)}")
     print(f"output        : {out_dir.resolve()}")
     print("  - ab-manifest.json")
     return 0

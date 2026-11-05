@@ -186,10 +186,13 @@ fade to black, the investigation continued separately:
 - `RATIO-RESEARCH.md` — primary-source research on the intended reference/colour
   scaling, the three levels (digital ratio, hardware output, perception), and the
   hypothesis that the base calibration is underdriven.
-- `ab/` — a controlled A/B stimulus set with reference fixed at −36 dBFS and
-  colour levels −54.1 / −42 / −36 / −30 / −24 dBFS, plus an overlap-shape and a
-  matched L/R control; offline verification 72/72 PASS, hardware observation
-  pending.
+- `ab/` — a controlled A/B stimulus set with reference fixed at −36 dBFS. The
+  first hardware pass is limited to the under-ceiling files: `direct-m54p1`
+  (12.4% of reference) and the boundary set `direct-m48p1`, `overlap-m48p1`,
+  `lr-m48p1` (~24.8%, below the former 25% research ceiling). The higher levels
+  in the same directory (−42, −36, −30, −24 dBFS) are offline-only/gated and
+  must not be played until a separate explicit decision. Offline verification is
+  72/72 PASS; hardware observation is pending.
 
 Those files do not change this calibration's levels or its report; they are a
 separate diagnostic for the transition question.

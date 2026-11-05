@@ -12,6 +12,23 @@
 > for every hardware session. Read it before this protocol. This document does
 > not replace it.
 
+> **Correction — owner decision, 5 November 2026.** The former conservative
+> research ceiling of **25% of the reference peak per active colour carrier**
+> corresponds, with the A/B reference fixed at **−36 dBFS**, to a colour carrier
+> at **−48.04 dBFS**. Of the original variants, only `direct-m54p1` (12.4% of
+> reference) is below it; the new boundary variants (`direct-m48p1`,
+> `overlap-m48p1`, `lr-m48p1`, ~24.8%) are also below it. `direct-m42p0` (50.1%),
+> `direct-m36p0` (100%), `direct-m30p0` (199.5%) and the `−24` variants
+> (398.1% per carrier) are **above** it. The earlier version of
+> this protocol incorrectly listed only `m30p0`, `m24p0`, `overlap-24` and
+> `lr-24` as above the ceiling. The above-ceiling variants are **gated from
+> hardware playback** — do not play them, even with lower physical controls,
+> until a separate explicit decision and a revised safety rationale. New
+> under-ceiling stimuli were added: `direct-m48p1`, `overlap-m48p1` and
+> `lr-m48p1` at ~24.8% of reference. The 25% ceiling is a **conservative
+> research convention**, not a proven physical safety threshold and not a
+> MindPlace decoder specification.
+
 ## 1. Research question
 
 Hardware observation of the base colour calibration: the nine states are
@@ -71,15 +88,18 @@ Red → Green → Blue → Yellow → Cyan → Magenta → White → Red → Gre
 centre-panned (both ears equal) except in the L/R file. Colour peak level is
 **per active carrier**.
 
-| Variant id | File | Sequence | Colour level | Ratio to −36 dB ref | % of ref | % of MindPlace full (−24 dB) | Crossfade shape | Expected midpoint |
+| Variant id | File | Sequence | Colour level | Ratio to −36 dB ref | % of ref | % of MindPlace full (−24 dBFS) | Hardware exposure | Crossfade shape |
 |---|---|---|---|---|---|---|---|---|
-| `direct-m54p1` | `ab-direct-m54p1-44k1-16bit.wav` | main | −54.1 dBFS | −18.10 dB | 12.45% | 3.13% | direct | outgoing/incoming ≈50% |
-| `direct-m42p0` | `ab-direct-m42p0-44k1-16bit.wav` | main | −42.0 dBFS | −6.00 dB | 50.12% | 12.59% | direct | outgoing/incoming ≈50% |
-| `direct-m36p0` | `ab-direct-m36p0-44k1-16bit.wav` | main | −36.0 dBFS | 0.00 dB | 100.00% | 25.12% | direct | outgoing/incoming ≈50% |
-| `direct-m30p0` | `ab-direct-m30p0-44k1-16bit.wav` | main | −30.0 dBFS | +6.00 dB | 199.53% | 50.12% | direct | outgoing/incoming ≈50% |
-| `direct-m24p0` | `ab-direct-m24p0-44k1-16bit.wav` | main | −24.0 dBFS | +12.00 dB | 398.11% | 100.00% | direct | outgoing/incoming ≈50% |
-| `overlap-24` | `ab-overlap-24-44k1-16bit.wav` | main | −24.0 dBFS | +12.00 dB | 398.11% | 100.00% | overlap | outgoing/incoming ≈100% |
-| `lr-24` | `ab-lr-24-44k1-16bit.wav` | L/R | −24.0 dBFS | +12.00 dB | 398.11% | 100.00% | direct | intended ear on, other off |
+| `direct-m54p1` | `ab-direct-m54p1-44k1-16bit.wav` | main | −54.1 dBFS | −18.10 dB | 12.45% | 3.13% | **under ceiling** | direct |
+| `direct-m48p1` | `ab-direct-m48p1-44k1-16bit.wav` | main | −48.1 dBFS | −12.10 dB | 24.83% | 6.25% | **under ceiling** | direct |
+| `overlap-m48p1` | `ab-overlap-m48p1-44k1-16bit.wav` | main | −48.1 dBFS | −12.10 dB | 24.83% | 6.25% | **under ceiling** | overlap |
+| `lr-m48p1` | `ab-lr-m48p1-44k1-16bit.wav` | L/R | −48.1 dBFS | −12.10 dB | 24.83% | 6.25% | **under ceiling** | direct (L/R) |
+| `direct-m42p0` | `ab-direct-m42p0-44k1-16bit.wav` | main | −42.0 dBFS | −6.00 dB | 50.12% | 12.59% | **gated (above)** | direct |
+| `direct-m36p0` | `ab-direct-m36p0-44k1-16bit.wav` | main | −36.0 dBFS | 0.00 dB | 100.00% | 25.12% | **gated (above)** | direct |
+| `direct-m30p0` | `ab-direct-m30p0-44k1-16bit.wav` | main | −30.0 dBFS | +6.00 dB | 199.53% | 50.12% | **gated (above)** | direct |
+| `direct-m24p0` | `ab-direct-m24p0-44k1-16bit.wav` | main | −24.0 dBFS | +12.00 dB | 398.11% | 100.00% | **gated (above)** | direct |
+| `overlap-24` | `ab-overlap-24-44k1-16bit.wav` | main | −24.0 dBFS | +12.00 dB | 398.11% | 100.00% | **gated (above)** | overlap |
+| `lr-24` | `ab-lr-24-44k1-16bit.wav` | L/R | −24.0 dBFS | +12.00 dB | 398.11% | 100.00% | **gated (above)** | direct (L/R) |
 
 The filename tag `m` means minus (e.g. `m54p1` = −54.1 dBFS). All files are
 44.1 kHz / 16-bit stereo PCM, no dither, no metadata, **no normalisation**.
@@ -89,12 +109,15 @@ variant would exceed −6 dBFS.
 
 **Safety note on the level ladder.** The 25%-of-reference per-carrier ratio used
 in the exploration and the base calibration is a **self-imposed conservative
-ceiling, not a MindPlace hardware limit**. The variants above that ratio
-(`direct-m30p0`, `direct-m24p0`, `overlap-24`, `lr-24`) are **research-only
-diagnostic stimuli**; playing them requires Lonn's explicit authorisation under
-`../../HARDWARE-PROTOCOL.md`, fixed low hardware brightness, and the same stop
-rules. They do not change the production/exposure ceiling, any preset, any
-score, or the base calibration.
+ceiling, not a MindPlace hardware limit**. `direct-m42p0` and `direct-m36p0`
+are also above it, in addition to `direct-m30p0`, `direct-m24p0`, `overlap-24`
+and `lr-24`. All six above-ceiling variants are **offline-only/gated diagnostic
+stimuli**: do not play them on hardware, even at lower physical controls, until
+Lonn makes a separate explicit decision and a revised safety rationale exists.
+The under-ceiling files (`direct-m54p1`, `direct-m48p1`, `overlap-m48p1`,
+`lr-m48p1`) are the only files intended for the first hardware pass; they do
+not change the production/exposure ceiling, any preset, any score or the base
+calibration.
 
 ### Timing (identical to the base calibration)
 
@@ -127,8 +150,9 @@ cd experiments/spectrastrobe-poc/calibration/ab
 
 This renders all variants and verifies them independently. Outputs (git-ignored,
 not committed): `out/ab-report.md`, `out/ab-report.json`,
-`out/ab-transition-envelopes.csv`, `out/ab-timeline.svg`, the seven WAVs and
-`out/ab-manifest.json` (hashes, levels, ratios, peaks, timings, command).
+`out/ab-transition-envelopes.csv`, `out/ab-timeline.svg`, **ten** WAVs and
+`out/ab-manifest.json` (hashes, levels, ratios, peaks, timings, command,
+hardware-exposure classification).
 
 ## 5. Fixed conservative hardware procedure
 
@@ -149,20 +173,30 @@ Binding safety reference: `../../HARDWARE-PROTOCOL.md`. In addition:
 4. **Play one pass, then pause.** Each file has a 300 ms fade-in/out; a gapless
    loop turns the file boundary into a quiet gap. Pause between variants and
    replay only if needed. Do not loop while judging a transition.
-5. **Order: start with the dimmest file** (`direct-m54p1`, the level at which
-   the fade-to-black was first observed), then `direct-m42p0`, `direct-m36p0`,
-   `direct-m30p0`, `direct-m24p0`, `overlap-24`, `lr-24`. This is also the
-   conservative safety order (lowest exposure first). Do not reorder to a
-   brighter file first.
-6. **Standard Ganzframes (eyes closed) first.** DeepVision (eyes open) only if
+5. **First hardware pass — under-ceiling files only.** Start with
+   `direct-m54p1` (the level at which the fade-to-black was first observed),
+   then `direct-m48p1` (the boundary case), then `overlap-m48p1` (same boundary
+   ratio, overlap shape) and `lr-m48p1` (same boundary ratio, L/R). These are
+   the only files for this pass. **Do not play any variant marked `gated
+   (above)`** — `direct-m42p0`, `direct-m36p0`, `direct-m30p0`,
+   `direct-m24p0`, `overlap-24` or `lr-24` — even with lower physical controls.
+   Those require a separate explicit decision and a revised safety rationale.
+6. **Separate the A/B from physical light brightness.** This A/B compares
+   encoded ratios and shapes at **one fixed physical brightness/AUX setting**;
+   do not change Kasina brightness or AUX between files, and do not use the
+   hardware brightness control to emulate a higher signal ratio. Record the
+   actual settings. A physical-brightness comparison at a fixed file is a
+   different, gated experiment; it is not part of this A/B.
+7. **Standard Ganzframes (eyes closed) first.** DeepVision (eyes open) only if
    the session is comfortable, and at the same or a *lower* Kasina brightness.
-7. **Immediate stop:** stop playback, Kasina brightness to minimum, glasses off
+8. **Immediate stop:** stop playback, Kasina brightness to minimum, glasses off
    or cover one eye. Stop at any discomfort, headache, dizziness, an
    unexplained flash or loss of detection. Stopping is always allowed.
-8. **No medical/wellness claim.** This is a perceptual/technical diagnostic.
-9. **One variable at a time.** Do not change Kasina brightness, AUX level,
-   routing, seating or glasses type between variants. If something must change,
-   note it and restart the comparison from the dimmest file.
+9. **No medical/wellness claim.** This is a perceptual/technical diagnostic.
+10. **One variable at a time.** Keep physical brightness, AUX level, routing,
+    seating and glasses type fixed between the under-ceiling variants. If
+    something must change, note it and restart the comparison from
+    `direct-m54p1`.
 
 ## 6. Observation log per transition
 
@@ -205,18 +239,26 @@ despite a correct encoded spectrum cannot be explained by the file alone.
 
 ## 8. Decision matrix (hypotheses only)
 
+The first hardware pass is restricted to the under-ceiling variants:
+`direct-m54p1` (12.4% of reference) and the boundary set `direct-m48p1`,
+`overlap-m48p1`, `lr-m48p1` (~24.8%). The above-ceiling variants are gated and
+must not be played in this pass.
+
 | Observation | Possible reading (hypothesis, not a conclusion) | Next check |
 |---|---|---|
-| Fade-to-black at **all** levels, including −24 | Ratio/threshold is not the dominant factor; look at transition shaping, L/R behaviour, decoder dynamics or the observation setup | Compare direct vs overlap at −24; then L/R file |
-| Fade-to-black only at the **lowest** levels (−54.1, −42) and not at −36/−30/−24 | A level/ratio threshold in the decoder or LED transfer may be involved | Repeat at −36 exactly; record where it disappears |
-| Direct at −24 looks black, **overlap at −24 looks continuous** | Midpoint amplitude / crossfade shaping is a possible factor | Compare the two files back-to-back at fixed settings |
-| **Both** direct and overlap at −24 look black | Midpoint amplitude is probably not the explanation; look at decoder dynamics, LED response, or L/R | Run `lr-24`; check one eye |
-| L/R file shows dark only on one eye or one side | L/R routing, eye assignment or channel balance may be involved | Re-check cable/ear assignment and the parent hardware protocol |
-| Nothing reproduces the observation in this set | The earlier impression may depend on source material, mastering, playback level or the specific session | Record the exact chain and conditions; repeat the original file |
+| Black at `direct-m54p1`, continuous at `direct-m48p1` | Within-ceiling level/ratio may be involved; the boundary is just below the former 25% ceiling | Repeat both at the same fixed hardware settings; record where the dip disappears |
+| Black at both `direct-m54p1` and `direct-m48p1` | Ratio change in the permitted range was not enough; threshold may lie above the ceiling or another factor dominates | Compare `overlap-m48p1` and `lr-m48p1`; do not escalate to gated levels |
+| Direct at boundary black, **overlap at boundary continuous** | Midpoint amplitude / transition shaping is a possible factor at a fixed ratio and level | Compare back-to-back at fixed hardware settings |
+| Both direct and overlap at boundary black | Midpoint shaping is probably not sufficient; decoder dynamics, LED response, L/R behaviour or perception may dominate | Run `lr-m48p1`; check one eye; record settings |
+| `lr-m48p1` shows dark only on one eye/side | L/R routing, eye assignment or channel balance may be involved (note: the inactive eye is expected to be dark) | Re-check cable/ear assignment and the parent hardware protocol |
+| Nothing reproduces the observation under the ceiling | The earlier impression may depend on source material, mastering, playback level, the maximum-hardware session or expectation | Record the exact chain/conditions; repeat the original file before considering any gated variant |
 
 These rows are **hypotheses to discriminate**, not findings. Only the recorded
 hardware observation, ideally repeated by a second observer, can select among
-them; a photodiode measurement would be the objective next step.
+them; a photodiode measurement would be the objective next step. Gated
+above-ceiling variants are not part of this matrix until a separate explicit
+decision and revised safety rationale exist.
+
 
 ## 9. Limitations
 

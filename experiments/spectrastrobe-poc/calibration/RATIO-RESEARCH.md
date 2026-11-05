@@ -16,6 +16,20 @@
 > developer statement on the Lumasonic/MindPlace forum; **[inference]**;
 > **[open]**.
 
+> **Correction — owner decision, 5 November 2026.** With the A/B reference fixed
+> at **-36 dBFS peak**, the former conservative research ceiling of **25% of
+> the reference peak per active colour carrier** corresponds to a colour carrier
+> at **-48.04 dBFS**. Of the original variants, only `direct-m54p1` (12.4% of
+> reference) is below it; the new boundary variants `direct-m48p1`,
+> `overlap-m48p1` and `lr-m48p1` (~24.8%) are also below it. `direct-m42p0`
+> (50.1%), `direct-m36p0` (100%), `direct-m30p0` (199.5%) and the `-24` variants
+> (398.1% per carrier) are **above** it. The earlier issue/PR narrative that
+> listed only `-30/-24/overlap/LR` as above the ceiling was wrong. The
+> above-ceiling variants remain **offline-only/gated**: do not play them, even
+> at lower physical controls, until a separate explicit decision and revised
+> safety rationale. The 25% ceiling is a **conservative research convention**,
+> not a proven physical safety threshold or a MindPlace decoder specification.
+
 ---
 
 ## 1. Question and boundary
@@ -249,16 +263,17 @@ marginally tighter at -60 dBFS (~32 LSB) but is not the first suspect.
 
 ## 6. Controlled A/B ladder — implemented in `ab/`
 
-> **Implementation status (5 November 2026):** the direct ratio ladder
-> (`-54.1 / -42 / -36 / -30 / -24 dBFS`), the `overlap` shape at `-24`, and the
-> matched L/R control at `-24` are implemented in `calibration/ab/`.
-> `ab/run_ab.sh` exits 0 with 72/72 checks PASS. The hard-switch S2 variant and
-> the optional L0.5/reference/rate controls were deliberately not rendered in
-> this first pass: a hard 0 ms switch adds an abrupt transient without being
-> necessary for the level-vs-shape question, and extra variants increase
-> exposure and session length. They remain available as a focused follow-up if
-> the implemented A/B does not discriminate. See `ab/out/ab-report.md` and
-> `ab/out/ab-transition-envelopes.csv` for the measured midpoints.
+> **Implementation status (5 November 2026, corrected):** the under-ceiling
+> hardware set is implemented in `calibration/ab/`: `direct-m54p1` (12.4% of
+> reference), `direct-m48p1` (~24.8%), `overlap-m48p1` (~24.8%) and
+> `lr-m48p1` (~24.8%). The higher ladder variants (`-42/-36/-30/-24`, plus
+> `overlap-24`/`lr-24`) are offline-verified but **gated from hardware playback**
+> until a separate explicit decision. The hard-switch S2 variant and the
+> optional reference/rate controls were not rendered: an abrupt 0 ms switch adds
+> a transient without being necessary, and extra variants increase exposure.
+> `ab/run_ab.sh` exits 0. See `ab/out/ab-report.md`,
+> `ab/out/ab-transition-envelopes.csv` and `ab/AB-PROTOCOL.md` for the corrected
+> procedure.
 
 **Goal:** determine whether the perceived black transition is a level/threshold
 effect (and which reference-to-colour convention the hardware follows), using
@@ -299,6 +314,18 @@ issue #31. At L4, a white state (three carriers) sums to about -14.5 dBFS per
 ear plus the -36 dBFS reference; peak stays far below -6 dBFS. Sixteen-bit
 resolution is ample at every step.
 
+**Ceiling correction and the playable subset.** The former conservative research
+ceiling is **25% of the reference peak per active colour carrier**, which at a
+-36 dBFS reference means **-48.04 dBFS**. Only **L0 (-54.1 dBFS, 12.4%)** and the
+new **L0.5 boundary (-48.1 dBFS, ~24.8%)** are under/at that ceiling. **L1
+(-42 dBFS, 50.1%), L2 (-36 dBFS, 100%), L3 (-30 dBFS, 199.5%) and L4
+(-24 dBFS, 398.1%) are all above the ceiling** — the earlier note that listed
+only L3/L4 (and the -24 shape/LR variants) as above was wrong. The above-ceiling
+files are **offline-only/gated**: do not play them, even with lower physical
+controls, until a separate explicit decision and revised safety rationale. The
+25% ceiling is a conservative research convention, not a proven physical safety
+threshold and not a MindPlace decoder specification.
+
 ### 6.3 Shape variant at one level (L4)
 
 Same sequence, same levels, three transition shapes:
@@ -311,19 +338,22 @@ Same sequence, same levels, three transition shapes:
   least 100 ms. Document that the effective transition is longer than 250 ms;
   keep the 1 s dwell so the comparison is still perceptual.
 
-Purpose: separate *level threshold* from *envelope shape*. If S2 and S3 look
-continuous but S1 looks black at the same level, the dip crosses a threshold or
-the decoder reacts badly to partial overlap. If all three look black at L4, the
-problem is not the crossfade shape.
+Purpose: separate *level threshold* from *envelope shape*. Because L4 is gated
+from hardware playback, the first under-ceiling shape comparison is at the
+boundary (`overlap-m48p1` vs `direct-m48p1`, both at ~24.8% of reference and
+fixed hardware settings); the L4 shape variants remain offline-only. If the
+boundary shape comparison is continuous but direct is black, the midpoint/shape
+hypothesis gains support; if both are black, shape alone is not sufficient.
 
 ### 6.4 Matched L/R alternation control
 
 Same nine-state timing and levels, but each state hard-pans its colour to one ear
 only, alternating left/right per state (a ladder version of the existing
-`calibration-lr` file; at minimum at L0 and L4). Purpose: an inactive eye is
-*expected* to be dark; the control prevents that expected darkness from being
-counted as the main-file black-crossfade finding, and checks eye assignment. The
-control is not itself evidence about crossfades.
+`calibration-lr` file). The under-ceiling comparison is `lr-m48p1` at ~24.8% of
+reference; the L0/L4 ladder versions are offline-only/gated. Purpose: an
+inactive eye is *expected* to be dark; the control prevents that expected
+darkness from being counted as the main-file black-crossfade finding, and checks
+eye assignment. The control is not itself evidence about crossfades.
 
 ### 6.5 Optional secondary controls
 
@@ -347,6 +377,11 @@ control is not itself evidence about crossfades.
 - **One operator, one watcher; stop within reach** (stop playback, Kasina
   brightness to minimum, glasses off). Room lit, no other flicker sources.
 - Record firmware version, Kasina settings, player, file order and date.
+- **Keep the A/B separate from physical brightness.** The under-ceiling A/B is
+  run at one fixed Kasina brightness and AUX setting; do not change hardware
+  brightness between files and do not use it to emulate a higher signal ratio.
+  A physical-brightness comparison at a fixed file is a separate, gated
+  experiment and requires an explicit decision; it is not part of this A/B.
 
 ### 6.7 Observation and analysis
 
