@@ -437,4 +437,13 @@ Colour gloopLaneColour (int lane) noexcept
     return lanes[(size_t) (((lane % 8) + 8) % 8)];
 }
 
+Colour gloopMotion() noexcept
+{
+    // Ice-blue: the one cool accent in the instrument, used only for Gloop's
+    // audible offset. Kept bright enough to read on the dark phosphor field and
+    // far enough from the ember ramp that it cannot be mistaken for the knob's
+    // own live-value arc.
+    return Colour (0xff82d4ff);
+}
+
 } // namespace nagloed::ui::theme

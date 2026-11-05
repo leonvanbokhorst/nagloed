@@ -391,11 +391,35 @@ void GloopPanel::renderBackground (juce::Graphics& g, juce::Rectangle<float> bou
         g.setColour (lineSoft.withAlpha (0.6f));
         g.fillRect (f.getX(), f.getY(), f.getWidth(), juce::jmax (0.6f, 0.6f * s));
 
+        auto centre = f.withTrimmedLeft (f.getWidth() * 0.33f)
+                       .withTrimmedRight (f.getWidth() * 0.33f);
+
+        // The colour key is the mental model: orange belongs to the live knob,
+        // blue belongs to Gloop. The state cycle sits beneath it when the footer
+        // has room; at the minimum editor size the key is dropped rather than
+        // squeezing the lane rows.
+        const auto showKey = f.getHeight() >= 38.0f * s;
+        auto stateLine = showKey ? centre.removeFromTop (centre.getHeight() * 0.48f)
+                                 : centre;
+
         drawMicroText (g, utf8 ("REC \u25b8 LOOP \u25b8 FADE \u25b8 READY"),
-                       f.withTrimmedLeft (f.getWidth() * 0.34f)
-                        .withTrimmedRight (f.getWidth() * 0.34f),
+                       stateLine,
                        monoFont (6.4f * fs, juce::Font::plain, 0.10f),
                        dim.withAlpha (0.85f), juce::Justification::centred);
+
+        if (showKey)
+        {
+            const auto keyFont = monoFont (5.8f * fs, juce::Font::plain, 0.08f);
+            const auto key = centre.withTrimmedTop (1.0f * s);
+            auto orangeKey = key.withTrimmedRight (key.getWidth() * 0.50f + 3.0f * s);
+            auto blueKey = key.withTrimmedLeft (key.getWidth() * 0.50f + 3.0f * s);
+
+            drawMicroText (g, "ORANGE = LIVE", orangeKey, keyFont,
+                           theme::ember.withAlpha (0.85f), juce::Justification::centredRight);
+            drawMicroText (g, "BLUE = GLOOP", blueKey, keyFont,
+                           theme::gloopMotion().withAlpha (0.95f),
+                           juce::Justification::centredLeft);
+        }
     }
 }
 

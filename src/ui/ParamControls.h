@@ -70,8 +70,10 @@ public:
 
     /** Feed the live Gloop state to the knobs that are a lane's target.
         Each affected slider receives the component properties the LookAndFeel
-        reads to draw its ring ("gloopPhases", "gloopAmounts", "gloopOffset");
-        sliders whose lanes all stopped are cleared and repainted once. */
+        reads to draw its blue influence arc ("gloopOffset", "gloopAmount",
+        "gloopActive"); sliders whose lanes all stopped are cleared and
+        repainted once. Offsets from several lanes on one knob are summed into
+        one combined display, not drawn as separate rings. */
     void applyGloopVisual (const gloop::Visual& visual);
 
     /** Parameter ids that have a live attachment in this set (for coverage tests). */

@@ -60,8 +60,8 @@ moment and play what remains, read on.
 - Eight asynchronous **Gloop** gesture loopers: record a knob's movement, let it
   orbit the knob's live value indefinitely, set per-lane amount and speed
   (0.25×–2×), fade a lane out, and gently randomise the moving relationships.
-  The target knob shows the movement as a live ring; empty or motionless lanes
-  stay silent.
+  The target knob keeps its orange live-value ring and adds one light-blue arc
+  for Gloop's current movement; empty or motionless lanes stay silent.
 - One LFO (six shapes, six destinations plus Off) and Auto-motion for long evolves.
 - Resizable editor (1180 × 680 default) with a live grain cloud.
 - Full host automation and session state; presets exposed as plug-in programs.

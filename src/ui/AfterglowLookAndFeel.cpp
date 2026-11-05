@@ -373,129 +373,69 @@ void AfterglowLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, in
         }
     }
 
-    // --- Gloop rings: live movement around a target knob ---------------------
+    // --- Gloop influence: one cool-blue arc around the live value ------------
     //
-    // ParamControlSet::applyGloopVisual() stamps three properties on a slider
-    // that is currently a lane target:
-    //   "gloopPhases"  array[8]  0..1 playhead per lane, -1 = lane inactive
-    //   "gloopAmounts" array[8]  0..1 effective amount per lane
-    //   "gloopOffset"  float     summed normalised offset of the active lanes
-    // The ring therefore shows *movement* (dots orbiting at the lane's phase)
-    // and *current influence* (an ember arc from the live angle), never a static
-    // modulation range. Drawn before the engraved label so the micro text stays
-    // readable on the dense grids.
+    // The knob's own ember arc and pointer are the live parameter value; Gloop
+    // must never look as if it is turning the physical knob. applyGloopVisual()
+    // stamps one combined offset per knob ("gloopOffset" + "gloopAmount"), so
+    // several lanes appear as one readable blue influence. The playhead/phase
+    // lives in the Gloop lane panel, not here.
     {
         const auto& props = slider.getProperties();
-        const auto phasesVar = props.getWithDefault ("gloopPhases", juce::var());
 
-        if (auto* phases = phasesVar.getArray())
+        if (props.contains (juce::Identifier ("gloopOffset")))
         {
-            const auto amountsVar = props.getWithDefault ("gloopAmounts", juce::var());
-            auto* amounts = amountsVar.getArray();
             const auto offset = (float) (double) props.getWithDefault ("gloopOffset", 0.0);
-            const auto span = rotaryEndAngle - rotaryStartAngle;
+            const auto amount = juce::jlimit (0.0f, 1.0f,
+                                               (float) (double) props.getWithDefault ("gloopAmount", 0.0));
 
-            const auto trackR = radius + 3.5f * s;
-            const auto ringLimit = juce::jmin (cx - bounds.getX(), bounds.getRight() - cx,
-                                               cy - bounds.getY(), bounds.getBottom() - cy);
-
-            // The lane rings live outside the engraved tick ring when there is
-            // room for them...
-            auto ringR = juce::jmin (radius + 9.5f * s, ringLimit - 2.0f * s);
-            ringR = juce::jmax (ringR, juce::jmin (trackR + 2.0f * s, ringLimit - 1.0f * s));
-
-            // ...and on the knob face when there is not: the short EAR filter
-            // cells (52 px) leave nothing outside the ticks, and a ring that is
-            // clipped is worse than a smaller orbit.
-            const auto cramped = ringR < trackR + 1.0f * s;
-
-            if (cramped)
-                ringR = radius * 0.70f;
-
-            int activeLanes = 0;
-
-            for (int lane = 0; lane < gloop::kNumLanes; ++lane)
+            if (std::abs (offset) > 0.002f)
             {
-                if ((size_t) lane >= (size_t) phases->size())
-                    break;
+                const auto span = rotaryEndAngle - rotaryStartAngle;
+                const auto influenceAngle = juce::jlimit (rotaryStartAngle, rotaryEndAngle,
+                                                           angle + offset * span);
+                const auto trackR = radius + 3.5f * s;
+                const auto ringLimit = juce::jmin (cx - bounds.getX(), bounds.getRight() - cx,
+                                                   cy - bounds.getY(), bounds.getBottom() - cy);
 
-                const auto phase = (float) (double) (*phases)[lane];
+                // Keep the blue orbit outside the orange tick/value ring when
+                // there is room; on the tight EAR filter cells fall back to a
+                // smaller arc on the knob face.
+                auto blueR = juce::jmin (radius + 9.0f * s, ringLimit - 1.5f * s);
 
-                if (phase < 0.0f)
-                    continue;
-
-                ++activeLanes;
-
-                const auto amount = amounts != nullptr && (size_t) lane < (size_t) amounts->size()
-                                        ? juce::jlimit (0.0f, 1.0f, (float) (double) (*amounts)[lane])
-                                        : 0.5f;
-                const auto colour = theme::gloopLaneColour (lane);
-
-                // Two orbits on the same knob get a couple of pixels of radius
-                // apart, so their dots never sit on top of each other.
-                const auto laneR = cramped
-                                       ? ringR
-                                       : juce::jmin (ringR + (float) (lane % 3) * 1.9f * s,
-                                                     juce::jmax (ringR, ringLimit - 1.2f * s));
-
-                if (! cramped)
-                {
-                    // Thin lane track, so several lanes on one knob stay separable.
-                    juce::Path laneTrack;
-                    laneTrack.addCentredArc (cx, cy, laneR, laneR, 0.0f,
-                                             rotaryStartAngle, rotaryEndAngle, true);
-                    g.setColour (colour.withAlpha (0.14f + 0.22f * amount));
-                    g.strokePath (laneTrack, juce::PathStrokeType (juce::jmax (0.6f, 0.7f * s)));
-                }
-
-                // The playhead: a short comet that ends in a dot at the phase, so
-                // the ring visibly moves even in a single still frame.
-                const auto dotAngle = rotaryStartAngle
-                                      + juce::jlimit (0.0f, 1.0f, phase) * span;
-                const auto tailAngle = juce::jmax (rotaryStartAngle, dotAngle - 0.80f);
-
-                juce::Path comet;
-                addArc (comet, cx, cy, laneR, tailAngle, dotAngle);
-                g.setColour (colour.withAlpha (0.45f + 0.45f * amount));
-                g.strokePath (comet, juce::PathStrokeType (juce::jmax (0.8f, 1.1f * s),
-                                                           juce::PathStrokeType::curved,
-                                                           juce::PathStrokeType::rounded));
-
-                const auto dot = polar (cx, cy, laneR, dotAngle);
-                const auto dotR = (cramped ? 1.25f : 1.5f) * s;
-
-                theme::drawGlowDot (g, dot.x, dot.y, juce::jmax (1.0f, dotR * 0.9f), colour,
-                                    0.55f + 0.45f * amount, s);
-                g.setColour (colour.interpolatedWith (theme::paleEmber, 0.35f));
-                g.fillEllipse (dot.x - dotR, dot.y - dotR, dotR * 2.0f, dotR * 2.0f);
-            }
-
-            // Current influence: an ember arc that continues the knob's own value
-            // arc to the angle the live offset pushes it to. It shares the track
-            // radius on purpose — it reads as the knob being *moved*, not as a
-            // second modulation range — and it is clamped to the sweep.
-            if (activeLanes > 0 && std::abs (offset) > 0.002f)
-            {
-                const auto influenceAngle = juce::jlimit (
-                    rotaryStartAngle, rotaryEndAngle, angle + offset * span);
+                if (blueR < trackR + 1.0f * s)
+                    blueR = juce::jmax (radius * 0.72f, 3.0f * s);
 
                 juce::Path influence;
-                addArc (influence, cx, cy, trackR, angle, influenceAngle);
+                addArc (influence, cx, cy, blueR, angle, influenceAngle);
 
                 if (! influence.isEmpty())
                 {
-                    const auto heat = theme::emberRamp (0.30f + 0.45f * juce::jmin (1.0f,
-                                                                                   std::abs (offset) * 2.0f));
+                    const auto blue = theme::gloopMotion();
+                    const auto heat = 0.65f + 0.35f * amount;
 
-                    g.setColour (heat.withAlpha (0.10f));
-                    g.strokePath (influence, juce::PathStrokeType (6.0f * s, juce::PathStrokeType::curved,
+                    // Three-pass soft glow: cool, quiet, clearly not the ember
+                    // live-value arc underneath.
+                    g.setColour (blue.withAlpha (0.10f * heat));
+                    g.strokePath (influence, juce::PathStrokeType (6.5f * s,
+                                                                   juce::PathStrokeType::curved,
                                                                    juce::PathStrokeType::rounded));
-                    g.setColour (heat.withAlpha (0.32f));
-                    g.strokePath (influence, juce::PathStrokeType (3.2f * s, juce::PathStrokeType::curved,
+                    g.setColour (blue.withAlpha (0.30f * heat));
+                    g.strokePath (influence, juce::PathStrokeType (3.2f * s,
+                                                                   juce::PathStrokeType::curved,
                                                                    juce::PathStrokeType::rounded));
-                    g.setColour (heat.withAlpha (0.88f));
-                    g.strokePath (influence, juce::PathStrokeType (1.5f * s, juce::PathStrokeType::curved,
+                    g.setColour (blue.withAlpha (0.90f));
+                    g.strokePath (influence, juce::PathStrokeType (1.5f * s,
+                                                                   juce::PathStrokeType::curved,
                                                                    juce::PathStrokeType::rounded));
+
+                    // A small end marker makes the current offset legible in a
+                    // still frame without implying a playhead.
+                    const auto end = polar (cx, cy, blueR, influenceAngle);
+                    theme::drawGlowDot (g, end.x, end.y, 1.4f * s, blue,
+                                        0.65f + 0.35f * amount, s);
+                    g.setColour (blue.interpolatedWith (juce::Colours::white, 0.35f));
+                    g.fillEllipse (end.x - 1.3f * s, end.y - 1.3f * s, 2.6f * s, 2.6f * s);
                 }
             }
         }

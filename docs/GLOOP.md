@@ -21,8 +21,12 @@ feedback; automated tests only establish the mechanics below.
   time of the gesture and glides without restarting the phase.
 * The target knob is the live centre. Moving it while a loop runs translates the
   orbit; the APVTS value is never overwritten by Gloop.
-* A moving ring around the target knob shows the current playhead(s) and the
-  lane's current offset. A separate Gloop panel shows all eight lanes.
+* The target knob keeps its **orange** live-value arc and pointer. Gloop's
+  contribution is a separate **light-blue** arc that follows the current summed
+  offset; when several lanes share a knob it is one combined display, not a
+  pile of rings. Playback phase lives in the lane's mini-ring in the Gloop
+  panel, never on the parameter knob. A separate Gloop panel shows all eight
+  lanes.
 * `RANDOMIZE` gently changes the depth and speed of lanes that are already
   moving, gliding over several seconds. It never starts an idle lane, never
   changes a target and never restarts a phase.

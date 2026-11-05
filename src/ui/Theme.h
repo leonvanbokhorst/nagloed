@@ -149,6 +149,11 @@ Colour pitchColour (float semitones);
     reads as an ember rather than a rainbow: copper -> ember -> gold -> mint. */
 Colour gloopLaneColour (int lane) noexcept;
 
+/** Cool light-blue reserved for Gloop's relative movement around a knob. It is
+    deliberately outside the warm ember palette so it reads as "Gloop is moving
+    this" rather than as part of the live knob value. */
+Colour gloopMotion() noexcept;
+
 /** Cheap cached 128x128 monochrome noise tile (alpha only, drawn by atmosphere). */
 const juce::Image& noiseTile();
 
