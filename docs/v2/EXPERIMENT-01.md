@@ -1,248 +1,251 @@
 # Experiment 01 — Eerste Gloed
 
-> **Status:** voorstel voor één klein, afzonderlijk experiment. Geen v2-feature,
-> geen integratie in de plug-in, geen wijziging aan NAGLOED 1.0.4. Het experiment
-> staat volledig los van de release en is veilig te verwijderen. Het is in de
-> eerste plaats een **materiaalverkenning**: het test of een *geschreven*
-> verwantschap tussen één lichtgebaar en één audiogebaar voelbaar is. Het test
-> niet of een systeem zelf kan weigeren, herinneren of vergeten.
+> **Status:** proposal for one small, separate experiment. Not a v2 feature, no
+> integration into the plug-in, no change to NAGLOED 1.0.4. The experiment is
+> entirely separate from the release and can safely be removed. It is first of
+> all a **material exploration**: it tests whether a *written* kinship between
+> one light gesture and one audio gesture is perceptible. It does not test
+> whether a system can refuse, remember or forget on its own.
 
-## 1. De vraag
+## 1. The question
 
-Kan **één gedeeld gebaar** — een lichtgrain dat dooft en een auditieve respons
-die daar bewust niet mee samenvalt — een voelbare verwantschap maken zonder
-frame-synchronie? En is een bewust **niet-antwoord** op een later lichtgrain
-waarneembaar als compositie in plaats van als gemis of fout?
+Can **one shared gesture** — a light grain that fades out and an auditory
+response that deliberately does not coincide with it — create a felt kinship
+without frame synchrony? And is a deliberate **non-response** to a later light
+grain perceivable as composition rather than as absence or error?
 
-Twee deelvragen, die apart moeten worden beantwoord:
+Two sub-questions, which must be answered separately:
 
-1. **Verwantschap:** ervaart een luisteraar/kijker een relatie tussen het
-   lichtgebaar en de 180 ms latere audio-impact, zonder dat die synchroon lopen?
-2. **Niet-antwoord:** merkt een luisteraar/kijker dat het lichtgrain van 38 s
-   geen antwoord krijgt, en leest hij dat als intentie, als gemis of als niets?
+1. **Kinship:** does a listener/viewer experience a relationship between the
+   light gesture and the audio impact 180 ms later, without the two running in
+   sync?
+2. **Non-response:** does a listener/viewer notice that the 38 s light grain
+   receives no answer, and do they read that as intent, as absence or as
+   nothing?
 
-## 2. Wat dit experiment wel en niet is
+## 2. What this experiment is and is not
 
-**Wel:** een offline, reproduceerbare compositie met een declaratieve score, een
-eigen renderer, een SpectraStrobe-encoder en een verificatierapport. De relaties
-zijn **geschreven**, niet emergent: de componist plaatst de gebeurtenissen, de
-renderer voert ze uit. Dat is bewust — de eerste vraag is of de *ervaring* van
-verwantschap werkt, niet of een agent zelf beslissingen neemt.
+**Is:** an offline, reproducible composition with a declarative score, its own
+renderer, a SpectraStrobe encoder and a verification report. The relationships
+are **written**, not emergent: the composer places the events, the renderer
+executes them. That is deliberate — the first question is whether the
+*experience* of kinship works, not whether an agent takes decisions on its
+own.
 
-**Niet:** een bewijs van systeem-autonomie, aandacht of geheugen. De
-"herinnering" op 46 s is een gesynthetiseerde transformatie van de impact op
-14,18 s; de 12 s capture-ring van v1 kan dat materiaal niet bevatten. Als dit
-experiment muzikaal slaagt, is de volgende vraag juist of dat soort geheugen
-buiten de ring nodig is — een ontwerpvraag, geen uitgemaakte zaak. "Eén gedeeld
-gebaar" betekent hier: **één paar** (lichtextinctie + audio-impact), geen
-continue koppeling.
+**Is not:** proof of system autonomy, attention or memory. The "memory" at 46 s
+is a synthesised transformation of the impact at 14.18 s; v1's 12 s capture
+ring cannot contain that material. If this experiment succeeds musically, the
+next question is precisely whether that kind of memory outside the ring is
+necessary — a design question, not a settled matter. "One shared gesture" here
+means: **one pair** (light extinction + audio impact), not continuous coupling.
 
-## 3. De compositie (72 seconden)
+## 3. The composition (72 seconds)
 
-Werknaam: **Eerste Gloed**. Vier momenten, veel ruimte ertussen.
+Working title: **Eerste Gloed** (first glow). Four moments, with plenty of
+space between them.
 
-| Tijd | Gebeurtenis | Licht | Geluid | Relatie |
+| Time | Event | Light | Sound | Relationship |
 |---|---|---|---|---|
-| 0–8 s | Kamer, bijna niets | Geen licht (alleen referentiedraaggolf) | Zeer schaars kamerbeeld, één ver fragment | Geen |
-| 8–14 s | Lichtgrain | Amberkleurig grain start links, drijft langzaam naar rechts, wordt iets helderder | Stil | Alleen licht |
-| 14,0 s | Extinctie | Licht dooft in **20 ms** (R4-minimum) | Stil | — |
-| 14,18 s | Antwoord | Geen nieuw licht | Lage impact, 180 ms later, andere decay (2,5 s), iets rechts | Verwantschap, geen synchronie |
-| 14–28 s | Naleven | Diffuus amberrood veld blijft langzaam ademen en dooft | De impact is al weg | Licht overleeft geluid |
-| 28–46 s | Terughoudendheid | Eén zwak lichtgrain om 38 s, dooft vanzelf | Stil | **Opzettelijk onbeantwoord** |
-| 46–52 s | Herinnering | Dimmere, tragere echo van het eerste licht, andere timing | Omgekeerd en verlaagd fragment, 46,4 s | Herkenbaar, verplaatst |
-| 52–72 s | Uitdoving | Langzame fade, geen slotakkoord | Kamer wordt stil | Stilte als einde |
+| 0–8 s | Room, almost nothing | No light (reference carrier only) | Very sparse room image, one distant fragment | None |
+| 8–14 s | Light grain | Amber grain starts on the left, drifts slowly to the right, becomes slightly brighter | Silent | Light only |
+| 14.0 s | Extinction | Light fades out in **20 ms** (R4 minimum) | Silent | — |
+| 14.18 s | Response | No new light | Low impact, 180 ms later, different decay (2.5 s), slightly to the right | Kinship, not synchrony |
+| 14–28 s | Lingering | Diffuse amber-red field keeps breathing slowly and fades out | The impact is already gone | Light outlives sound |
+| 28–46 s | Restraint | One weak light grain at 38 s, fades out by itself | Silent | **Deliberately unanswered** |
+| 46–52 s | Memory | Dimmer, slower echo of the first light, different timing | Reversed and lowered fragment, 46.4 s | Recognisable, displaced |
+| 52–72 s | Fading out | Slow fade, no final chord | Room falls silent | Silence as ending |
 
-De vertraging van 180 ms is een **artistieke keuze**, geen latency-bug. De
-audio-envelope lijkt niet op de licht-envelope: het licht dooft in 20 ms, het
-geluid heeft een lange decay. Ze zijn familie, niet kopie. De extinctie is
-verlengd van 8 ms naar 20 ms zodat ze de harde veiligheidsregel R4 respecteert;
-20 ms is nog steeds als abrupt waarneembaar. De start van het tweede lichtveld
-krijgt een fade-in van 50 ms (R5: geen sprong van zwart naar vol).
+The 180 ms delay is an **artistic choice**, not a latency bug. The audio
+envelope does not resemble the light envelope: the light fades out in 20 ms,
+the sound has a long decay. They are family, not a copy. The extinction was
+extended from 8 ms to 20 ms so that it respects hard safety rule R4; 20 ms is
+still perceivable as abrupt. The start of the second light field gets a 50 ms
+fade-in (R5: no jump from black to full).
 
-## 4. Technische uitvoering
+## 4. Technical implementation
 
-1. **Score als data.** `score.json` beschrijft gebeurtenissen, kleuren, panning,
-   envelopes, vertragingen en stiltes. De renderer voert de score uit met een
-   vaste seed; een render is reproduceerbaar.
-2. **Programma-audio.** Schaars, gesynthetiseerd "gevonden" materiaal,
-   bandbegrensd onder 15,5 kHz. Geen echte stemmen, geen field recording van
-   personen: in dit eerste experiment is privacy geen variabele. (Voor latere
-   experimenten met echte omgevingen geldt [SAFETY-PRIVACY.md](SAFETY-PRIVACY.md).)
-3. **SpectraStrobe-encodering.** De referentiedraaggolf (18,2 kHz) loopt continu
-   met een 20 Hz stereo-pan-LFO. De kleurkanalen (18,7 / 19,2 / 19,7 kHz) volgen
-   de lichtgrains. De carriers worden **na** de audioprocessing toegevoegd; het
-   programma wordt vooraf bandbegrensd.
-4. **Conservatieve helderheid en veiligheidsbegrenzing.** Referentie −30 dBFS,
-   kleurkanalen per drager maximaal 25 % daarvan (score: 20 %). De encoder
-   clampt een score die meer vraagt, valideert de minimale attack/release
-   (≥ 20 ms), weigert stappen en begrenst het aantal helderheidsovergangen per
-   seconde. Voor de hardwareladder zijn er extra varianten: **dim** (max 6,25 %)
-   en **mid** (12,5 %). De piek van de hele mix blijft onder −6 dBFS.
-5. **Verificatie vooraf.** De PoC controleert carrierfrequenties, relatieve
-   amplitudes, isolatie tussen de kleuren, de 20 Hz-panmodulatie, de
-   bandbegrenzing, de headroom, de veiligheidsclamp, de envelopes en de
-   deterministische re-render. De bindende toleranties staan in
-   [SPECTRASTROBE.md](SPECTRASTROBE.md) §3; dit document noemt geen losse,
-   ruimere criteria. Laatste run: **52/52 kernchecks PASS, 1 INFO, 0 FAIL**;
-   de INFO is de eerlijke breedbandprobe voor M7 (de −60 dBFS-eis is voor
-   breedbandig v1-materiaal niet aangetoond). Pas daarna gaat er iets naar de
-   hardware. Zie `experiments/spectrastrobe-poc/out/verify-report.md`.
+1. **Score as data.** `score.json` describes events, colours, panning,
+   envelopes, delays and silences. The renderer executes the score with a fixed
+   seed; a render is reproducible.
+2. **Programme audio.** Sparse, synthesised "found" material, band-limited
+   below 15.5 kHz. No real voices, no field recording of people: in this first
+   experiment privacy is not a variable. (For later experiments with real
+   environments, [SAFETY-PRIVACY.md](SAFETY-PRIVACY.md) applies.)
+3. **SpectraStrobe encoding.** The reference carrier (18.2 kHz) runs
+   continuously with a 20 Hz stereo pan LFO. The colour channels (18.7 / 19.2 /
+   19.7 kHz) follow the light grains. The carriers are added **after** the
+   audio processing; the programme is band-limited in advance.
+4. **Conservative brightness and safety limiting.** Reference −30 dBFS, colour
+   channels at most 25% of that per carrier (score: 20%). The encoder clamps a
+   score that asks for more, validates the minimum attack/release (≥ 20 ms),
+   rejects steps and limits the number of brightness transitions per second.
+   For the hardware ladder there are additional variants: **dim** (max 6.25%)
+   and **mid** (12.5%). The peak of the entire mix stays below −6 dBFS.
+5. **Verification in advance.** The PoC checks carrier frequencies, relative
+   amplitudes, isolation between the colours, the 20 Hz pan modulation, the
+   band limiting, the headroom, the safety clamp, the envelopes and the
+   deterministic re-render. The binding tolerances are in
+   [SPECTRASTROBE.md](SPECTRASTROBE.md) §3; this document does not state any
+   separate, looser criteria. Latest run: **52/52 core checks PASS, 1 INFO, 0
+   FAIL**; the INFO is the honest broadband probe for M7 (the −60 dBFS
+   requirement is not demonstrated for broadband v1 material). Only after that
+   does anything go to the hardware. See
+   `experiments/spectrastrobe-poc/out/verify-report.md`.
 
-## 5. Wat we meten
+## 5. What we measure
 
-### Technisch (objectief, offline)
+### Technical (objective, offline)
 
-De bindende metingen M1–M10 en de adviserende corruptiematrix M14 staan in
-[SPECTRASTROBE.md](SPECTRASTROBE.md) §3. De uitvoer en het laatste rapport staan
-in `experiments/spectrastrobe-poc/out/verify-report.md`. De PoC bewijst
-signaalintegriteit op deze machine; hardwaredetectie (M11–M13) is niet gemeten.
+The binding measurements M1–M10 and the advisory corruption matrix M14 are in
+[SPECTRASTROBE.md](SPECTRASTROBE.md) §3. The output and the latest report are
+in `experiments/spectrastrobe-poc/out/verify-report.md`. The PoC proves
+signal integrity on this machine; hardware detection (M11–M13) has not
+been measured.
 
-### Perceptueel — gefaseerd, met een expliciet onderscheid
+### Perceptual — phased, with an explicit distinction
 
-De perceptuele toets kent twee fasen. Fase 0 is een auteurstest en levert
-**geen bewijs**. Fase 1 is een vooraf geregistreerde toets met onafhankelijke
-deelnemers.
+The perceptual test has two phases. Phase 0 is an author test and provides **no
+evidence**. Phase 1 is a pre-registered test with independent participants.
 
-#### Fase 0 — auteurstest (Lonn, verkennend)
+#### Phase 0 — author test (Lonn, exploratory)
 
-Lonn kijkt/luistert één keer, zonder vooraf de timing te hoeven weten, en noteert
-achteraf in eigen woorden wat opviel. Daarna pas de gerichte vragen. Dit is
-materiaalverkenning: één persoon, geen blindering, geen bewijs. De uitkomst mag
-de compositie bijsturen, niet de conclusie dragen.
+Lonn watches/listens once, without needing to know the timing in advance, and
+afterwards notes in their own words what stood out. Only then come the targeted
+questions. This is material exploration: one person, no blinding, no evidence.
+The outcome may adjust the composition, but may not carry the conclusion.
 
-#### Fase 1 — vooraf geregistreerde toets (onafhankelijke deelnemers)
+#### Phase 1 — pre-registered test (independent participants)
 
-Deze fase wordt **pas uitgevoerd als de hardware detection groen is** en als de
-controleversies bestaan. Ze wordt vooraf vastgelegd:
+This phase is **only carried out once hardware detection is green** and the
+control versions exist. It is fixed in advance:
 
-- **Deelnemers:** minimaal 5, niet de auteur, geen familie of directe
-  medewerker. Vrijwillig, geïnformeerd, geen (vermoede) fotosensitiviteit;
-  gehoorniveau en leeftijd genoteerd. kinderen alleen met begeleiding en alleen
-  bij een lagere helderheid.
-- **Condities, in gerandomiseerde volgorde en blind voor de deelnemer:**
-  A = de score zoals ze is; B = dezelfde score met 0 ms vertraging (A1 op
-  14,00 s); C = dezelfde score waarin het lichtgrain van 38 s wél een antwoord
-  krijgt; D = programma-only, zonder dragers/licht. B en C zijn
-  **controleversies** die nog gerenderd moeten worden; zonder die controles is
-  fase 1 niet geldig en wordt ze niet uitgevoerd.
-- **Procedure:** eerst een open vraag ("Wat merkte je op?"), dan de gerichte
-  items. De deelnemer krijgt vooraf geen uitleg over de 38 s-gebeurtenis of over
-  de verwachte relatie. De observator noteert letterlijk.
-- **Analyse:** per conditie en per vraag worden antwoorden onafhankelijk
-  gecodeerd door twee codeerders. Minstens één codeur is **blind voor de
-  conditie** en codeert op geanonimiseerde fragmenten; Lonn is auteur en codeert
-  niet als enige. De codering en de beslissingsregels worden vóór de sessie
-  vastgelegd. Geen statistische claim bij N=5; wel een duidelijke richting en
-  een lijst met tegenvoorbeelden.
+- **Participants:** at least 5, not the author, no family or direct colleagues.
+  Voluntary, informed, no (suspected) photosensitivity; hearing level and age
+  recorded. Children only with supervision and only at a lower brightness.
+- **Conditions, in randomised order and blind for the participant:** A = the
+  score as it is; B = the same score with a 0 ms delay (A1 at 14.00 s); C = the
+  same score in which the 38 s light grain does receive an answer; D =
+  programme-only, without carriers/light. B and C are **control versions** that
+  still have to be rendered; without those controls phase 1 is not valid and
+  will not be carried out.
+- **Procedure:** first an open question ("What did you notice?"), then the
+  targeted items. The participant receives no advance explanation about the
+  38 s event or about the expected relationship. The observer records verbatim.
+- **Analysis:** for each condition and each question, answers are independently
+  coded by two coders. At least one coder is **blind to the condition** and
+  codes anonymised fragments; Lonn is the author and does not code alone. The
+  coding and the decision rules are fixed before the session. No statistical
+  claim at N=5; rather a clear direction and a list of counterexamples.
 
-#### De vragen (open eerst, dan gericht)
+#### The questions (open first, then targeted)
 
-1. "Wat merkte je op?" (open, zonder ontwerpverklap)
-2. "Heb je een verband ervaren tussen wat je zag en wat je hoorde? Beschrijf het
-   in je eigen woorden." (open; geen dichotomie)
-3. "Was er een moment waarop je iets verwachtte dat niet kwam? Wat deed dat?"
-   (open)
-4. "Hoe ervoer je de lange stilte?" (open)
-5. "Wat bleef er hangen?" (open)
-6. Pas daarna: "Het lichtgrain rond 38 seconden kreeg geen antwoord. Heb je dat
-   opgemerkt? Zo ja: hoe voelde dat?" (gericht; design wordt nu pas onthuld)
-7. "Zou je dit aan iemand anders willen laten zien? Waarom wel/niet?" (open)
+1. "What did you notice?" (open, without revealing the design)
+2. "Did you experience a connection between what you saw and what you heard?
+   Describe it in your own words." (open; not a dichotomy)
+3. "Was there a moment when you expected something that did not come? What did
+   that do?" (open)
+4. "How did you experience the long silence?" (open)
+5. "What stayed with you?" (open)
+6. Only then: "The light grain around 38 seconds received no answer. Did you
+   notice that? If so: how did it feel?" (targeted; the design is only now
+   revealed)
+7. "Would you want to show this to someone else? Why/why not?" (open)
 
-#### Beslissingsregels (voorstel, vooraf vast te leggen)
+#### Decision rules (proposal, to be fixed in advance)
 
-- **Verwantschap:** A wordt vaker als "verwant" beschreven dan B (0 ms) en D
-  (programma-only). Als A niet boven B uitkomt, voegt de vertraging artistiek
-  niets toe; als A niet boven D uitkomt, voegt het licht niets toe.
-- **Niet-antwoord:** minstens 2 van de 5 deelnemers noemen het ontbrekende
-  antwoord bij vraag 3 of 6. Als niemand het opmerkt, is de niet-antwoordconditie
-  voor deze uitvoering **niet geslaagd**; dat is een uitkomst, geen succes.
-  Wordt het door niemand als intentie gelezen en door meer dan de helft als
-  fout/gemis, dan is de dramaturgie niet geslaagd.
-- **Stilte:** de stilte mag niet door meer dan de helft als "storing" of
-  "leegte" worden beschreven. Anders is de terughoudendheid te lang of te
-  onduidelijk.
-- **Geen demo-gevoel:** de vraag "wat bleef hangen" levert geen antwoord dat
-  uitsluitend uit effect-woorden bestaat ("mooi licht", "vette reverb"). Dit is
-  een kwalitatieve check, geen statistiek.
+- **Kinship:** A is described as "kin" more often than B (0 ms) and D
+  (programme-only). If A does not rise above B, the delay adds nothing
+  artistically; if A does not rise above D, the light adds nothing.
+- **Non-response:** at least 2 of the 5 participants mention the missing answer
+  at question 3 or 6. If nobody notices it, the non-response condition for this
+  run has **not succeeded**; that is an outcome, not a success. If nobody reads
+  it as intent and more than half read it as error/absence, the dramaturgy has
+  not succeeded.
+- **Silence:** the silence must not be described as "malfunction" or
+  "emptiness" by more than half. Otherwise the restraint is too long or too
+  unclear.
+- **No demo feeling:** the question "what stayed with you" does not produce an
+  answer consisting solely of effect words ("nice light", "fat reverb"). This is
+  a qualitative check, not statistics.
 
-Deze regels zijn strenger dan "voelt goed": ze kunnen ook **falen**. Dat is de
-bedoeling.
+These rules are stricter than "feels good": they can also **fail**. That is the
+intention.
 
-## 6. Hardwareprotocol en veiligheid
+## 6. Hardware protocol and safety
 
-Het conservatieve protocol staat in
-`experiments/spectrastrobe-poc/HARDWARE-PROTOCOL.md` en de bindende eisen in
-[SPECTRASTROBE.md](SPECTRASTROBE.md) §4 en [SAFETY-PRIVACY.md](SAFETY-PRIVACY.md).
-Kort: eerst donker en laag, Kasina + standaard Ganzframes, 44,1 kHz/16-bit,
-helderheidsladder **dim (6,25 %) → mid (12,5 %) → volledig (20 %)**, daarna pas
-48 kHz en DeepVision. Primaire stop is menselijk: weergave stoppen,
-Kasina-helderheid naar minimum, bril af, of één oog bedekken. De offline PoC
-heeft geen bewezen software-panic van 50 ms en claimt die niet. Eén persoon
-bedient, één persoon kijkt; geen andere flikkerbronnen; geen mensen met
-(vermoede) fotosensitiviteit; gehoorniveau en toestemming vooraf; geen
-medische of wellness-claims.
+The conservative protocol is in
+`experiments/spectrastrobe-poc/HARDWARE-PROTOCOL.md` and the binding
+requirements in [SPECTRASTROBE.md](SPECTRASTROBE.md) §4 and
+[SAFETY-PRIVACY.md](SAFETY-PRIVACY.md). In short: dark and low first, Kasina +
+standard Ganzfeld frames, 44.1 kHz/16-bit, brightness ladder **dim (6.25%) →
+mid (12.5%) → full (20%)**, then only afterwards 48 kHz and DeepVision. The
+primary stop is human: stop playback, turn Kasina brightness to minimum, take
+off the glasses, or cover one eye. The offline PoC does not have a proven 50 ms
+software panic and does not claim one. One person operates, one person watches;
+no other flicker sources; no people with (suspected) photosensitivity; hearing
+level and consent in advance; no medical or wellness claims.
 
-## 7. Succes- en faalsignalen
+## 7. Success and failure signals
 
-**Succes (na fase 1, niet na fase 0):**
+**Success (after phase 1, not after phase 0):**
 
-- de vertraging voelt niet als fout, en A wordt vaker als verwant beschreven
-  dan B en D;
-- de stilte wordt niet door de meerderheid als storing ervaren;
-- de late terugkeer is herkenbaar zonder meteen plaatsbaar te zijn;
-- het niet-antwoord wordt door minstens 2 van de 5 opgemerkt en vaker als
-  intentie dan als gemis gelezen;
-- de luisteraar beschrijft iets anders dan "een effect".
+- the delay does not feel like an error, and A is described as kin more often
+  than B and D;
+- the silence is not experienced as a malfunction by the majority;
+- the late return is recognisable without being immediately placeable;
+- the non-response is noticed by at least 2 of the 5 and read as intent more
+  often than as absence;
+- the listener describes something other than "an effect".
 
-**Falen (nuttige informatie):**
+**Failure (useful information):**
 
-- licht en geluid voelen als twee losse demonstraties;
-- de vertraging voelt als fout of als willekeur;
-- het licht is te fel, te snel of de carriers zijn hoorbaar/irritant;
-- de audio is te vol en de stilte kan niet dragen;
-- de helderheid is zo conservatief dat de Ganzfeld niets laat zien (dan is het
-  een hardware-/helderheidsprobleem, geen artistiek probleem);
-- niemand merkt het niet-antwoord op, of de meerderheid leest het als bug;
-- de hardware herkent het signaal niet (signaalintegriteit- of detectieprobleem,
-  geen artistiek probleem).
+- light and sound feel like two separate demonstrations;
+- the delay feels like an error or like arbitrariness;
+- the light is too bright, too fast, or the carriers are audible/irritating;
+- the audio is too full and the silence cannot carry;
+- the brightness is so conservative that the Ganzfeld shows nothing (then it is
+  a hardware/brightness problem, not an artistic one);
+- nobody notices the non-response, or the majority reads it as a bug;
+- the hardware does not recognise the signal (a signal integrity or
+  detection problem, not an artistic one).
 
-## 8. Wat dit experiment niet bewijst
+## 8. What this experiment does not prove
 
-- Geen realtime plug-inhaalbaarheid; dit is een offline render.
-- Geen host-routing of DAW-gedrag; dat is een aparte technische vraag.
-- Geen distributed werking, geen netwerk, geen meerdere kamers.
-- Geen AI-component.
-- Geen systeem-autonomie of emergent geheugen; de relaties zijn geschreven.
-- Geen uitspraak over de definitieve architectuur van v2.
-- Geen algemene uitspraak over "audio-visuele verwantschap"; alleen over deze
-  ene, kleine situatie.
+- No realtime plug-in feasibility; this is an offline render.
+- No host routing or DAW behaviour; that is a separate technical question.
+- No distributed operation, no network, no multiple rooms.
+- No AI component.
+- No system autonomy or emergent memory; the relationships are written.
+- No statement about the definitive architecture of v2.
+- No general statement about "audio-visual kinship"; only about this one small
+  situation.
 
-## 9. Uitvoering en bewijs
+## 9. Execution and evidence
 
-De uitvoerbare vorm staat in `experiments/spectrastrobe-poc/`:
+The executable form is in `experiments/spectrastrobe-poc/`:
 
 ```bash
 cd experiments/spectrastrobe-poc
 ./run.sh
 ```
 
-Dat schrijft naar `out/`: de 48 kHz/24-bit mix, de 44,1 kHz/16-bit variant, de
-dim- en mid-varianten, een programma-only A/B-versie, `events.csv`,
-`timeline.svg` en een verificatierapport. Het hardwareprotocol staat in
+That writes to `out/`: the 48 kHz/24-bit mix, the 44.1 kHz/16-bit variant, the
+dim and mid variants, a programme-only A/B version, `events.csv`,
+`timeline.svg` and a verification report. The hardware protocol is in
 `HARDWARE-PROTOCOL.md`.
 
-## 10. Vervolg — alleen als het muzikaal iets doet
+## 10. Follow-up — only if it does something musically
 
-Geen v2-plan en geen backlog. Als *Eerste Gloed* iets raakt, zijn er twee
-kleine, losstaande vervolgvragen denkbaar:
+No v2 plan and no backlog. If *Eerste Gloed* touches something, two small,
+separate follow-up questions are conceivable:
 
-1. **Geheugen en verval** (idee #2 uit [IDEAS.md](IDEAS.md)): één fragment dat
-   drie keer terugkeert en elke keer meer vervormt, met een licht dat niet
-   meebeweegt maar meeverandert. Vraag: wanneer wordt een herinnering
-   sentimenteel?
-2. **De kunst van het negeren** (idee #3): tien lichtgebeurtenissen, acht
-   genegeerd versus vier genegeerd, met een vooraf vastgelegde paired-toets.
-   Vraag: voelt terughoudendheid als intentie of als gemis?
+1. **Memory and decay** (idea #2 from [IDEAS.md](IDEAS.md)): one fragment that
+   returns three times and distorts more each time, with a light that does not
+   move with it but changes with it. Question: when does a memory become
+   sentimental?
+2. **The art of ignoring** (idea #3): ten light events, eight ignored versus
+   four ignored, with a pre-registered paired test. Question: does restraint
+   feel like intent or like absence?
 
-Pas daarna, en alleen met expliciete toestemming van Lonn, is een gedeelde
-architectuur aan de orde. Niet eerder.
+Only after that, and only with Lonn's explicit permission, is a shared
+architecture on the agenda. Not before.

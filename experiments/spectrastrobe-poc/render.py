@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""NAGLOED v2 — SpectraStrobe proof-of-concept: deterministische renderer.
+"""NAGLOED v2 — SpectraStrobe proof-of-concept: deterministic renderer.
 
-EXPERIMENT. Geen deel van NAGLOED v1.0.4, geen integratie, geen DSP-contract.
-Offline en alleen Python-stdlib.
+EXPERIMENT. Not part of NAGLOED v1.0.4, no integration, no DSP contract.
+Offline and Python-stdlib only.
 
-Leest score.json en schrijft (standaard naar out/):
-  spectrastrobe-48k-24bit.wav        volledige mix, 48 kHz/24-bit (technische referentie)
-  spectrastrobe-44k1-16bit.wav       volledige mix, 44,1 kHz/16-bit (aanbevolen weergave)
-  spectrastrobe-mid-44k1-16bit.wav   helderheidsladder: 12,5% max
-  spectrastrobe-dim-44k1-16bit.wav   helderheidsladder: 6,25% max (eerste hardware-exposure)
-  program-only-48k-24bit.wav         A/B zonder dragers
-  program-only-44k1-16bit.wav        A/B zonder dragers, 44,1 kHz
+Reads score.json and writes (by default into out/):
+  spectrastrobe-48k-24bit.wav        full mix, 48 kHz/24-bit (technical reference)
+  spectrastrobe-44k1-16bit.wav       full mix, 44.1 kHz/16-bit (recommended playback)
+  spectrastrobe-mid-44k1-16bit.wav   brightness ladder: 12.5% max
+  spectrastrobe-dim-44k1-16bit.wav   brightness ladder: 6.25% max (first hardware exposure)
+  program-only-48k-24bit.wav         A/B without carriers
+  program-only-44k1-16bit.wav        A/B without carriers, 44.1 kHz
   events.csv, timeline.svg, render-manifest.json
 
-Volgorde is bindend (docs/v2/SPECTRASTROBE.md §6): programma eerst volledig
-verwerken en bandbegrenzen, daarna dragers optellen, daarna niets meer.
+The order is binding (docs/v2/SPECTRASTROBE.md §6): process and band-limit the
+programme completely first, then add the carriers, then nothing else.
 
-Veiligheid (R3 uit docs/v2/SAFETY-PRIVACY.md): elk kleurkanaal wordt hard
-geclampt op 25% van de referentiepiek, ook als de score meer vraagt. De som per
-oor wordt apart gerapporteerd; 25% geldt per drager.
+Safety (R3 from docs/v2/SAFETY-PRIVACY.md): every colour channel is hard-clamped
+to 25% of the reference peak, even if the score asks for more. The sum per ear
+is reported separately; 25% applies per carrier.
 """
 
 from __future__ import annotations
@@ -42,14 +42,14 @@ POC_DIR = Path(__file__).resolve().parent
 
 LIGHT_KEYS = ("red", "green", "blue")
 DEFAULT_EXPOSURES = {
-    "full": {"scale": 1.0, "max_colour_ratio": 0.20, "label": "volledig 20%"},
-    "mid": {"scale": 0.625, "max_colour_ratio": 0.125, "label": "midden 12,5%"},
-    "dim": {"scale": 0.3125, "max_colour_ratio": 0.0625, "label": "dim 6,25%"},
+    "full": {"scale": 1.0, "max_colour_ratio": 0.20, "label": "full 20%"},
+    "mid": {"scale": 0.625, "max_colour_ratio": 0.125, "label": "middle 12.5%"},
+    "dim": {"scale": 0.3125, "max_colour_ratio": 0.0625, "label": "dim 6.25% (first hardware exposure)"},
 }
 
 
 # --------------------------------------------------------------------------- #
-# Basisberekeningen
+# Basic calculations
 # --------------------------------------------------------------------------- #
 def db_to_lin(db: float) -> float:
     return 10.0 ** (db / 20.0)
@@ -72,10 +72,10 @@ def smoothstep(u: float) -> float:
 
 
 def segments_array(points, count: int, fs: float) -> array.array:
-    """Breakpoint-envelope met smoothstep-interpolatie; klikvrij."""
+    """Breakpoint envelope with smoothstep interpolation; click-free."""
     pts = [(float(t), float(v)) for t, v in points]
     if not pts:
-        raise ValueError("leeg breakpoint-pad")
+        raise ValueError("empty breakpoint path")
     arr = array.array("d", [pts[0][1]]) * count
     for (t0, v0), (t1, v1) in zip(pts, pts[1:]):
         i0 = int(round(t0 * fs))
@@ -96,7 +96,7 @@ def segments_array(points, count: int, fs: float) -> array.array:
 
 
 def fade_array(count: int, fs: float, fade_in_ms: float, fade_out_ms: float) -> array.array:
-    """Klikvrije raised-cosine in-/uitfade voor de dragers op de trackranden."""
+    """Click-free raised-cosine fade-in/out for the carriers at the track edges."""
     fade = array.array("d", [1.0]) * count
     k_in = max(0, min(count // 2, int(round(fade_in_ms * fs / 1000.0))))
     for i in range(k_in):
@@ -111,61 +111,61 @@ def fade_array(count: int, fs: float, fade_in_ms: float, fade_out_ms: float) -> 
 # Panning
 # --------------------------------------------------------------------------- #
 def pan_equal_power(p: float):
-    """Gelijkvermogen-panning (referentie): totale dragerenergie blijft constant."""
+    """Equal-power panning (reference): total carrier energy stays constant."""
     p = -1.0 if p < -1.0 else (1.0 if p > 1.0 else p)
     theta = 0.25 * math.pi + 0.25 * math.pi * p
     return math.cos(theta), math.sin(theta)
 
 
 def pan_linear_0db(p: float):
-    """Gedocumenteerde lineaire panning met 0 dB in het midden (kleuren).
+    """Documented linear panning with 0 dB in the centre (colours).
 
-    Bewust géén -3 dB center-pan law: die zou de gedecodeerde helderheid per oor
-    halveren. p=-1: alleen links; p=0: beide oren vol; p=+1: alleen rechts.
+    Deliberately no -3 dB centre-pan law: that would halve the decoded
+    brightness per ear. p=-1: left only; p=0: both ears full; p=+1: right only.
     """
     p = -1.0 if p < -1.0 else (1.0 if p > 1.0 else p)
     return (1.0 - max(0.0, p), 1.0 + min(0.0, p))
 
 
 # --------------------------------------------------------------------------- #
-# Scorevalidatie (R4/R5, panlaws, plafonds)
+# Score validation (R4/R5, pan laws, ceilings)
 # --------------------------------------------------------------------------- #
 def validate_score(score: dict) -> dict:
-    """Harde scorevalidatie; geeft de normaliseerde configuratie terug."""
+    """Hard score validation; returns the normalised configuration."""
     meta = score.get("meta") or {}
     duration = float(meta.get("duration_s", 0.0))
     if not (60.0 <= duration <= 90.0):
-        raise ValueError(f"scoreduur moet 60–90 s zijn, is {duration} s")
+        raise ValueError(f"score duration must be 60–90 s, got {duration} s")
     carriers = score.get("carriers") or {}
     ref = carriers.get("reference") or {}
     if ref.get("pan_law") != "equal_power":
-        raise ValueError("referentie-panlaw moet 'equal_power' zijn (constante dragerenergie)")
+        raise ValueError("reference pan law must be 'equal_power' (constant carrier energy)")
     if carriers.get("colour_pan_law") != "linear_0db_center":
-        raise ValueError("kleur-panlaw moet 'linear_0db_center' zijn (geen -3 dB center law)")
+        raise ValueError("colour pan law must be 'linear_0db_center' (no -3 dB centre law)")
     max_ratio = float(carriers.get("max_colour_ratio", 0.25))
     if not (0.0 < max_ratio <= 0.25):
-        raise ValueError(f"max_colour_ratio moet in (0, 0,25] liggen, is {max_ratio}")
+        raise ValueError(f"max_colour_ratio must be in (0, 0.25], got {max_ratio}")
     rules = score.get("envelope_rules") or {}
     min_attack = float(rules.get("min_attack_ms", 20.0)) / 1000.0
     min_release = float(rules.get("min_release_ms", 20.0)) / 1000.0
     events = (score.get("light") or {}).get("events") or []
     if not events:
-        raise ValueError("score heeft geen lichtgebeurtenissen")
+        raise ValueError("score has no light events")
     for ev in events:
         env = ev.get("env") or []
         start = float(ev["start_s"])
         end = float(ev["end_s"])
         span = end - start
         if span <= 0.0:
-            raise ValueError(f"{ev['id']}: ongeldige duur")
+            raise ValueError(f"{ev['id']}: invalid duration")
         if abs(float(env[0][0])) > 1e-9 or abs(float(env[0][1])) > 1e-9:
-            raise ValueError(f"{ev['id']}: envelope moet op (0, 0) beginnen (R5)")
+            raise ValueError(f"{ev['id']}: envelope must start at (0, 0) (R5)")
         if abs(float(env[-1][0]) - span) > 1e-6 or abs(float(env[-1][1])) > 1e-9:
-            raise ValueError(f"{ev['id']}: envelope moet op (duur, 0) eindigen (R4/R5)")
+            raise ValueError(f"{ev['id']}: envelope must end at (duration, 0) (R4/R5)")
         values = [float(pair[1]) for pair in env]
         peak = max(values)
         if peak <= 0.0:
-            raise ValueError(f"{ev['id']}: lege envelope")
+            raise ValueError(f"{ev['id']}: empty envelope")
         attack = next((float(env[i][0]) for i, v in enumerate(values)
                        if v >= 0.5 * peak), span)
         release = span - float(env[-2][0])
@@ -176,21 +176,21 @@ def validate_score(score: dict) -> dict:
             raise ValueError(f"{ev['id']}: release {release * 1000:.0f} ms < "
                              f"{min_release * 1000:.0f} ms (R4)")
         if peak > 1.0 + 1e-9:
-            raise ValueError(f"{ev['id']}: envelope boven 1,0")
+            raise ValueError(f"{ev['id']}: envelope above 1.0")
     exposures = score.get("exposures") or DEFAULT_EXPOSURES
     for name, item in exposures.items():
         scale = float(item.get("scale", 0.0))
         if not (0.0 < scale <= 1.0):
-            raise ValueError(f"exposure {name}: scale moet in (0, 1] liggen")
+            raise ValueError(f"exposure {name}: scale must be in (0, 1]")
         expected = float(item.get("max_colour_ratio", scale * 0.20))
         if abs(expected - scale * 0.20) > 1e-6:
-            raise ValueError(f"exposure {name}: max_colour_ratio inconsistent met scale")
+            raise ValueError(f"exposure {name}: max_colour_ratio inconsistent with scale")
     return {"duration": duration, "max_ratio": max_ratio, "exposures": exposures,
             "min_attack": min_attack, "min_release": min_release}
 
 
 # --------------------------------------------------------------------------- #
-# Biquads (RBJ) voor programma-bandbegrenzing en ruisvorming
+# Biquads (RBJ) for programme band-limiting and noise shaping
 # --------------------------------------------------------------------------- #
 def biquad_coeffs(fs: float, kind: str, f0: float, q: float):
     w0 = TAU * f0 / fs
@@ -210,7 +210,7 @@ def biquad_coeffs(fs: float, kind: str, f0: float, q: float):
         b1 = 0.0
         b2 = -alpha
     else:
-        raise ValueError(f"onbekend filtertype: {kind}")
+        raise ValueError(f"unknown filter type: {kind}")
     a0 = 1.0 + alpha
     a1 = -2.0 * cw
     a2 = 1.0 - alpha
@@ -230,7 +230,7 @@ def apply_biquad(buf: array.array, coeffs) -> None:
 
 
 def programme_lowpass(buf: array.array, fs: float, cutoff_hz: float, order: int) -> array.array:
-    """Butterworth-cascade (standaard: 8e orde, 48 dB/oct) op het programma."""
+    """Butterworth cascade (default: 8th order, 48 dB/oct) on the programme."""
     if cutoff_hz <= 0 or cutoff_hz >= fs * 0.5:
         return buf
     pairs = max(1, order // 2)
@@ -241,7 +241,7 @@ def programme_lowpass(buf: array.array, fs: float, cutoff_hz: float, order: int)
 
 
 # --------------------------------------------------------------------------- #
-# Programma-synthese (schaars, gesynthetiseerd "gevonden" materiaal)
+# Programme synthesis (sparse, synthesised "found" material)
 # --------------------------------------------------------------------------- #
 def synth_impact(ev: dict, fs: float, seed: int) -> array.array:
     count = int(round(float(ev["duration_s"]) * fs))
@@ -281,7 +281,7 @@ def synth_impact(ev: dict, fs: float, seed: int) -> array.array:
 
 
 def transform_buffer(ev: dict, source: array.array, fs: float) -> array.array:
-    """Herinneringstransformatie: omkeren en verlagen (pitch_ratio < 1)."""
+    """Memory transformation: reverse and lower (pitch_ratio < 1)."""
     tr = ev.get("transform") or {}
     buf = list(source)
     if tr.get("reverse"):
@@ -310,7 +310,7 @@ def scale_to_peak(buf: array.array, target: float) -> array.array:
 
 
 def render_program(score: dict, fs: float, count: int):
-    """Rendert het programma op een eigen bus. Geen dragers, geen processing erna."""
+    """Render the programme on its own bus. No carriers, no processing afterwards."""
     left = array.array("d", [0.0]) * count
     right = array.array("d", [0.0]) * count
     cache = {}
@@ -325,10 +325,10 @@ def render_program(score: dict, fs: float, count: int):
         elif kind == "transform":
             src_id = ev["source"]
             if src_id not in cache:
-                raise ValueError(f"transform-bron {src_id!r} is nog niet gerenderd")
+                raise ValueError(f"transform source {src_id!r} has not been rendered yet")
             mono = transform_buffer(ev, cache[src_id], fs)
         else:
-            raise ValueError(f"onbekend programmatype: {kind}")
+            raise ValueError(f"unknown programme type: {kind}")
         mono = programme_lowpass(mono, fs, cutoff, order)
         mono = scale_to_peak(mono, db_to_lin(float(ev["peak_dbfs"])))
         cache[ev["id"]] = mono
@@ -341,16 +341,16 @@ def render_program(score: dict, fs: float, count: int):
 
 
 # --------------------------------------------------------------------------- #
-# SpectraStrobe-dragers
+# SpectraStrobe carriers
 # --------------------------------------------------------------------------- #
 def render_carriers(score: dict, fs: float, count: int, colour_scale: float = 1.0,
                     clamp_log: list | None = None):
-    """Rendert referentie (continu, sinus-pan-LFO) + kleurkanalen per lichtgrain.
+    """Render the reference (continuous, sine pan LFO) + colour channels per light grain.
 
-    Veiligheidsclamp: elk kleurkanaal wordt begrensd op
-    score["carriers"]["max_colour_ratio"] (0,25) van de referentiepiek. Als de
-    score of exposure meer vraagt, wordt de aanvraag gelogd in clamp_log en het
-    toegepaste niveau gebruikt.
+    Safety clamp: every colour channel is limited to
+    score["carriers"]["max_colour_ratio"] (0.25) of the reference peak. If the
+    score or exposure asks for more, the request is logged in clamp_log and the
+    applied level is used.
     """
     car = score["carriers"]
     ref = car["reference"]
@@ -427,7 +427,7 @@ def render_carriers(score: dict, fs: float, count: int, colour_scale: float = 1.
 
 def render_mix(score: dict, fs: float, with_programme: bool = True,
                colour_scale: float = 1.0, clamp_log: list | None = None):
-    """Retourneert ((mix_l, mix_r), (prog_l, prog_r)) voor de gevraagde rate."""
+    """Return ((mix_l, mix_r), (prog_l, prog_r)) for the requested rate."""
     count = int(round(float(score["meta"]["duration_s"]) * fs))
     if with_programme:
         prog_l, prog_r = render_program(score, fs, count)
@@ -444,10 +444,10 @@ def render_mix(score: dict, fs: float, with_programme: bool = True,
 
 
 # --------------------------------------------------------------------------- #
-# WAV-export (PCM, stereo, geen metadata, geen dither)
+# WAV export (PCM, stereo, no metadata, no dither)
 # --------------------------------------------------------------------------- #
 def write_pcm(path, fs: int, bits: int, left, right) -> float:
-    """Schrijft 16/24-bit PCM WAV en geeft de samplepiek in dBFS terug."""
+    """Write a 16/24-bit PCM WAV and return the sample peak in dBFS."""
     count = len(left)
     peak = max(max(left), -min(left), max(right), -min(right))
     if bits == 24:
@@ -480,7 +480,7 @@ def write_pcm(path, fs: int, bits: int, left, right) -> float:
             payload[j + 3] = (v >> 8) & 0xFF
             j += 4
     else:
-        raise ValueError("alleen 16- of 24-bit PCM")
+        raise ValueError("16- or 24-bit PCM only")
     with wave.open(str(path), "wb") as handle:
         handle.setnchannels(2)
         handle.setsampwidth(bits // 8)
@@ -498,7 +498,7 @@ def sha256_file(path: Path) -> str:
 
 
 # --------------------------------------------------------------------------- #
-# events.csv en timeline.svg
+# events.csv and timeline.svg
 # --------------------------------------------------------------------------- #
 def _transform_duration(score: dict, ev: dict) -> float:
     source = next(e for e in score["program"]["events"] if e["id"] == ev["source"])
@@ -537,6 +537,7 @@ def build_events_rows(score: dict):
 
 
 def write_events_csv(path: Path, score: dict) -> None:
+    # CSV schema (column names and domain values) is kept stable for compatibility.
     fields = ["id", "domein", "rol", "start_s", "einde_s", "duur_s",
               "piek_dbfs", "rgb", "pan_van", "pan_naar", "relatie"]
     with open(path, "w", encoding="utf-8", newline="") as handle:
@@ -558,10 +559,10 @@ def _short_role(role: str, limit: int = 30) -> str:
 
 
 def write_timeline_svg(path: Path, score: dict) -> None:
-    """Tijdlijn volledig afgeleid uit de score (secties, aantallen, labels, relaties)."""
+    """Timeline fully derived from the score (sections, counts, labels, relations)."""
     meta = score["meta"]
     duration = float(meta["duration_s"])
-    sections = meta.get("sections") or [{"t0": 0.0, "t1": duration, "label": "stuk"}]
+    sections = meta.get("sections") or [{"t0": 0.0, "t1": duration, "label": "piece"}]
     width, height = 1280, 500
     left, right = 150, 1230
     lane_light, lane_audio, lane_ref = 120, 235, 350
@@ -580,11 +581,11 @@ def write_timeline_svg(path: Path, score: dict) -> None:
            f'<text x="{left}" y="34" font-size="19" font-weight="bold" fill="#1c1a17">'
            f'{EXPERIMENT_TITLE}</text>',
            f'<text x="{left}" y="56" font-size="12" fill="#5a544c">'
-           f'seed {meta["seed"]} · {duration:.1f} s · {len(light_events)} lichtgebeurtenissen · '
-           f'{len(audio_events)} audiogebeurtenissen · exposures: '
+           f'seed {meta["seed"]} · {duration:.1f} s · {len(light_events)} light events · '
+           f'{len(audio_events)} audio events · exposures: '
            + " / ".join(f'{item["label"]}' for item in exposures.values()) + '</text>',
            f'<text x="{left}" y="74" font-size="11" fill="#8a2f1f">'
-           f'EXPERIMENT — geen deel van NAGLOED v1.0.4</text>']
+           f'EXPERIMENT — not part of NAGLOED v1.0.4</text>']
     for t0, t1, label in [(float(s["t0"]), float(s["t1"]), s["label"]) for s in sections]:
         out.append(f'<rect x="{x(t0):.1f}" y="88" width="{x(t1) - x(t0):.1f}" height="22" '
                    f'fill="#e7e1d6" stroke="#d4ccbe"/>')
@@ -598,8 +599,8 @@ def write_timeline_svg(path: Path, score: dict) -> None:
                    f'text-anchor="middle">{t:.0f}</text>')
         t += step
     out.append(f'<text x="{right}" y="448" font-size="10" fill="#6b645a" '
-               f'text-anchor="end">tijd (s)</text>')
-    for y, label in ((lane_light, "LICHT"), (lane_audio, "AUDIO"), (lane_ref, "DRAAGGOLF 18,2 kHz")):
+               f'text-anchor="end">time (s)</text>')
+    for y, label in ((lane_light, "LIGHT"), (lane_audio, "AUDIO"), (lane_ref, "CARRIER 18.2 kHz")):
         out.append(f'<text x="{left - 12}" y="{y + 32}" font-size="11" font-weight="bold" '
                    f'fill="#3e3a34" text-anchor="end">{label}</text>')
         out.append(f'<line x1="{left}" y1="{y + 26}" x2="{right}" y2="{y + 26}" stroke="#c9c1b4"/>')
@@ -628,12 +629,12 @@ def write_timeline_svg(path: Path, score: dict) -> None:
     out.append(f'<text x="{left + 8}" y="{lane_ref + 20}" font-size="10" fill="#f6efe6">'
                f'{float(score["carriers"]["reference"]["hz"]):.0f} Hz · '
                f'{float(score["carriers"]["reference"]["level_dbfs"]):+.0f} dBFS · '
-               f'{float(score["carriers"]["reference"]["pan_lfo_hz"]):g} Hz sinus-pan-LFO · continu</text>')
+               f'{float(score["carriers"]["reference"]["pan_lfo_hz"]):g} Hz sine pan LFO · continuous</text>')
     out.append(f'<text x="{left + 8}" y="{lane_ref + 37}" font-size="9" fill="#e2d3c2">'
-               f'kleuren 18.700 R · 19.200 G · 19.700 B volgen de lichtsporen; '
-               f'plafond 25% per drager</text>')
+               f'colours 18.700 R · 19.200 G · 19.700 B follow the light traces; '
+               f'ceiling 25% per carrier</text>')
 
-    # Relatie-annotaties, afgeleid uit de score (geen vaste ids/tijden).
+    # Relation annotations, derived from the score (no fixed ids/times).
     def start_end(ev):
         start = float(ev["start_s"])
         if "end_s" in ev:
@@ -650,7 +651,7 @@ def write_timeline_svg(path: Path, score: dict) -> None:
             if from_ids and from_ids[0] in by_id:
                 ev = by_id[from_ids[0]]
                 out.append(f'<text x="{x(float(ev["start_s"])) + 4:.1f}" y="{lane_light - 8}" '
-                           f'font-size="9" fill="#6b645a">geen antwoord</text>')
+                           f'font-size="9" fill="#6b645a">no answer</text>')
             continue
         if not from_ids or from_ids[0] not in by_id or to_ids[0] not in by_id:
             continue
@@ -667,8 +668,8 @@ def write_timeline_svg(path: Path, score: dict) -> None:
         out.append(f'<text x="{x(dst_start):.1f}" y="{lane_audio - 8}" '
                    f'font-size="9" fill="#8a2f1f" text-anchor="middle">{label}</text>')
     out.append(f'<text x="{left}" y="{height - 18}" font-size="10" fill="#6b645a">'
-               f'Gebruik: ./run.sh · rapport in out/verify-report.md · '
-               f'niet op de hardware zonder HARDWARE-PROTOCOL.md</text>')
+               f'Use: ./run.sh · report in out/verify-report.md · '
+               f'do not use on hardware without HARDWARE-PROTOCOL.md</text>')
     out.append("</svg>")
     path.write_text("\n".join(out) + "\n", encoding="utf-8")
 
@@ -697,14 +698,14 @@ def main(argv=None) -> int:
     parser.add_argument("--score", default=str(POC_DIR / "score.json"))
     parser.add_argument("--out-dir", default=str(POC_DIR / "out"))
     parser.add_argument("--colour-scale", type=float, default=None,
-                        help="render alleen deze exposure (bv. 0.3125 = 6,25%% max); "
-                             "standaard worden full/mid/dim gerenderd")
+                        help="render only this exposure (e.g. 0.3125 = 6.25%% max); "
+                             "by default full/mid/dim are rendered")
     parser.add_argument("--pan-lfo-hz", type=float, default=None,
-                        help="alleen voor corruptietests: overschrijf de referentie-pan-LFO")
+                        help="corruption tests only: override the reference pan LFO")
     parser.add_argument("--pan-lfo-shape", default=None,
-                        help="alleen voor corruptietests: sine/square/pulse")
+                        help="corruption tests only: sine/square/pulse")
     parser.add_argument("--carriers-only", action="store_true",
-                        help="alleen voor corruptietests: programma overslaan")
+                        help="corruption tests only: skip the programme")
     args = parser.parse_args(argv)
 
     score_path = Path(args.score)
@@ -721,7 +722,7 @@ def main(argv=None) -> int:
     if args.colour_scale is not None:
         full_scale = float(args.colour_scale)
         if not (0.0 < full_scale <= 1.0):
-            raise ValueError("--colour-scale moet in (0, 1] liggen")
+            raise ValueError("--colour-scale must be in (0, 1]")
         exposures = {"custom": {"scale": full_scale,
                                 "max_colour_ratio": full_scale * 0.20,
                                 "label": f"custom {full_scale * 0.20 * 100:.2f}%"}}
@@ -735,10 +736,10 @@ def main(argv=None) -> int:
         peak = write_pcm(path, rate, bits, mix[0], mix[1])
         outputs[name] = {"rate_hz": rate, "bit_depth": bits, "peak_dbfs": round(peak, 2)}
 
-    # Technische referentie en aanbevolen weergaveversie: volledige score.
+    # Technical reference and recommended playback version: full score.
     render_to(_exposure_filename(48000, 24, "full"), 48000, 24, full_scale)
     render_to(_exposure_filename(44100, 16, "full"), 44100, 16, full_scale)
-    # Helderheidsladder voor hardware, in de aanbevolen 44,1 kHz/16-bit vorm.
+    # Brightness ladder for hardware, in the recommended 44.1 kHz/16-bit format.
     if args.colour_scale is None:
         for exposure in ("mid", "dim"):
             if exposure in exposures:
@@ -759,10 +760,10 @@ def main(argv=None) -> int:
     requested_max = max(max(float(c) for c in ev["rgb"]) for ev in score["light"]["events"])
     clamped = bool(clamp_log)
     if clamped:
-        print("WAARSCHUWING: kleurplafond actief (max 25% van de referentiepiek).", file=sys.stderr)
+        print("WARNING: colour ceiling active (max 25% of the reference peak).", file=sys.stderr)
         for entry in clamp_log:
-            print(f"  {entry['event']}.{entry['colour']}: gevraagd "
-                  f"{entry['requested_ratio'] * 100:.1f}%, toegepast "
+            print(f"  {entry['event']}.{entry['colour']}: requested "
+                  f"{entry['requested_ratio'] * 100:.1f}%, applied "
                   f"{entry['applied_ratio'] * 100:.1f}%", file=sys.stderr)
     manifest = {
         "generator": "render.py",
@@ -816,32 +817,32 @@ def main(argv=None) -> int:
     audio_seconds = sum(
         (_transform_duration(score, ev) if ev["type"] == "transform" else float(ev["duration_s"]))
         for ev in score["program"]["events"])
-    print("NAGLOED v2 — SpectraStrobe PoC render (EXPERIMENT, niet v1.0.4)")
+    print("NAGLOED v2 — SpectraStrobe PoC render (EXPERIMENT, not v1.0.4)")
     print(f"score         : {score_path.name} v{score['meta']['version']}  "
-          f"seed {score['meta']['seed']}  duur {config['duration']:.1f} s")
+          f"seed {score['meta']['seed']}  duration {config['duration']:.1f} s")
     for name, info in outputs.items():
         print(f"  {name:<36} {info['peak_dbfs']:+6.2f} dBFS  "
               f"({info['rate_hz']} Hz/{info['bit_depth']}-bit)")
-    print(f"draaggolven   : 18200,0 Hz referentie {car['reference']['level_dbfs']:+.1f} dBFS "
-          f"(pan-LFO {car['reference']['pan_lfo_hz']:.1f} Hz, "
+    print(f"carriers      : 18200.0 Hz reference {car['reference']['level_dbfs']:+.1f} dBFS "
+          f"(pan LFO {car['reference']['pan_lfo_hz']:.1f} Hz, "
           f"{car['reference']['pan_lfo_shape']}, offset "
           f"{car['reference'].get('pan_lfo_offset', 0.0):g})")
-    print(f"kleurplafond  : max {float(car['max_colour_ratio']) * 100:.0f}% per drager; "
-          f"score vraagt max {requested_max * 100:.1f}%"
-          + (" — GECLAMPT" if clamped else " (binnen plafond)"))
+    print(f"colour ceiling: max {float(car['max_colour_ratio']) * 100:.0f}% per carrier; "
+          f"score requests max {requested_max * 100:.1f}%"
+          + (" — CLAMPED" if clamped else " (within ceiling)"))
     for name, item in exposures.items():
         print(f"  exposure {name:<5}: scale {item['scale']:.4f} → max "
               f"{item['max_colour_ratio'] * 100:.2f}% ({item['label']})")
-    print(f"events        : {light_count} licht, {audio_count} audio; "
-          f"programma {audio_seconds:.1f} s van {config['duration']:.1f} s "
-          f"({100.0 * (1.0 - audio_seconds / config['duration']):.0f}% stilte)")
-    print(f"uitvoer       : {out_dir.resolve()}")
+    print(f"events        : {light_count} light, {audio_count} audio; "
+          f"programme {audio_seconds:.1f} s of {config['duration']:.1f} s "
+          f"({100.0 * (1.0 - audio_seconds / config['duration']):.0f}% silence)")
+    print(f"output        : {out_dir.resolve()}")
     print("  - events.csv, timeline.svg, render-manifest.json")
     return 0
 
 
 def render_program_pair(score: dict, rate: int):
-    """Programma-only paren (L, R) voor de A/B-render."""
+    """Programme-only pair (L, R) for the A/B render."""
     count = int(round(float(score["meta"]["duration_s"]) * rate))
     return render_program(score, rate, count)
 

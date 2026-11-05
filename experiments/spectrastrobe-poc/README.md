@@ -1,192 +1,190 @@
 # Eerste Gloed — SpectraStrobe proof-of-concept
 
-> **EXPERIMENT — GEEN DEEL VAN NAGLOED v1.0.4.**
-> Dit is een losstaand, offline experiment in `experiments/spectrastrobe-poc/`.
-> Het is **niet** geïntegreerd in de plug-in, wijzigt **geen** `src/`, CMake,
-> presets, README of build, en raakt geen DSP-contract. Het is veilig te
-> verwijderen: deze map weghalen is genoeg. Geen medische of wellness-claims.
+> **EXPERIMENT — NOT PART OF NAGLOED v1.0.4.**
+> This is a standalone, offline experiment in `experiments/spectrastrobe-poc/`.
+> It is **not** integrated into the plug-in, changes **no** `src/`, CMake,
+> presets, README or build, and touches no DSP contract. It is safe to remove:
+> deleting this directory is enough. No medical or wellness claims.
 
-## Scope — wat dit wel en niet is
+## Scope — what this is and is not
 
-- **Wel:** een **encoder + signaalintegriteitsbewijs** voor SpectraStrobe-licht
-  in een audio-WAV: vier dragers, kleurkoppeling, panning, bandbegrenzing,
-  headroom, helderheidsladder, veiligheidsclamp en een offline meetrapport.
-- **Niet:** een event-engine, een licht-scheduler, geheugen/herinnering of
-  rate-/feedbackbudgetten. Dat is **fase 2** en de **A1-signaalhelft** van het
-  experiment. `score.json` is een declaratieve partituur die de renderer
-  uitvoert; er is geen realtime systeem.
-- **Niet:** hardware. Of een Kasina dit herkent en of de Ganzfeld de bedoelde
-  kleuren laat zien, is hier **niet gemeten** (M11–M13). Daarvoor is
-  `HARDWARE-PROTOCOL.md` nodig.
-- **Niet:** een geteste stop-ramp. De offline WAV heeft **geen encoder-panic en
-  geen 50 ms-softwareramp**; die horen bij een latere realtime encoder
-  (`docs/v2/SPECTRASTROBE.md` §6, fase B). De primaire stop is hier menselijk.
+- **Is:** an **encoder + signal-integrity proof** for SpectraStrobe light in an
+  audio WAV: four carriers, colour coupling, panning, band-limiting, headroom,
+  a brightness ladder, a safety clamp and an offline measurement report.
+- **Is not:** an event engine, a light scheduler, memory/recall or rate/feedback
+  budgets. That is **phase 2** and the **A1 signal half** of the experiment.
+  `score.json` is a declarative score that the renderer executes; there is no
+  realtime system.
+- **Is not:** hardware. Whether a Kasina recognises this and whether the
+  Ganzfeld shows the intended colours is **not measured here** (M11–M13). That
+  requires `HARDWARE-PROTOCOL.md`.
+- **Is not:** a tested stop ramp. The offline WAV has **no encoder panic and no
+  50 ms software ramp**; those belong to a later realtime encoder
+  (`docs/v2/SPECTRASTROBE.md` §6, phase B). The primary stop here is human.
 
-## Artistiek uitgangspunt
+## Artistic premise
 
-Issue #14 beschrijft *geborgen geluid*: het geluid van de kamer dat getransformeerd
-terugkomt, en licht en geluid die **verwant** zijn zonder dat het ene het andere
-illustreert. `docs/v2/EXPERIMENT-01.md` vertaalt dat naar vier momenten en veel
-ruimte ertussen; de score volgt die structuur:
+Issue #14 describes *Geborgen Geluid*: the sound of the room returning
+transformed, and light and sound that are **related** without one illustrating
+the other. `docs/v2/EXPERIMENT-01.md` translates that into four moments with
+much space in between; the score follows that structure:
 
-| Tijd | Gebeurtenis |
+| Time | Event |
 |---|---|
-| 0–8 s | Kamer, bijna niets: alleen de referentiedraaggolf en één ver fragment |
-| 8–14 s | Amberkleurig lichtgrain start links, drijft naar rechts, wordt iets helderder |
-| 14,0 s | Abrupte, geïsoleerde extinctie in **20 ms** (R4) — geen geluid |
-| 14,18 s | Antwoord: lage impact, **180 ms later**, andere decay (2,5 s), iets rechts |
-| 14–28 s | Diffuus amberrood veld ademt door en dooft; het licht overleeft het geluid |
-| 38 s | Zwak lichtgrain dat vanzelf dooft — **opzettelijk onbeantwoord** |
-| 46,0 s | Dimmere, tragere, omgekeerde echo van het eerste licht |
-| 46,4 s | Omgekeerd en verlaagd fragment (herinnering) |
-| 52–72 s | Uitdoving: stilte als einde |
+| 0–8 s | Room, almost nothing: only the reference carrier and one distant fragment |
+| 8–14 s | Amber-coloured light grain starts left, drifts right, becomes slightly brighter |
+| 14.0 s | Abrupt, isolated extinction in **20 ms** (R4) — no sound |
+| 14.18 s | Answer: low impact, **180 ms later**, different decay (2.5 s), slightly right |
+| 14–28 s | Diffuse amber-red field keeps breathing and fades; the light outlives the sound |
+| 38 s | Weak light grain that fades by itself — **deliberately unanswered** |
+| 46.0 s | Dimmer, slower, reversed echo of the first light |
+| 46.4 s | Reversed and lowered fragment (memory) |
+| 52–72 s | Fade-out: silence as the ending |
 
-De vertraging van 180 ms is een artistieke keuze, geen latency-bug. Licht en
-geluid zijn familie, geen kopie. De score is data (`score.json`); de renderer
-voert die met een vaste seed uit. Envelopes volgen R4/R5 uit
-`docs/v2/SAFETY-PRIVACY.md`: **attack/release ≥ 20 ms hard**, L1 heeft één
-geïsoleerde extinctie van 20 ms, L2 start met een fade-in van 50 ms; geen stap
-van zwart naar vol.
+The 180 ms delay is an artistic choice, not a latency bug. Light and sound are
+family, not a copy. The score is data (`score.json`); the renderer executes it
+with a fixed seed. Envelopes follow R4/R5 from `docs/v2/SAFETY-PRIVACY.md`:
+**attack/release ≥ 20 ms hard**, L1 has one isolated 20 ms extinction, L2 starts
+with a 50 ms fade-in; no step from black to full.
 
-## Veiligheid
+## Safety
 
-- **Conservatief licht.** Referentie −30 dBFS piekamplitude. Kleurkanalen zijn
-  hard geclampt op **maximaal 25% per drager** van de referentiepiek
-  (safety clamp in `render.py`, ook als de score meer vraagt). De score gebruikt
-  20%; de hardwareladder begint op **6,25%** (dim), dan 12,5% (mid), dan 20%.
-- **Som per oor.** 25% geldt **per drager** (R3). De som van rood+groen+blauw in
-  één oor kan hoger zijn; die wordt apart gerapporteerd (in deze score ca. 29,5%
-  op de L1-piek). Dat is informatie, geen extra vrijbrief.
-- **Geen bedoelde luminantiemodulatie in de kleurkanalen.** Kleurovergangen zijn
-  traag; er is één geïsoleerde 20 ms-extinctie. De **20 Hz-referentiepanning is
-  door het formaat voorgeschreven** en blijft een open aanname: dat hij niet als
-  zichtbare flikkering in de kleurkanalen lekt, is meetpunt M5/M6 en een
-  stopcriterium, geen bewezen feit.
-- **Direct stoppen.** Stop de weergave, zet de Kasina-helderheid op minimum,
-  bril af of **één oog bedekken** (R11). Eén persoon bedient, één persoon kijkt.
-  Geen andere flikkerbronnen in de ruimte.
-- **Fotosensitiviteit en toestemming.** Geen persoon met (vermoede)
-  fotosensitiviteit in de ruimte; kinderen alleen met begeleiding en
-  toestemming. Lees vóór de sessie `docs/v2/SAFETY-PRIVACY.md`.
-- **Gehoor.** De dragers (18,2–19,7 kHz) zijn **niet gegarandeerd onhoorbaar**:
-  dat hangt af van leeftijd, gehoor, transducers en weergaveniveau (open aanname
-  **U15** in `docs/v2/TECHNICAL-UNCERTAINTIES.md`). Doe een korte
-  comfortbeluistering op het bedoelde niveau vóór de sessie; bij tinnitus,
-  hyperacusis of twijfel: lager of niet deelnemen.
-- **Headroom.** Eindpiek ruim onder −6 dBFS; geen clipping, geen dither.
-- **Geen claims.** Dit is een artistiek experiment, geen therapie, geen
-  entrainment en geen medisch hulpmiddel.
+- **Conservative light.** Reference −30 dBFS peak amplitude. Colour channels
+  are hard-clamped to **max 25% per carrier** of the reference peak (safety
+  clamp in `render.py`, even if the score asks for more). The score uses 20%;
+  the hardware ladder starts at **6.25%** (dim), then 12.5% (mid), then 20%.
+- **Sum per ear.** 25% applies **per carrier** (R3). The sum of red+green+blue
+  in one ear can be higher; it is reported separately (in this score about
+  29.5% at the L1 peak). That is information, not an extra licence.
+- **No intended luminance modulation in the colour channels.** Colour
+  transitions are slow; there is one isolated 20 ms extinction. The **20 Hz
+  reference panning is prescribed by the format** and remains an open
+  assumption: that it does not leak as visible flicker into the colour channels
+  is measurement target M5/M6 and a stop criterion, not a proven fact.
+- **Immediate stop.** Stop playback, set Kasina brightness to minimum, glasses
+  off or **cover one eye** (R11). One person operates, one person watches. No
+  other flicker sources in the room.
+- **Photosensitivity and consent.** No person with (suspected)
+  photosensitivity in the room; children only with supervision and consent.
+  Read `docs/v2/SAFETY-PRIVACY.md` before the session.
+- **Hearing.** The carriers (18.2–19.7 kHz) are **not guaranteed inaudible**:
+  that depends on age, hearing, transducers and playback level (open assumption
+  **U15** in `docs/v2/TECHNICAL-UNCERTAINTIES.md`). Do a short comfort listening
+  test at the intended level before the session; with tinnitus, hyperacusis or
+  doubt: lower the level or do not take part.
+- **Headroom.** Final peak well below −6 dBFS; no clipping, no dither.
+- **No claims.** This is an artistic experiment, not therapy, not entrainment
+  and not a medical device.
 
-## Draaien
+## Running
 
-Vereist: Python 3 (stdlib). `ffmpeg` is optioneel en wordt alleen voor de
-adviserende corruptiematrix gebruikt.
+Requires: Python 3 (stdlib). `ffmpeg` is optional and is used only for the
+advisory corruption matrix.
 
 ```bash
 cd experiments/spectrastrobe-poc
 ./run.sh
 ```
 
-Of los:
+Or separately:
 
 ```bash
 python3 render.py --score score.json --out-dir out
 python3 verify.py  --score score.json --out-dir out
-# optioneel: één exposure met aangepaste kleurschaal
-python3 render.py --score score.json --out-dir out --colour-scale 0.3125   # 6,25% max
+# optional: one exposure with a custom colour scale
+python3 render.py --score score.json --out-dir out --colour-scale 0.3125   # 6.25% max
 ```
 
-`run.sh` geeft exitcode 0 als alle kernchecks slagen en schrijft naar `out/`:
+`run.sh` exits 0 when all core checks pass and writes to `out/`:
 
-| Bestand | Inhoud |
+| File | Content |
 |---|---|
-| `spectrastrobe-48k-24bit.wav` | volledige mix, 48 kHz/24-bit — technische referentie, **niet op de Kasina geverifieerd** |
-| `spectrastrobe-44k1-16bit.wav` | volledige mix, 44,1 kHz/16-bit — **signaalveilige/aanbevolen weergaveversie** (geen gezondheidsclaim) |
-| `spectrastrobe-mid-44k1-16bit.wav` | helderheidsladder: 12,5% max per drager |
-| `spectrastrobe-dim-44k1-16bit.wav` | helderheidsladder: 6,25% max per drager — **eerste hardware-exposure** |
-| `program-only-48k-24bit.wav`, `program-only-44k1-16bit.wav` | A/B zonder dragers |
-| `events.csv` | gebeurtenissen, niveaus, panning, relaties |
-| `timeline.svg` | tijdlijn licht/audio/draaggolf, afgeleid uit de score |
-| `verify-report.json` / `.md` | meetrapport met PASS/FAIL/INFO (M1–M10, clamp, ladder, M14) |
-| `render-manifest.json` | versie, sha256 van score en scripts, clamp-info, exposures, output-hashes |
+| `spectrastrobe-48k-24bit.wav` | full mix, 48 kHz/24-bit — technical reference, **not verified on the Kasina** |
+| `spectrastrobe-44k1-16bit.wav` | full mix, 44.1 kHz/16-bit — **signal-safe/recommended playback version** (no health claim) |
+| `spectrastrobe-mid-44k1-16bit.wav` | brightness ladder: 12.5% max per carrier |
+| `spectrastrobe-dim-44k1-16bit.wav` | brightness ladder: 6.25% max per carrier — **first hardware exposure** |
+| `program-only-48k-24bit.wav`, `program-only-44k1-16bit.wav` | A/B without carriers |
+| `events.csv` | events, levels, panning, relations |
+| `timeline.svg` | light/audio/carrier timeline, derived from the score |
+| `verify-report.json` / `.md` | measurement report with PASS/FAIL/INFO (M1–M10, clamp, ladder, M14) |
+| `render-manifest.json` | version, sha256 of score and scripts, clamp info, exposures, output hashes |
 
-`out/` staat in `.gitignore` en wordt niet gecommit.
+`out/` is listed in `.gitignore` and is not committed.
 
-## SpectraStrobe-parameters (conservatief)
+## SpectraStrobe parameters (conservative)
 
-| Parameter | Waarde |
+| Parameter | Value |
 |---|---|
-| Referentie | 18.200 Hz, **−30 dBFS piekamplitude** (bindend M2), continu aanwezig |
-| Referentie-panning | sinus, 20 Hz, diepte 100%, offset 0%, per sample |
-| Kleuren | rood 18.700 Hz, groen 19.200 Hz, blauw 19.700 Hz |
-| Kleurkoppeling | directe kanaalamplitude, lineaire 0-dB-middenpanning; **clamp 25% per drager** |
-| Panlaw referentie | gelijkvermogen (constante dragerenergie) |
-| Programma | gesynthetiseerd, bandbegrensd met 8e-orde Butterworth op 15,5 kHz |
-| Volgorde | programma volledig verwerken → dragers optellen → niets meer |
-| Piek | samplepiek en true peak ≤ −6 dBFS/dBTP; geen clipping, geen dither |
-| Exposures | dim 6,25% / mid 12,5% / volledig 20% (schaal 0,3125 / 0,625 / 1,0) |
+| Reference | 18.200 Hz, **−30 dBFS peak amplitude** (binding M2), continuously present |
+| Reference panning | sine, 20 Hz, depth 100%, offset 0%, per sample |
+| Colours | red 18.700 Hz, green 19.200 Hz, blue 19.700 Hz |
+| Colour coupling | direct channel amplitude, linear 0 dB centre panning; **clamp 25% per carrier** |
+| Reference pan law | equal power (constant carrier energy) |
+| Programme | synthesised, band-limited with an 8th-order Butterworth at 15.5 kHz |
+| Order | process the programme completely → add carriers → nothing else |
+| Peak | sample peak and true peak ≤ −6 dBFS/dBTP; no clipping, no dither |
+| Exposures | dim 6.25% / mid 12.5% / full 20% (scale 0.3125 / 0.625 / 1.0) |
 
-De 44,1 kHz-variant is een **aparte native render** van dezelfde score, niet een
-sample-rate-conversie van de master. SRC kan de dragers dicht bij Nyquist
-aantasten; de corruptiematrix meet dat effect juist expliciet.
+The 44.1 kHz variant is a **separate native render** of the same score, not a
+sample-rate conversion of the master. SRC can damage the carriers close to
+Nyquist; the corruption matrix measures that effect explicitly.
 
-## Wat de test wel en niet bewijst
+## What the test does and does not prove
 
-**Wel (offline, op deze machine, CPython-stdlib):**
+**Does (offline, on this machine, CPython stdlib):**
 
-- De vier dragers staan op de juiste frequentie (±1 Hz), de referentie op
-  −30 dBFS piekamplitude en de kleurkanalen volgen de score; de maximale
-  kleurkoppeling over de hele render is ≈20,0% (per drager), met de som per oor
-  apart gerapporteerd.
-- De **veiligheidsclamp werkt adversarieel**: een score met rgb = 0,90 wordt
-  hard op 25% geclampt en de render logt dat.
-- De **helderheidsladder** is echt oplopend: dim ≈6,25%, mid ≈12,5%,
-  volledig ≈20%, gemeten via probes; de referentie blijft in alle varianten
-  gelijk.
-- De 20 Hz-panning is per sample aanwezig met de vereiste diepte; de
-  referentie is in de "uit"-fase gemeten ≥ 30 dB onder de drempel.
-- **Inter-drager-isolatie** is gemeten met een aparte probe (één kleur
-  tegelijk): inactieve kleurbanden zijn ver onder −40 dB.
-- Er is geen noemenswaardige crosstalk, het programma lekt niet in de
-  controlebrand en 17–20 kHz is voor dit smalbandige materiaal ver onder
-  −60 dBFS (voor breedbandig v1-materiaal is dat niet aangetoond; zie INFO).
-- Er is ruime headroom, geen clipping en de render is deterministisch
-  (twee renders byte-identiek, manifest met script-sha256's).
-- De volledige M4/M7/M8-set is ook op de **44,1 kHz/16-bit** variant gedraaid.
-- De corruptiematrix laat zien wat resampling (net/naïef), lowpass, MP3
-  (320/128 joint), AAC, gain, monosom, L/R-verwisseling en rate-mismatch met de
-  dragers doen — inclusief de kleurverhoudingen.
+- The four carriers sit at the correct frequency (±1 Hz), the reference at
+  −30 dBFS peak amplitude, and the colour channels follow the score; the
+  maximum colour coupling over the whole render is ≈20.0% (per carrier), with
+  the sum per ear reported separately.
+- The **safety clamp works adversarially**: a score with rgb = 0.90 is
+  hard-clamped to 25% and the render logs it.
+- The **brightness ladder** really ascends: dim ≈6.25%, mid ≈12.5%, full
+  ≈20%, measured via probes; the reference stays equal in all variants.
+- The 20 Hz panning is present per sample with the required depth; the
+  reference is far below the threshold in the "off" phase.
+- **Inter-carrier isolation** is measured with a dedicated probe (one colour at
+  a time): inactive colour bands are far below −40 dB.
+- There is no significant crosstalk, the programme does not leak into the
+  control band, and 17–20 kHz is far below −60 dBFS.
+- There is ample headroom, no clipping, and the render is deterministic
+  (two renders byte-identical, manifest with script sha256s).
+- The full M4/M7/M8 set also ran on the **44.1 kHz/16-bit** variant.
+- The corruption matrix shows what resampling (neat/naive), lowpass, MP3
+  (320/128 joint), AAC, gain, mono sum, L/R swap and rate mismatch do to the
+  carriers — including the colour ratios.
 
-**Niet:**
+**Does not:**
 
-- Of een echte Kasina het signaal herkent en of de DeepVision Ganzfeld de
-  bedoelde kleuren/helderheid laat zien (M11–M13). **Hardware is hier niet
-  beschikbaar.**
-- Of de Kasina de 48 kHz/24-bit master kan afspelen; dat is niet geverifieerd.
-  Gebruik voor weergave de 44,1 kHz/16-bit variant (16-bit PCM, geen metadata,
-  geen dither) — signaalveilig, geen gezondheidsclaim.
-- **Breedbandige v1-materiaalbandbegrenzing**: de −60 dBFS-eis is aangetoond
-  voor het spaarzame, laagfrequent gesynthetiseerde materiaal. Een breedbandtest
-  (witte ruis door dezelfde 8e-orde LPF) staat als **INFO** in het rapport: de
-  filter alleen haalt bij 17 kHz ≈ −19 dB, dus de eis is voor breedbandig
-  v1-materiaal **niet** aangetoond. Geen valse PASS.
-- Host/DAW-gedrag, weergaveketens, Bluetooth, OS-audio-EQ en streaming buiten
-  de matrix.
-- Een event-engine, geheugen of budgetgedrag; en of de vertraging als
-  verwantschap voelt in plaats van als fout (perceptuele vraag).
-- Een geteste software-stop/50 ms-ramp; de primaire stop is menselijk.
+- Whether a real Kasina recognises the signal and whether the DeepVision
+  Ganzfeld shows the intended colours/brightness (M11–M13). **Hardware is not
+  available here.**
+- Whether the Kasina can play the 48 kHz/24-bit master; that is not verified.
+  Use the 44.1 kHz/16-bit variant for playback (16-bit PCM, no metadata, no
+  dither) — signal-safe, no health claim.
+- **Broadband v1 programme band-limiting**: the −60 dBFS requirement is
+  demonstrated for the sparse, low-frequency synthesised material. A broadband
+  test (white noise through the same 8th-order LPF) is **INFO** in the report:
+  the filter alone reaches ≈−19 dB at 17 kHz, so the requirement is **not**
+  demonstrated for broadband v1 material. No false PASS.
+- Host/DAW behaviour, playback chains, Bluetooth, OS audio EQ and streaming
+  outside the matrix.
+- An event engine, memory or budget behaviour; and whether the delay feels like
+  kinship rather than an error (perceptual question).
+- A tested software stop/50 ms ramp; the primary stop is human.
 
-## Herkomst
+## Sources
 
-- `gh issue view 14 --repo leonvanbokhorst/nagloed` — artistieke richting.
-- `docs/v2/EXPERIMENT-01.md` — de compositie *Eerste Gloed*.
-- `docs/v2/SPECTRASTROBE.md` — signaalmodel, meetplan M1–M14, harde encoder-eisen §6.
-- `docs/v2/SAFETY-PRIVACY.md` — R1–R12 (envelope-, plafond- en stopregels).
-- `docs/v2/TECHNICAL-UNCERTAINTIES.md` — U15 (hoorbaarheid dragers).
-- Lumasonic SpectraStrobe-specificatie en productie/mixnotities:
+- `gh issue view 14 --repo leonvanbokhorst/nagloed` — artistic direction.
+- `docs/v2/EXPERIMENT-01.md` — the composition *Eerste Gloed*.
+- `docs/v2/SPECTRASTROBE.md` — signal model, measurement plan M1–M14, hard
+  encoder requirements §6.
+- `docs/v2/SAFETY-PRIVACY.md` — R1–R12 (envelope, ceiling and stop rules).
+- `docs/v2/TECHNICAL-UNCERTAINTIES.md` — U15 (carrier audibility).
+- Lumasonic SpectraStrobe specification and production/mixing notes:
   <https://github.com/Lumasonic/Lumasonic/blob/main/docs/08-SpectraStrobe/03-format-specification.md>
-  en <https://github.com/Lumasonic/Lumasonic/blob/main/docs/08-SpectraStrobe/05-production-and-mixing.md>.
-- SpiraStrober (MIT, onafhankelijke implementatie):
+  and <https://github.com/Lumasonic/Lumasonic/blob/main/docs/08-SpectraStrobe/05-production-and-mixing.md>.
+- SpiraStrober (MIT, independent implementation):
   <https://github.com/Syluminose/SpiraStrober>.
 
-Licentie: GPL-3.0-or-later, net als NAGLOED.
+Licence: GPL-3.0-or-later, same as NAGLOED.

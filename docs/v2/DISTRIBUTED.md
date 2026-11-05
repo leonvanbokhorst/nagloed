@@ -1,174 +1,174 @@
-# Distributed NAGLOED — telegrammen tussen ruimtes
+# Distributed NAGLOED — telegrams between rooms
 
-> **Status:** verkenning binnen NAGLOED v2, geen specificatie en geen implementatieopdracht. Dit document hoort bij [ARTISTIC-VISION.md](ARTISTIC-VISION.md) en [EXPERIMENT-01.md](EXPERIMENT-01.md); het beschrijft het derde experiment (twee kamers, alleen gebeurtenissen) als denkbeeld. NAGLOED 1.0.4 blijft ongewijzigd. Geen netwerkcode in de plug-in, geen DMX-implementatie, geen wijziging aan `src/`, `CMakeLists.txt`, `presets/`, `README.md` of `.gitignore`.
+> **Status:** exploration within NAGLOED v2, not a specification and not an implementation assignment. This document belongs to [ARTISTIC-VISION.md](ARTISTIC-VISION.md) and [EXPERIMENT-01.md](EXPERIMENT-01.md); it describes the third experiment (two rooms, events only) as a thought experiment. NAGLOED 1.0.4 remains unchanged. No network code in the plugin, no DMX implementation, no change to `src/`, `CMakeLists.txt`, `presets/`, `README.md` or `.gitignore`.
 
-Markers: **Intentie** = artistieke bedoeling; **Techniek** = voorstel of feit; **Open vraag** = toetsbaar, nog niet beantwoord.
+Markers: **Intent** = artistic purpose; **Technique** = proposal or fact; **Open question** = testable, not yet answered.
 
-## 1. Artistieke intentie
+## 1. Artistic intent
 
-- **Ruimtes als gedeeltelijk autonome luisteraars.** Een ruimte is een NAGLOED-instantie met eigen audio, licht, tempo en aandacht. Ze is geen slaaf van een centrale tijdlijn: ze hoort, reageert en herinnert lokaal, en kan iets doorgeven. Autonomie is de default; verbinding is de uitzondering.
-- **Gebeurtenissen als telegrammen.** Wat reist is geen audio maar een bericht: kort, onvolledig, met tijdstempel en een mate van zekerheid. Het telegram is de herinnering aan een gebeurtenis, niet de gebeurtenis zelf. (**Intentie**)
-- **Herinnering reist tussen ruimtes.** Een gebaar in kamer A kan in kamer B later terugkomen: verlaagd, vertraagd, verkeerd begrepen of helemaal niet. De afstand is compositorisch materiaal, geen latency die weg moet.
-- **Intentionele drift en vertraging.** Kamers hoeven niet gelijk te lopen. Een kleine tempodrift, een vaste vertraging of een bewust gemiste reactie is een keuze. Perfecte sync is de default die we juist willen vermijden; dit sluit aan op "tijd: nu, later, nooit" in ARTISTIC-VISION.
-- **Ongelijkheid tussen kamers als materiaal.** De ene kamer dichter, feller of aandachtiger dan de andere is contrast, geen oneerlijkheid. Een kamer die zwijgt is even belangrijk als een kamer die antwoordt.
-- **Wat dit niet is.** Geen distributed orchestra in lock-step, geen remote control van één master, geen cloud-sessie, geen sample-nauwe netwerkaudio als startpunt. (**Intentie**)
+- **Rooms as partially autonomous listeners.** A room is a NAGLOED instance with its own audio, light, tempo and attention. It is not a slave to a central timeline: it listens, responds and remembers locally, and can pass something on. Autonomy is the default; connection is the exception.
+- **Events as telegrams.** What travels is not audio but a message: short, incomplete, with a timestamp and a degree of certainty. The telegram is the memory of an event, not the event itself. (**Intent**)
+- **Memory travels between rooms.** A gesture in room A can return later in room B: lowered, delayed, misunderstood or not at all. Distance is compositional material, not latency to be eliminated.
+- **Intentional drift and delay.** Rooms do not need to run in lock-step. A small tempo drift, a fixed delay or a deliberately missed response is a choice. Perfect sync is the default we want to avoid; this connects to "time: now, later, never" in ARTISTIC-VISION.
+- **Inequality between rooms as material.** One room denser, brighter or more attentive than the other is contrast, not unfairness. A room that stays silent is as important as a room that answers.
+- **What this is not.** No distributed orchestra in lock-step, no remote control from one master, no cloud session, no sample-accurate network audio as a starting point. (**Intent**)
 
-## 2. Topologie-opties
+## 2. Topology options
 
-Definities: **star** = één hub/broker; **peer** = directe unicast-links zonder doorgeven; **mesh** = any-to-any met forwarding of multicast.
+Definitions: **star** = one hub/broker; **peer** = direct unicast links without forwarding; **mesh** = any-to-any with forwarding or multicast.
 
-| Topologie | Voordelen | Nadelen | Artistieke fit |
+| Topology | Advantages | Disadvantages | Artistic fit |
 |---|---|---|---|
-| Star (hub) | Eenvoudig; één plek voor loggen, rate limits en dedupe; hub hoeft geen performer te zijn | Single point of failure; hub wordt onbedoeld "master"; +1 hop | Goed voor de eerste test en installaties met een technische operator |
-| Peer (directe links) | Geen broker; ruimtes blijven autonoom; voorspelbaar pad | N²-configuratie; lastiger observeren; elke ruimte moet eigen limieten hebben | Past bij 2-3 ruimtes en gelijkwaardige performers |
-| Mesh (multicast/forwarding) | Robuust bij uitval; schaalt; natuurlijke "bus" | Loopdetectie, TTL, duplicaten, broadcast-stormen; moeilijk te doordenken | Interessant later; te complex als eerste stap |
+| Star (hub) | Simple; one place for logging, rate limits and dedupe; the hub need not be a performer | Single point of failure; the hub unintentionally becomes "master"; +1 hop | Good for the first test and installations with a technical operator |
+| Peer (direct links) | No broker; rooms remain autonomous; predictable path | N² configuration; harder to observe; each room must have its own limits | Suits 2-3 rooms and equal performers |
+| Mesh (multicast/forwarding) | Robust under failure; scales; natural "bus" | Loop detection, TTL, duplicates, broadcast storms; hard to reason through | Interesting later; too complex as a first step |
 
-**Techniek.** Eerste experiment: een logische star met een hub die vooral *logt* en niet componeert. Telegrammen blijven stateless en hub-onafhankelijk, zodat dezelfde software later peer of mesh kan draaien. Multicast is als bus aantrekkelijk (OSC over UDP kan dat), maar maakt foutopsporing en rate limiting per zender lastiger. **Open vraag:** verandert het ervaren gezag van een ruimte als de hub verdwijnt of zwijgt?
+**Technique.** First experiment: a logical star with a hub that mainly *logs* and does not compose. Telegrams remain stateless and hub-independent, so that the same software can later run peer or mesh. Multicast is attractive as a bus (OSC over UDP can do this), but makes debugging and per-sender rate limiting harder. **Open question:** does a room's experienced authority change if the hub disappears or falls silent?
 
-## 3. Minimaal event-telegram
+## 3. Minimal event telegram
 
-Doel: klein, versioneerbaar, verlies- en duplicaat-tolerant, en los van het transport. Het gebeurtenis-vocabulaire (licht, geluid, gebaar, stilte, herinner, vergeet, echo, negeer) staat in `docs/v2/ARCHITECTURE-OPTIONS.md`; hier staat alleen de draad.
+Goal: small, versionable, loss- and duplicate-tolerant, and independent of the transport. The event vocabulary (light, sound, gesture, silence, remember, forget, echo, ignore) is in `docs/v2/ARCHITECTURE-OPTIONS.md`; here only the wire format.
 
-| Veld | Type | Betekenis |
+| Field | Type | Meaning |
 |---|---|---|
-| `v` | u8 | protocolversie (start 1) |
-| `id` | u64 | unieke id: nonce + monotone teller; dedupe-sleutel |
-| `room` | string ≤32 | ruimte-id, opaque, geen persoonsnaam |
-| `kind` | u8 | gebeurtenis-soort uit het vocabulaire |
-| `seed` | u32 | deterministische lokale interpretatie |
-| `t_origin` | OSC-timetag | absolute tijd van ontstaan; informatief, niet leidend |
-| `duration_ms` | u16 | bedoelde duur |
-| `color` | u8[3] | RGB 0-255 voor licht; 0 voor niet-licht |
-| `intensity` | f32 0-1 | sterkte, lokaal geclampt |
-| `confidence` | f32 0-1 | hoe zeker de zender is dat dit aandacht verdient |
-| `urgency` | f32 0-1 | hoe dringend; mag bij doorgeven nooit stijgen |
-| `ttl` | u8 | resterende hops; 0 = niet doorgeven |
-| `parents` | id[] ≤4 | causale keten; loopdetectie |
-| `payload` | blob | optioneel, versiegebonden; geen audio, geen PII |
+| `v` | u8 | protocol version (start 1) |
+| `id` | u64 | unique id: nonce + monotonic counter; dedupe key |
+| `room` | string ≤32 | room id, opaque, no personal name |
+| `kind` | u8 | event kind from the vocabulary |
+| `seed` | u32 | deterministic local interpretation |
+| `t_origin` | OSC timetag | absolute time of origin; informative, not authoritative |
+| `duration_ms` | u16 | intended duration |
+| `color` | u8[3] | RGB 0-255 for light; 0 for non-light |
+| `intensity` | f32 0-1 | strength, locally clamped |
+| `confidence` | f32 0-1 | how certain the sender is that this deserves attention |
+| `urgency` | f32 0-1 | how urgent; must never rise when forwarding |
+| `ttl` | u8 | remaining hops; 0 = do not forward |
+| `parents` | id[] ≤4 | causal chain; loop detection |
+| `payload` | blob | optional, version-bound; no audio, no PII |
 
-Alle integers big-endian, zoals OSC. Eén telegram = één OSC-message met een blob-payload; de debug-variant gebruikt losse argumenten.
+All integers big-endian, as in OSC. One telegram = one OSC message with a blob payload; the debug variant uses separate arguments.
 
 ```
-/nagloed/event/v1/room/<room>/event      ,b   telegram (binair, zie tabel)
-/nagloed/event/v1/room/<room>/hello      ,st  room-id, protocolversie
-/nagloed/event/v1/room/<room>/heartbeat  ,i   laatste event-teller
-/nagloed/event/v1/room/<room>/digest     ,b   samenvatting na herverbinden
+/nagloed/event/v1/room/<room>/event      ,b   telegram (binary, see table)
+/nagloed/event/v1/room/<room>/hello      ,st  room-id, protocol version
+/nagloed/event/v1/room/<room>/heartbeat  ,i   latest event counter
+/nagloed/event/v1/room/<room>/digest     ,b   summary after reconnecting
 /nagloed/event/v1/room/<room>/control    ,s   mute | stop | rate
-/nagloed/event/v1/session/panic          ,    lokaal stopcommando (idempotent)
+/nagloed/event/v1/session/panic          ,    local stop command (idempotent)
 ```
 
-Waarom OSC: open, transport-onafhankelijk en gangbaar in de muziekwereld; bundles zijn atomair en dragen een NTP-timetag. De spec zegt expliciet dat OSC géén kloksynchronisatie levert, dus tijd alleen gebruiken als ze betrouwbaar is ([OSC 1.0](https://ccrma.stanford.edu/groups/osc/spec-1_0.html)).
+Why OSC: open, transport-independent and common in the music world; bundles are atomic and carry an NTP timetag. The spec explicitly states that OSC does *not* provide clock synchronisation, so use time only when it is reliable ([OSC 1.0](https://ccrma.stanford.edu/groups/osc/spec-1_0.html)).
 
-**Regels (Techniek).**
-- **Rate limits.** Zacht ≤ 2 events/s per ruimte, hard ≤ 10/s, burst ≤ 20. De ontvanger heeft een eigen ingress-plafond en een aandachtsbudget per minuut; overschrijding dempt, buffert niet tot oneindig.
-- **Bounded queues.** Ingress 256 telegrammen, egress 64, geen groei. Vol → laagste confidence eerst, daarna oudste laten vallen. Nooit blokkeren; netwerk-I/O leeft buiten de audiodraad (ARCHITECTURE.md verbiedt netwerktoegang in `process()`).
-- **Verlies.** UDP is best-effort: geen retransmissie, geen ACK. Verlies is normaal; een gemist telegram is een gemiste herinnering. Heartbeat en digest na herverbinden in plaats van replay.
-- **Duplicaten.** Dedupe op `id` met een begrensd venster (bijv. 1024 ids / 10 s). Duplicaat = negeren, tenzij bewust als `echo` met lagere confidence. Idempotentie is een harde eis.
-- **Geen runaway feedback.** `ttl` daalt per hop (start 3); `confidence` × 0,5 per hop, drop onder 0,2; `urgency` stijgt nooit; `parents` begrensd op 4; eigen id in `parents` → drop; refractory per ruimte per `kind` (250-500 ms); globaal circuit breaker bij > 50 events/s ingress (30 s mute + log). "Geen antwoord" is de default, niet de uitzondering.
+**Rules (Technique).**
+- **Rate limits.** Soft ≤ 2 events/s per room, hard ≤ 10/s, burst ≤ 20. The receiver has its own ingress ceiling and an attention budget per minute; exceeding it attenuates, it does not buffer without bound.
+- **Bounded queues.** Ingress 256 telegrams, egress 64, no growth. Full → lowest confidence first, then oldest dropped. Never block; network I/O lives outside the audio thread (ARCHITECTURE.md forbids network access in `process()`).
+- **Loss.** UDP is best-effort: no retransmission, no ACK. Loss is normal; a missed telegram is a missed memory. Heartbeat and digest after reconnecting instead of replay.
+- **Duplicates.** Dedupe on `id` with a bounded window (e.g. 1024 ids / 10 s). Duplicate = ignore, unless deliberately as an `echo` with lower confidence. Idempotence is a hard requirement.
+- **No runaway feedback.** `ttl` decreases per hop (start 3); `confidence` × 0.5 per hop, drop below 0.2; `urgency` never rises; `parents` bounded to 4; own id in `parents` → drop; refractory per room per `kind` (250-500 ms); global circuit breaker at > 50 events/s ingress (30 s mute + log). "No answer" is the default, not the exception.
 
-## 4. Tijdstrategie
+## 4. Time strategy
 
-**Intentie.** Lokale autonomie is de default. Elke ruimte heeft haar eigen klok, tempo en adem. Een gedeelde klok is een optie voor een specifiek effect, niet de fundering.
+**Intent.** Local autonomy is the default. Every room has its own clock, tempo and breath. A shared clock is an option for a specific effect, not the foundation.
 
-| Klok | Nauwkeurigheid (orde) | Bruikbaar voor | Niet voor |
+| Clock | Accuracy (order) | Usable for | Not for |
 |---|---|---|---|
-| Lokale monotone klok | geen onderlinge relatie | alle lokale scheduling en refractoire periodes | volgorde tussen ruimtes |
-| NTP (RFC 5905) | ms op LAN; tientallen µs mogelijk | loggen, dedupe-venster, "ruwweg gelijk" | strakke gezamenlijke gebeurtenissen |
-| PTP / IEEE 1588 | sub-microseconde | netwerkaudio, sample-nauwe afspraken | eenvoudige installatie; vereist PTP-switch/NIC |
-| Ableton Link | muzikale beat/fase, geen wandklok | gedeelde puls zonder lock-step | absolute telegram-tijd |
+| Local monotonic clock | no mutual relation | all local scheduling and refractory periods | ordering between rooms |
+| NTP (RFC 5905) | ms on LAN; tens of µs possible | logging, dedupe window, "roughly equal" | tight joint events |
+| PTP / IEEE 1588 | sub-microsecond | network audio, sample-accurate arrangements | simple installation; requires PTP switch/NIC |
+| Ableton Link | musical beat/phase, not wall clock | shared pulse without lock-step | absolute telegram time |
 
-**Techniek.** Gebruik `t_origin` alleen als informatie; plan lokaal met de monotone klok en relatieve vertraging. Bij drift: 10 ppm ≈ 0,86 s/dag, 50 ppm ≈ 4,3 s/dag. Laat een ruimte bewust 1-5% naast een andere lopen als dat muzikaal werkt; maak drift een parameter, geen fout.
+**Technique.** Use `t_origin` only as information; schedule locally with the monotonic clock and relative delay. On drift: 10 ppm ≈ 0.86 s/day, 50 ppm ≈ 4.3 s/day. Let a room deliberately run 1-5% apart from another if that works musically; make drift a parameter, not an error.
 
-**Wat mag laat zijn, wat niet.** Licht op een langzaam kleurveld mag tientallen milliseconden laat zijn (**Open vraag**, perceptueel te toetsen). Een lokaal geluid mag nooit op het netwerk wachten: de audiodraad rendert altijd door. Een remote getriggerd geluid kan alleen met vooruitplannen en blijft begrensd door klokfout plus jitter; zonder gedeelde klok is sample-nauwheid een illusie. Een noodstop/panic is lokaal en onmiddellijk en hangt nooit van het netwerk af.
+**What may be late, what may not.** Light on a slow colour field may be tens of milliseconds late (**Open question**, to be tested perceptually). A local sound must never wait for the network: the audio thread always keeps rendering. A remotely triggered sound is only possible with pre-planning and remains bounded by clock error plus jitter; without a shared clock, sample accuracy is an illusion. An emergency stop/panic is local and immediate and never depends on the network.
 
-**Event-only versus netwerkaudio.**
+**Event-only versus network audio.**
 
-| | Event-only | Netwerkaudio (AES67/Dante/AVB) |
+| | Event-only | Network audio (AES67/Dante/AVB) |
 |---|---|---|
-| Klok | lokaal, los | één PTP-domein nodig |
-| Complexiteit | laag | hoog: switches, QoS, latency-budget, discovery |
-| Faalwijze | ruimte valt terug op zichzelf | verlies van clock-master raakt iedereen |
-| Artistieke betekenis | herinnering reist, audio blijft lokaal | gedeeld akoestisch materiaal, echte ruimtelijke compositie |
-| Advies | start hier | pas later, alleen als event-only artistiek tekortschiet |
+| Clock | local, separate | one PTP domain required |
+| Complexity | low | high: switches, QoS, latency budget, discovery |
+| Failure mode | room falls back on itself | loss of clock master affects everyone |
+| Artistic meaning | memory travels, audio stays local | shared acoustic material, true spatial composition |
+| Advice | start here | later, only if event-only falls short artistically |
 
-AES67 gebruikt doorgaans 1 ms packet time, 48 kHz en een PTP-profiel (IEEE 1588 default, AES67-media of 802.1AS). Dante is propriëtair (Audinate; lage latency, veel kanalen). AVB is een IEEE-standaardset met gPTP en AVTP op laag 2. Alle drie lossen een ander probleem op dan "een telegram laten reizen".
+AES67 typically uses 1 ms packet time, 48 kHz and a PTP profile (IEEE 1588 default, AES67 media or 802.1AS). Dante is proprietary (Audinate; low latency, many channels). AVB is an IEEE standards set with gPTP and AVTP at layer 2. All three solve a different problem than "letting a telegram travel".
 
-## 5. Faalmodi
+## 5. Failure modes
 
-| Faalmodus | Effect | Maatregel |
+| Failure mode | Effect | Measure |
 |---|---|---|
-| Netwerkverlies | telegrammen verdwijnen; ruimte wordt stiller | best-effort accepteren; heartbeat; digest bij herverbinden; geen replay-storm |
-| Clock drift of sprong | verkeerde volgorde; "late" events | `t_origin` informatief; monotone klok lokaal; drempel op "te laat" |
-| Dubbele events | herhaling; op hol geslagen herinnering | id-dedupe, begrensd venster, echo alleen expliciet |
-| Feedback-lus | event-explosie tussen ruimtes | ttl/confidence/urgency/parents/refractory/budget/circuit breaker |
-| Partitionering | twee ruimtes divergeren | beide spelen door; bij rejoin digest, geen geschiedenis-replay; divergentie desnoods als artistiek effect documenteren |
-| Discovery/config | ruimte niet gevonden | handmatige room-lijst eerst; mDNS/DNS-SD later |
-| Verkeerd netwerk | broadcast-storm, latency | eigen VLAN/interface, geen publiek net; rate limits |
-| Clock-master weg (audio) | audio-glitch bij iedereen | geen netwerkaudio in het eerste experiment |
+| Network loss | telegrams disappear; room becomes quieter | accept best-effort; heartbeat; digest on reconnect; no replay storm |
+| Clock drift or jump | wrong order; "late" events | `t_origin` informative; monotonic clock locally; threshold on "too late" |
+| Duplicate events | repetition; memory running wild | id dedupe, bounded window, echo only explicit |
+| Feedback loop | event explosion between rooms | ttl/confidence/urgency/parents/refractory/budget/circuit breaker |
+| Partitioning | two rooms diverge | both keep playing; on rejoin digest, no history replay; if necessary document divergence as an artistic effect |
+| Discovery/config | room not found | manual room list first; mDNS/DNS-SD later |
+| Wrong network | broadcast storm, latency | own VLAN/interface, no public network; rate limits |
+| Clock master gone (audio) | audio glitch for everyone | no network audio in the first experiment |
 
-## 6. Security en privacy
+## 6. Security and privacy
 
-- **Alleen vertrouwd lokaal netwerk.** OSC 1.0 heeft geen authenticatie of encryptie; Art-Net en sACN zijn broadcast/multicast zonder beveiliging. Dus: eigen interface/VLAN, geen internet, geen port-forwarding, firewall aan. Netwerkmodus expliciet aan/uit, default uit.
-- **Geen PII.** Ruimte-ids zijn opaque (nonce); geen namen, e-mail of stemopnames in telegrammen. `room` en `id` zijn geen identiteit. Logs lokaal, roterend, met grove tijdstempels.
-- **Geen audio over de telegrambus.** Een telegram verwijst naar een gebeurtenis, niet naar samples. Audio blijft lokaal tenzij later expliciet netwerkaudio wordt gekozen.
-- **Toestemming.** Deelnemers en omstanders weten dat er geluid wordt opgevangen en dat er berichten tussen ruimtes reizen. Mute/stop is lokaal en altijd beschikbaar; opgevangen materiaal is vluchtig tenzij bewust bewaard. Zie `docs/v2/SAFETY-PRIVACY.md`.
-- **Geen cloud.** Geen discovery-service, geen telemetrie, geen remote logging, geen accounts. Een installatie moet zonder internet volledig werken.
-- **DMX/Art-Net/sACN later alleen via een brug** op een geïsoleerd lighting-netwerk, nooit vanuit de plug-in en nooit op het publieke net. Art-Net (UDP 6454) en sACN (multicast) vervoeren DMX512-universes over IP. Het `priority`-veld in sACN is geen beveiliging. Als later auth nodig blijkt: pre-shared key plus HMAC op het telegram, niet in het eerste experiment.
+- **Trusted local network only.** OSC 1.0 has no authentication or encryption; Art-Net and sACN are broadcast/multicast without security. So: own interface/VLAN, no internet, no port forwarding, firewall on. Network mode explicitly on/off, default off.
+- **No PII.** Room ids are opaque (nonce); no names, e-mail or voice recordings in telegrams. `room` and `id` are not identity. Logs local, rotating, with coarse timestamps.
+- **No audio over the telegram bus.** A telegram refers to an event, not to samples. Audio stays local unless network audio is explicitly chosen later.
+- **Consent.** Participants and bystanders know that sound is being captured and that messages travel between rooms. Mute/stop is local and always available; captured material is ephemeral unless deliberately kept. See `docs/v2/SAFETY-PRIVACY.md`.
+- **No cloud.** No discovery service, no telemetry, no remote logging, no accounts. An installation must work fully without internet.
+- **DMX/Art-Net/sACN only later via a bridge** on an isolated lighting network, never from the plugin and never on the public network. Art-Net (UDP 6454) and sACN (multicast) carry DMX512 universes over IP. The `priority` field in sACN is not security. If authentication turns out to be needed later: pre-shared key plus HMAC on the telegram, not in the first experiment.
 
-## 7. Mogelijke onderzoeksvolgorde, nu expliciet niet bouwen
+## 7. Possible research order, explicitly not to build now
 
-**Mogelijke onderzoeksvolgorde — geen backlog, geen fasering en geen commitment.**
-De volgorde is alleen een logische volgorde als dit ooit wordt opgepakt; ze is
-geen planning en geen releasecriterium. Eén stap tegelijk, en alleen na een
-expliciete artistieke vraag.
-1. Twee processen op één machine, loopback, met event-log, replay en injectie van verlies en duplicaten.
-2. Twee machines, bekabeld, event-only; meten welke vertraging en welk verlies een herinnering nog geloofwaardig maken.
-3. Drie ruimtes, star versus peer, met een telegram-viewer voor observatie.
-4. Optionele brug naar Art-Net/sACN op een geïsoleerd net.
-5. Klok-experiment: geen/NTP/PTP/Link, met gemeten fout en perceptief oordeel.
-6. Pas daarna netwerkaudio (AES67-achtig) overwegen.
+**Possible research order — no backlog, no phasing and no commitment.**
+The order is only a logical sequence if this is ever taken up; it is not a
+plan and not a release criterion. One step at a time, and only after an
+explicit artistic question.
+1. Two processes on one machine, loopback, with event log, replay and injection of loss and duplicates.
+2. Two machines, wired, event-only; measure which delay and which loss still make a memory credible.
+3. Three rooms, star versus peer, with a telegram viewer for observation.
+4. Optional bridge to Art-Net/sACN on an isolated network.
+5. Clock experiment: none/NTP/PTP/Link, with measured error and perceptual judgement.
+6. Only then consider network audio (AES67-like).
 
-**Nu expliciet NIET.**
-- Geen netwerkcode in de plug-in, laat staan in de audiodraad.
-- Geen DMX/Art-Net/sACN-implementatie, ook geen "klein beginnetje".
-- Geen AES67/Dante/AVB-endpoint, geen PTP-stack, geen Ableton Link-integratie.
-- Geen cloud, accounts, remote discovery of internet.
-- Geen sample-nauwe remote audio en geen "distributed orchestra".
-- Geen UI of parameters voor distributie in v1.0.4.
-- Geen wijziging aan `src/`, `CMakeLists.txt`, `presets/`, `README.md`, `.gitignore`.
+**Explicitly NOT now.**
+- No network code in the plugin, let alone in the audio thread.
+- No DMX/Art-Net/sACN implementation, not even a "small start".
+- No AES67/Dante/AVB endpoint, no PTP stack, no Ableton Link integration.
+- No cloud, accounts, remote discovery or internet.
+- No sample-accurate remote audio and no "distributed orchestra".
+- No UI or parameters for distribution in v1.0.4.
+- No change to `src/`, `CMakeLists.txt`, `presets/`, `README.md`, `.gitignore`.
 
-## 8. Aanbeveling
+## 8. Recommendation
 
-1. Behandel distributie als **derde experiment**, volledig los van de plug-in, in de lijn van EXPERIMENT-01 §9 (twee kamers, alleen gebeurtenissen).
-2. Start **event-only**, OSC over UDP, als **logische star** met een hub die logt en niet componeert; houd het protocol peer-ready.
-3. Drie harde invarianten: **lokale autonomie**, **begrensde queues**, **geen feedback-amplificatie**. Lokaal stop/panic wint altijd.
-4. Geen gedeelde klok in de eerste test; `t_origin` alleen informatief. NTP voor logs, PTP of Link pas na meting.
-5. Geen netwerkaudio en geen DMX in deze fase. Werkt event-only artistiek niet, dan is de volgende stap een kleiner experiment, niet meer infrastructuur.
-6. Publiceer het telegram-schema als versieerbaar contract en houd het transport vervangbaar.
+1. Treat distribution as the **third experiment**, entirely separate from the plugin, in the line of EXPERIMENT-01 §9 (two rooms, events only).
+2. Start **event-only**, OSC over UDP, as a **logical star** with a hub that logs and does not compose; keep the protocol peer-ready.
+3. Three hard invariants: **local autonomy**, **bounded queues**, **no feedback amplification**. Local stop/panic always wins.
+4. No shared clock in the first test; `t_origin` informative only. NTP for logs, PTP or Link only after measurement.
+5. No network audio and no DMX in this phase. If event-only does not work artistically, the next step is a smaller experiment, not more infrastructure.
+6. Publish the telegram schema as a versionable contract and keep the transport replaceable.
 
-**Grootste risico's.** Complexiteit die de artistieke vraag overschreeuwt; feedback-lussen die als "systeem" aanvoelen in plaats van als muziek; de verwachting van strakke sync bij performers en publiek; onbeveiligde OSC of DMX op een gedeeld netwerk. Alle vier zijn met de bovenstaande invarianten beheersbaar; geen ervan is een reden om nu te bouwen.
+**Biggest risks.** Complexity that drowns out the artistic question; feedback loops that feel like a "system" rather than like music; the expectation of tight sync among performers and audience; unsecured OSC or DMX on a shared network. All four are manageable with the invariants above; none of them is a reason to build now.
 
-## 9. Open onderzoeksvragen (toetsbaar)
+## 9. Open research questions (testable)
 
-1. Bij welke vertraging voelt een remote gebeurtenis nog "verwant" en niet "toevallig"? (Ladder 0/50/100/200/500 ms en 2 s, N luisteraars.)
-2. Hoeveel verlies (10/30/50%) verdraagt een ruimte voordat ze "afwezig" voelt?
-3. Is intentionele drift van 0,5/1/2/5% hoorbaar of juist productief?
-4. Wat is het juiste aandachtsbudget per ruimte (events/min) voordat het "druk" wordt?
-5. Leest een duplicaat als echo of herinnering, of als bug?
-6. Verandert star versus peer het ervaren gezag van een ruimte?
-7. Wat is de minimale gedeelde klok: geen, NTP, PTP of Link, en wat is de gemeten fout?
-8. Kan partitionering artistiek betekenisvol zijn (twee uiteenlopende herinneringen) of voelt ze als storing?
-9. Bij hoeveel ruimtes (2/3/5) wordt het geheel onleesbaar?
-10. Kun je horen uit welke ruimte een gebeurtenis kwam, of is herkomst expres onkenbaar?
+1. At what delay does a remote event still feel "related" and not "coincidental"? (Ladder 0/50/100/200/500 ms and 2 s, N listeners.)
+2. How much loss (10/30/50%) can a room tolerate before it feels "absent"?
+3. Is intentional drift of 0.5/1/2/5% audible or actually productive?
+4. What is the right attention budget per room (events/min) before it becomes "busy"?
+5. Does a duplicate read as echo or memory, or as a bug?
+6. Does star versus peer change the experienced authority of a room?
+7. What is the minimum shared clock: none, NTP, PTP or Link, and what is the measured error?
+8. Can partitioning be artistically meaningful (two diverging memories) or does it feel like a fault?
+9. At how many rooms (2/3/5) does the whole become illegible?
+10. Can you hear which room an event came from, or is origin deliberately unknowable?
 
-## Bronnen
+## Sources
 
-- OSC 1.0 — <https://ccrma.stanford.edu/groups/osc/spec-1_0.html> (messages, bundles, timetags, geen kloksync)
-- Art-Net 4 — <https://art-net.org.uk/downloads/art-net.pdf> (UDP-poort 6454, max 44 Hz DMX512)
+- OSC 1.0 — <https://ccrma.stanford.edu/groups/osc/spec-1_0.html> (messages, bundles, timetags, no clock sync)
+- Art-Net 4 — <https://art-net.org.uk/downloads/art-net.pdf> (UDP port 6454, max 44 Hz DMX512)
 - ANSI E1.31 (sACN) — <https://tsp.esta.org/tsp/documents/docs/E1-31_2009.pdf> (multicast, priority 0-200, keep-alive 800-1000 ms)
-- AES67-2018 PICS — <https://aes.org/wp-content/uploads/2024/05/AES67-2018-PICS-Summary_Merging-Technologies_HORUS_3.9_Audio-interface-to-and-from-AoIP-for-Recording.pdf> (1 ms packet time, 48 kHz, PTP-profielen)
-- IEEE 1588-2019 (PTP) — <https://standards.ieee.org/ieee/1588/6825/> (sub-microseconde, profielen)
-- NTPv4 RFC 5905 — <https://www.rfc-editor.org/info/rfc5905/> (tientallen µs haalbaar op moderne LAN's)
-- Ableton Link — <https://ableton.github.io/link/> en <https://github.com/Ableton/link> (beat/fase, onafhankelijke tijdlijnen)
-- Dante (propriëtair) — <https://en.wikipedia.org/wiki/Dante_(networking)>
+- AES67-2018 PICS — <https://aes.org/wp-content/uploads/2024/05/AES67-2018-PICS-Summary_Merging-Technologies_HORUS_3.9_Audio-interface-to-and-from-AoIP-for-Recording.pdf> (1 ms packet time, 48 kHz, PTP profiles)
+- IEEE 1588-2019 (PTP) — <https://standards.ieee.org/ieee/1588/6825/> (sub-microsecond, profiles)
+- NTPv4 RFC 5905 — <https://www.rfc-editor.org/info/rfc5905/> (tens of µs achievable on modern LANs)
+- Ableton Link — <https://ableton.github.io/link/> and <https://github.com/Ableton/link> (beat/phase, independent timelines)
+- Dante (proprietary) — <https://en.wikipedia.org/wiki/Dante_(networking)>
 - AVB/TSN — <https://en.wikipedia.org/wiki/Audio_Video_Bridging> (802.1AS gPTP, 1722 AVTP)

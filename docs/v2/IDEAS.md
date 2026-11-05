@@ -1,307 +1,301 @@
-# NAGLOED v2 — ideeën buiten de opdracht
+# NAGLOED v2 — ideas beyond the brief
 
-Artistiek onderzoeksmateriaal bij issue #14. Dit bestand is additief en vrijblijvend: elke
-gedachte hier is een **hypothese of uitnodiging**, geen eis, geen specificatie en geen
-v1-scope. Niets hiervan vraagt om implementatie, contractwijziging of een release-criterium.
-De guardrails van de issue gelden onverkort (geen één-op-één mapping, geen kleurenorgel,
-geen therapie- of meditatieclaims, geen claims over neurologische effecten).
+Artistic research material for issue #14. This file is additive and non-binding: every
+thought here is a **hypothesis or an invitation**, not a requirement, not a specification and
+not v1 scope. Nothing here asks for implementation, a contract change or a release criterion.
+The issue's guardrails apply in full (no one-to-one mapping, no colour organ, no therapy or
+meditation claims, no claims about neurological effects).
 
-De ideeën hieronder zijn geen herhalingen van de schetsen in de issue. Waar een idee een
-bestaande schets raakt, is de toevoeging de concrete dramaturgie, het geheugen of de
-sociale vorm — niet het concept. Uitgangspunt blijft de muzikale praktijk van Master Lonn:
-eenmalige takes, modular, field recordings, ruis en ruimte, en het beeld van het kind onder
-de tafel op een familiefeest.
+The ideas below do not repeat the sketches in the issue. Where an idea touches an existing
+sketch, the addition is the concrete dramaturgy, the memory or the social form — not the
+concept. The starting point remains Master Lonn's musical practice: one-take recordings,
+modular, field recordings, noise and space, and the image of the child under the table at a
+family gathering.
 
-Leeswijzer per idee: gedachte, waarom het past, artistiek effect, ruwe technische vorm
-(één alinea, geen spec), kleinste denkbare test, risico/onzekerheid.
+How to read each idea: idea, why it fits, artistic effect, rough technical shape (one
+paragraph, no spec), smallest conceivable test, risk/uncertainty.
 
 ---
 
-## 1. De offstage componist
+## 1. The offstage composer
 
-*Hypothese, geen eis.*
+*Hypothesis, not a requirement.*
 
-- **Gedachte** — Het stuk wordt niet in de kamer bedacht. Een componist (script of AI)
-  werkt offline, buiten de installatie, en levert een partituur: gebeurtenissen, rusten,
-  weigeringen en regels voor wat mag afwijken. Op de vloer speelt alleen de partituur en
-  de kamer. Geen model, geen inferentie, geen netwerk in de keten.
-- **Waarom het past** — Een eenmalige take is ook een partituur die zichzelf schrijft
-  terwijl hij klinkt. De installatie wordt dan de uitvoering van iets dat al bestond, zoals
-  het gesprek op het feest al gaande was voordat het kind eronder kroop.
-- **Artistiek effect** — De kamer voelt niet als een reagerende machine maar als iemand die
-  iets uitvoert. Bezoekers kunnen een auteur vermoeden zonder die ooit te zien.
-- **Ruwe technische vorm** — Een partituur als tekst/JSON met een kleine eventwoordenschat
-  (klank, licht, rust, weiger, herinner, vergeet), tijd in seconden, een seed en een
-  validatiestap. Een compiler buiten de plugin zet een korte brief om in een partituur,
-  rendert die deterministisch naar audio en een event-spoor, en bewaart beide. De
-  installatie leest alleen een vooraf gevalideerde, read-only partituur; iteratie gebeurt
-  offline (brief → partituur → render → luisteren), niet tijdens de voorstelling.
-- **Kleinste test** — Drie korte briefs ("drie minuten, één stem, niets doen"; "een kamer
-  die leegloopt"; "twee antwoorden die te laat komen"), twee renders per partituur met
-  dezelfde seed, byte-vergelijk. Daarna laat je twee luisteraars blind de partituren aan de
-  briefs koppelen. Lukt dat, dan is er een signatuur; lukt dat niet, dan is het ruis.
-- **Risico/onzekerheid** — Een partituur die te veel vastlegt wordt dode muziek; een die te
-  weinig vastlegt is weer kans. En "AI" is snel een sticker: de componist moet een
-  waarneembare stem hebben of helemaal wegblijven.
+- **Idea** — The piece is not conceived in the room. A composer (script or AI) works offline,
+  outside the installation, and delivers a score: events, rests, refusals and rules for what
+  may deviate. On the floor, only the score and the room perform. No model, no inference, no
+  network in the chain.
+- **Why it fits** — A one-take recording is also a score that writes itself while it sounds.
+  The installation then becomes the performance of something that already existed, like the
+  conversation at the party that was already under way before the child crawled underneath
+  it.
+- **Artistic effect** — The room does not feel like a machine that reacts but like someone
+  performing something. Visitors can suspect an author without ever seeing one.
+- **Rough technical shape** — A score as text/JSON with a small event vocabulary (sound,
+  light, rest, refuse, remember, forget), time in seconds, a seed and a validation step. A
+  compiler outside the plug-in turns a short brief into a score, renders it deterministically
+  to audio and an event trace, and keeps both. The installation only reads a pre-validated,
+  read-only score; iteration happens offline (brief → score → render → listening), not during
+  the performance.
+- **Smallest test** — Three short briefs ("three minutes, one voice, do nothing"; "a room
+  emptying"; "two answers that arrive too late"), two renders per score with the same seed,
+  byte comparison. Then two listeners blindly match the scores to the briefs. If they succeed,
+  there is a signature; if they fail, it is noise.
+- **Risk/uncertainty** — A score that fixes too much becomes dead music; one that fixes too
+  little is chance again. And "AI" quickly becomes a sticker: the composer must have an
+  observable voice or stay away entirely.
 
-## 2. Het vergeetboek
+## 2. The book of forgetting (*vergeetboek*)
 
-*Hypothese, geen eis.*
+*Hypothesis, not a requirement.*
 
-- **Gedachte** — Vergeten is geen ontbrekende data maar een actief proces met regels. Elk
-  opgenomen fragment krijgt een leeftijd en een aantal keren dat het is teruggehaald. Elke
-  terugkeer kost detail; sommige fragmenten verdwijnen definitief uit de index. De
-  vergeetcurve is een compositieparameter, geen bug.
-- **Waarom het past** — Geborgen geluid is poreus en tijdelijk; het kind weet dat het feest
-  voorbijgaat. Nagloed is wat overblijft, maar niet alles blijft, en wat blijft is niet meer
-  hetzelfde.
-- **Artistiek effect** — Je hoort een herinnering die zichzelf verminkt. Na een paar keer
-  terugkeren is het een andere plek. Dat is ontroerend zonder sentimenteel te worden; het
-  publiek kan het verlies bijna aanwijzen.
-- **Ruwe technische vorm** — Per capture-segment een memory-record (id, eerste gehoord,
-  recall-count, laatste recall, vervalstand). Elke recall trekt een cumulatieve
-  degrade-factor (bandbreedte, korte dropouts, quantisatie, pitch-drift). Een
-  deterministische drop-regel verwijdert een deel van de records permanent na een aantal
-  recalls of na verstreken tijd. Alles leeft in de partituur en de state, niets in een
-  random generator per playback; een offline render kan het met dezelfde seed reproduceren.
-- **Kleinste test** — Eén fragment van acht seconden, zes recalls in twee minuten. Render de
-  zesde recall ook als "eerste recall" (controle) en laat drie luisteraars zeggen welke van
-  de twee de oude is. Verwacht: de degrade-versie klinkt ouder, maar niet kapot.
-- **Risico/onzekerheid** — Degradatie wordt een effect (LoFi) in plaats van een herinnering.
-  Het verschil moet in de structuur zitten — welke fragmenten, wanneer, en wat nooit
-  terugkomt — niet in de klank.
+- **Idea** — Forgetting is not missing data but an active process with rules. Every recorded
+  fragment gets an age and a count of how many times it has been retrieved. Every return costs
+  detail; some fragments disappear from the index for good. The forgetting curve is a
+  composition parameter, not a bug.
+- **Why it fits** — Geborgen Geluid is porous and temporary; the child knows that the party
+  will end. *nagloed* is what remains, but not everything remains, and what remains is no
+  longer the same.
+- **Artistic effect** — You hear a memory that mutilates itself. After a few returns it is a
+  different place. That is moving without becoming sentimental; the audience can almost point
+  at the loss.
+- **Rough technical shape** — Per capture segment a memory record (id, first heard, recall
+  count, last recall, decay state). Each recall applies a cumulative degradation factor
+  (bandwidth, short dropouts, quantisation, pitch drift). A deterministic drop rule removes
+  some of the records permanently after a number of recalls or after elapsed time. Everything
+  lives in the score and the state, nothing in a random generator per playback; an offline
+  render can reproduce it with the same seed.
+- **Smallest test** — One eight-second fragment, six recalls in two minutes. Also render the
+  sixth recall as a "first recall" (control) and ask three listeners which of the two is the
+  old one. Expectation: the degraded version sounds older, but not broken.
+- **Risk/uncertainty** — Degradation becomes an effect (LoFi) instead of a memory. The
+  difference must lie in the structure — which fragments, when, and what never returns — not
+  in the sound.
 
-## 3. De kunst van het negeren
+## 3. The art of ignoring (*de kunst van het negeren*)
 
-*Hypothese, geen eis.*
+*Hypothesis, not a requirement.*
 
-- **Gedachte** — Het systeem krijgt het recht om te weigeren. Elke gebeurtenis kan expliciet
-  onbeantwoord blijven; weigeringen worden bijgehouden. Een genegeerde lichtvraag kan later
-  terugkomen als auditieve schim, of nooit. Niet-reageren is een zet met geheugen, geen
-  dode probabiliteit.
-- **Waarom het past** — Het kind onder de tafel hoort stemmen die niet tegen hem praten; de
-  wereld reageert niet op hem en juist dat maakt het geborgen. De issue zegt "intervening
-  less often than not"; dit maakt daar een dramaturgie van in plaats van een instelling.
-- **Artistiek effect** — Spanning zonder gebeurtenis. Het publiek gaat wachten, en het
-  wachten wordt de ervaring. Een late reactie voelt als erkenning.
-- **Ruwe technische vorm** — Een event-bus met "open vragen" per domein. Een lichtgebeurtenis
-  kan een auditief verzoek achterlaten met een houdbaarheid; de mixer beslist niet per
-  gebeurtenis maar per frase ("deze minuut antwoorden we niet"). Geweigerde events gaan
-  naar een lade met vervaltermijn; de partituur kan ze later opgraven of wissen. Alles
-  bounded, geen onbeperkte groei, geen feedback-lus.
-- **Kleinste test** — Drie minuten met tien lichtgebeurtenissen, waarvan acht genegeerd;
-  één variant met vier genegeerd. Vraag luisteraars welke versie meer "wacht" voelt en
-  welke meer "vol". Verwacht: acht op tien geeft meer spanning maar verveelt sneller.
-- **Risico/onzekerheid** — Het publiek merkt het verschil niet en leest het als kapot; of de
-  lade wordt een gimmick. Nodig: iemand die de partituur kent en kan controleren of de
-  weigering klopt met wat je hoort.
+- **Idea** — The system gets the right to refuse. Every event can remain explicitly
+  unanswered; refusals are tracked. An ignored light question can later return as an auditory
+  shadow, or never. Not responding is a move with memory, not dead probability.
+- **Why it fits** — The child under the table hears voices that are not talking to him; the
+  world does not respond to him, and precisely that is what makes it safe. The issue says
+  "intervening less often than not"; this turns that into a dramaturgy instead of a setting.
+- **Artistic effect** — Tension without an event. The audience starts waiting, and the waiting
+  becomes the experience. A late response feels like recognition.
+- **Rough technical shape** — An event bus with "open questions" per domain. A light event can
+  leave an auditory request with a shelf life; the mixer decides not per event but per phrase
+  ("we are not answering this minute"). Refused events go into a drawer with an expiry; the
+  score can dig them up later or erase them. Everything bounded, no unbounded growth, no
+  feedback loop.
+- **Smallest test** — Three minutes with ten light events, eight of them ignored; one variant
+  with four ignored. Ask listeners which version feels more like "waiting" and which more
+  "full". Expectation: eight out of ten gives more tension but also bores sooner.
+- **Risk/uncertainty** — The audience does not notice the difference and reads it as broken;
+  or the drawer becomes a gimmick. Needed: someone who knows the score and can check whether
+  the refusal matches what you hear.
 
-## 4. Contrapunt tussen de zintuigen
+## 4. Counterpoint between the senses
 
-*Hypothese, geen eis.*
+*Hypothesis, not a requirement.*
 
-- **Gedachte** — Licht en geluid zijn twee stemmen in een contrapunt, niet een paar. Regels:
-  wanneer de een spreekt, rust de ander; ze volgen elkaars motief maar niet elkaars timing;
-  een canon over de zintuigen heen, waarbij licht begint en geluid een frase later volgt met
-  andere intervallen.
-- **Waarom het past** — De premisse zegt: verwant, maar geen letterlijke illustratie.
-  Contrapunt is de muzikale vorm van verwantschap zonder synchronie. Het kind onder de tafel
-  hoort de kamer ook als twee lagen die elkaar niet napraten.
-- **Artistiek effect** — Een gesprek tussen twee media die elkaar kennen maar niet imiteren.
-  De ruimte wordt polyfoon; je voelt dat er iets bedacht is in plaats van gekoppeld.
-- **Ruwe technische vorm** — Een klein regelsysteem met twee stemmen, elk met een motief
-  (intervallen, kleurverloop, envelopvorm) en een transformatie per frase (vertraging,
-  inversie, retrograde). Een gedeelde klok alleen voor frases, niet voor samples. De
-  partituur noteert de stemmen en de regels; de engine voert ze uit. Geen per-sample
-  koppeling, geen mapping-tabel.
-- **Kleinste test** — Zestig seconden canon: licht begint met een motief van drie gebaren,
-  geluid volgt vier seconden later met dezelfde ritmische vorm maar andere toonhoogte,
-  daarna inversie. Vraag luisteraars of ze een verband horen zonder te kunnen zeggen wat
-  het is. Niemand hoort iets: te subtiel. Iedereen zegt "sync": te letterlijk.
-- **Risico/onzekerheid** — Licht heeft geen toonhoogte; de regels kunnen arbitrair voelen.
-  En een oefening is nog geen stuk: het contrapunt moet hoorbaar ergens naartoe gaan.
+- **Idea** — Light and sound are two voices in a counterpoint, not a pair. Rules: when one
+  speaks, the other rests; they follow each other's motif but not each other's timing; a canon
+  across the senses, where light begins and sound follows a phrase later with different
+  intervals.
+- **Why it fits** — The premise says: related, but not a literal illustration. Counterpoint
+  is the musical form of kinship without synchrony. The child under the table also hears the
+  room as two layers that do not parrot each other.
+- **Artistic effect** — A conversation between two media that know each other but do not
+  imitate each other. The space becomes polyphonic; you feel that something has been composed
+  rather than coupled.
+- **Rough technical shape** — A small rule system with two voices, each with a motif
+  (intervals, colour progression, envelope shape) and a transformation per phrase (delay,
+  inversion, retrograde). A shared clock for phrases only, not for samples. The score notates
+  the voices and the rules; the engine performs them. No per-sample coupling, no mapping
+  table.
+- **Smallest test** — Sixty seconds of canon: light begins with a motif of three gestures,
+  sound follows four seconds later with the same rhythmic shape but a different pitch, then
+  inversion. Ask listeners whether they hear a connection without being able to say what it
+  is. Nobody hears anything: too subtle. Everyone says "sync": too literal.
+- **Risk/uncertainty** — Light has no pitch; the rules can feel arbitrary. And an exercise is
+  not yet a piece: the counterpoint must audibly go somewhere.
 
-## 5. De lamp verveelt zich
+## 5. The lamp gets bored (*de lamp verveelt zich*)
 
-*Hypothese, geen eis.*
+*Hypothesis, not a requirement.*
 
-- **Gedachte** — De lichtinstallatie is een performer met een eigen toestand: rusteloos,
-  tevreden, verveeld, oplettend. Die toestand komt uit de geschiedenis — hoe lang was er
-  niets, hoeveel werd er genegeerd — niet uit een random generator. Een verveelde lamp
-  initieert zelf een gebaar; een tevreden lamp laat stilte toe.
-- **Waarom het past** — De installatie is een aanwezigheid in de kamer, geen projectie van
-  geluid. Het kind onder de tafel kent ook de lamp die aangaat zonder dat er iemand praat.
-- **Artistiek effect** — Het licht voelt eigenzinnig. Bezoekers gaan het licht "lezen" en
-  krijgen het gevoel dat de kamer iets van hen vindt: niet reagerend, wel aanwezig.
-- **Ruwe technische vorm** — Een kleine toestandsmachine met vier of vijf toestanden, trage
-  overgangen en een aandrift die groeit bij stilte. Initiatief alleen als de toestand het
-  toestaat en het aandachtsbudget het toelaat. Alle beslissingen in de partituur en de
-  state, reproduceerbaar met een seed; geen model, alleen regels en drempels.
-- **Kleinste test** — Tien minuten zonder audio-input. Kijk of de lamp vijf tot acht eigen
-  gebaren maakt die van elkaar verschillen. Laat drie mensen achteraf de volgorde
-  navertellen: als ze een verhaal kunnen reconstrueren zonder dat het random aanvoelt, zit
-  er agency in. Niet beweren dat het leeft.
-- **Risico/onzekerheid** — Antropomorfisme wordt klef, en "verveling" is moeilijk te
-  onderscheiden van random. De toestand moet gevolgen hebben — een verveelde lamp maakt
-  kortere, fellere gebaren; een tevreden lamp langzame — anders is het decoratie.
+- **Idea** — The light rig is a performer with a state of its own: restless, content, bored,
+  attentive. That state comes from history — how long has nothing happened, how much has been
+  ignored — not from a random generator. A bored lamp initiates a gesture of its own; a
+  content lamp allows silence.
+- **Why it fits** — The installation is a presence in the room, not a projection of sound. The
+  child under the table also knows the lamp that comes on when nobody is talking.
+- **Artistic effect** — The light feels wilful. Visitors start "reading" the light and get the
+  feeling that the room has an opinion of them: not reacting, but present.
+- **Rough technical shape** — A small state machine with four or five states, slow transitions
+  and a drive that grows with silence. Initiative only if the state allows it and the
+  attention budget permits it. All decisions in the score and the state, reproducible with a
+  seed; no model, only rules and thresholds.
+- **Smallest test** — Ten minutes without audio input. Watch whether the lamp makes five to
+  eight gestures of its own that differ from one another. Ask three people afterwards to
+  retell the order: if they can reconstruct a story without it feeling random, there is agency
+  in it. Do not claim it is alive.
+- **Risk/uncertainty** — Anthropomorphism turns saccharine, and "boredom" is hard to
+  distinguish from randomness. The state must have consequences — a bored lamp makes shorter,
+  brighter gestures; a content lamp slow ones — otherwise it is decoration.
 
-## 6. Weer en gebeurtenis
+## 6. Weather and event (*weer en gebeurtenis*)
 
-*Hypothese, geen eis.*
+*Hypothesis, not a requirement.*
 
-- **Gedachte** — Twee tijdschalen: een langzaam "weer" (dichtheid, demping, helderheid,
-  druk) en plotselinge gebeurtenissen. Het weer verandert niet de klank van een gebeurtenis
-  maar haar betekenis: dezelfde inslag klinkt anders in mist dan in helder licht. Weer is
-  dramaturgie, geen LFO.
-- **Waarom het past** — De praktijk is eenmalig, modular, ruimte; een kamer heeft een
-  stemming die langzaam verschuift. Het kind onder de tafel voelt de sfeer van het feest
-  eerder dan de woorden.
-- **Artistiek effect** — Luisteraars krijgen het gevoel dat er een dag verstrijkt, ook al is
-  het stuk kort. Gebeurtenissen voelen betekenisvol omdat ze in een toestand vallen.
-- **Ruwe technische vorm** — Een weather-state met drie of vier trage dimensies die via
-  regels beweegt en alleen via drempels events beïnvloedt: welke events mogen, welke
-  kleuren, welke ruimte, welke dichtheid. De gebeurtenissen zelf komen uit de partituur; het
-  weer wordt als tweede spoor geëxporteerd zodat je het los kunt inspecteren.
-- **Kleinste test** — Dezelfde vijf gebeurtenissen in twee weercondities (laag en dicht
-  tegenover hoog en leeg), elk negentig seconden. Laat luisteraars in één woord zeggen wat
-  de ruimte is, niet welke versie mooier is. Als de woorden systematisch verschillen, werkt
-  het weer als dramaturgie.
-- **Risico/onzekerheid** — Weer wordt gewoon modulatie (Auto, LFO) en dan is het niets
-  nieuws. Het verschil zit in de koppeling aan betekenis — welke gebeurtenissen worden
-  toegelaten — niet in continue klankbeweging.
+- **Idea** — Two timescales: a slow "weather" (density, damping, brightness, pressure) and
+  sudden events. The weather changes not the sound of an event but its meaning: the same
+  impact sounds different in fog than in clear light. Weather is dramaturgy, not an LFO.
+- **Why it fits** — The practice is one-take, modular, space; a room has a mood that shifts
+  slowly. The child under the table feels the mood of the party sooner than the words.
+- **Artistic effect** — Listeners get the feeling that a day passes, even though the piece is
+  short. Events feel meaningful because they fall into a state.
+- **Rough technical shape** — A weather state with three or four slow dimensions that moves by
+  rules and influences events only through thresholds: which events are allowed, which
+  colours, which space, which density. The events themselves come from the score; the weather
+  is exported as a second track so you can inspect it separately.
+- **Smallest test** — The same five events in two weather conditions (low and dense versus
+  high and empty), ninety seconds each. Ask listeners to say in one word what the space is,
+  not which version is more beautiful. If the words differ systematically, the weather is
+  working as dramaturgy.
+- **Risk/uncertainty** — Weather simply becomes modulation (Auto, LFO) and then it is nothing
+  new. The difference lies in the coupling to meaning — which events are admitted — not in
+  continuous sound movement.
 
-## 7. Het aandachtsbudget
+## 7. The attention budget (*het aandachtsbudget*)
 
-*Hypothese, geen eis.*
+*Hypothesis, not a requirement.*
 
-- **Gedachte** — In plaats van een kans per gebeurtenis heeft het systeem een budget: per
-  minuut mag de kamer een beperkt aantal dingen doen. Budget kun je uitgeven of sparen;
-  ongebruikt budget bouwt schuld op die op een onverwacht moment wordt afbetaald. Zo
-  ontstaan clusters en stiltes die als gecomponeerd voelen.
-- **Waarom het past** — "Intervening less often than not" is een kwantiteit die je hoort,
-  maar een budget maakt van restraint een vorm met geheugen. Een gast op een feest praat
-  ook in vlagen, en zwijgt daarna weer.
-- **Artistiek effect** — Het publiek leert het ritme van de kamer kennen: lange stilte, dan
-  een concentratie van gebeurtenissen. Dat voelt als iemand die iets te zeggen heeft, niet
-  als een generator.
-- **Ruwe technische vorm** — Een budgetmeter per minuut met maximum en carry-over, plus een
-  prioriteit per kandidaat-event. De partituur markeert wat "duur" is; de scheduler geeft
-  uit tot het budget op is. Alles deterministisch en exporteerbaar als event-spoor. Geen
-  complexe planning, alleen een teller en een queue.
-- **Kleinste test** — Twee sporen van één minuut met dezelfde gemiddelde dichtheid:
-  Bernoulli tegenover het budgetmodel, met dezelfde klank gerenderd. Vraag luisteraars welk
-  spoor "bedoeld" klinkt. Herhaal met vijf mensen; statistiek alleen zegt hier niets.
-- **Risico/onzekerheid** — De scheduler kan hebberig worden en alles in de eerste seconde
-  uitgeven, of het budget is onzichtbaar. De kunst zit in de regels voor sparen en uitgeven,
-  bijvoorbeeld een minimum aan stilte na een uitgave. Het mag geen spelletje worden.
+- **Idea** — Instead of a chance per event, the system has a budget: per minute the room may
+  do a limited number of things. You can spend the budget or save it; unused budget builds a
+  debt that is repaid at an unexpected moment. This produces clusters and silences that feel
+  composed.
+- **Why it fits** — "Intervening less often than not" is a quantity you can hear, but a budget
+  turns restraint into a form with memory. A guest at a party also talks in bursts, and then
+  falls silent again.
+- **Artistic effect** — The audience learns the rhythm of the room: a long silence, then a
+  concentration of events. That feels like someone who has something to say, not like a
+  generator.
+- **Rough technical shape** — A budget meter per minute with a maximum and carry-over, plus a
+  priority per candidate event. The score marks what is "expensive"; the scheduler spends
+  until the budget is gone. Everything deterministic and exportable as an event trace. No
+  complex planning, just a counter and a queue.
+- **Smallest test** — Two one-minute traces with the same average density: Bernoulli versus
+  the budget model, rendered with the same sound. Ask listeners which trace sounds "intended".
+  Repeat with five people; statistics alone say nothing here.
+- **Risk/uncertainty** — The scheduler can become greedy and spend everything in the first
+  second, or the budget is invisible. The art lies in the rules for saving and spending, for
+  example a minimum of silence after a spend. It must not become a game.
 
-## 8. Aanwezigheid zonder beelden
+## 8. Presence without images (*aanwezigheid zonder beelden*)
 
-*Hypothese, geen eis.*
+*Hypothesis, not a requirement.*
 
-- **Gedachte** — De kamer weet hoeveel mensen er zijn en hoe ze bewegen, zonder camera's en
-  zonder audio te bewaren: alleen een paar scalairen (dichtheid, flux, stilte) uit de
-  microfoon. Meer mensen betekent niet meer geluid maar een ander regime: voller publiek
-  vraagt meer restraint, of juist meer feest — de kamer mag kiezen. Een fysiek teken (een
-  kaart op tafel) maakt van luisteren een afgesproken toestand.
-- **Waarom het past** — Het familiefeest is vol mensen; het kind onder de tafel is omringd
-  maar niet aangesproken. Geen gezichtsherkenning, geen opname, geen namen: dat past bij de
-  intieme en tijdelijke aard. De kaart maakt toestemming zichtbaar zonder surveillance.
-- **Artistiek effect** — De installatie voelt sociaal zonder te kijken. Bezoekers merken dat
-  de kamer anders is als ze met velen zijn, zonder dat ze kunnen aanwijzen wat er "slims"
-  gebeurt. De kaart geeft een klein ritueel: je legt hem neer en de kamer gaat luisteren.
-- **Ruwe technische vorm** — Audio-only occupancy-schatting (energie, spectrale flux,
-  stemactiviteit) levert twee of drie scalairen, geen opname en geen retentie. Een
-  toestandsregel "veel/weinig/leeg" beïnvloedt de dramaturgie. Een fysieke token schakelt de
-  luistermodus met een vaste begin- en eindhandeling. Geen camera's, geen namen, geen
-  opslag buiten de sessie.
-- **Kleinste test** — Dertig minuten microfoon in een kamer met wisselend nul, twee en zes
-  mensen; log alleen de scalairen en vergelijk met een handmatige telling op papier. Daarna
-  één sessie van twintig minuten met de kaart op tafel en achteraf alleen woorden, geen
-  data.
-- **Risico/onzekerheid** — De schatting is onbetrouwbaar en kan als surveillance voelen als
-  mensen hem doorhebben; de kaart kan een ding worden in plaats van een afspraak. De grootste
-  winst is misschien het ritueel, niet de sensing.
+- **Idea** — The room knows how many people are there and how they move, without cameras and
+  without storing audio: only a few scalars (density, flux, silence) from the microphone. More
+  people does not mean more sound but a different regime: a fuller audience asks for more
+  restraint, or more party — the room may choose. A physical sign (a card on the table) turns
+  listening into an agreed state.
+- **Why it fits** — The family gathering is full of people; the child under the table is
+  surrounded but not addressed. No face recognition, no recording, no names: that suits the
+  intimate and temporary nature. The card makes consent visible without surveillance.
+- **Artistic effect** — The installation feels social without looking. Visitors notice that
+  the room is different when there are many of them, without being able to point at what is
+  "smart" about it. The card provides a small ritual: you put it down and the room starts
+  listening.
+- **Rough technical shape** — Audio-only occupancy estimation (energy, spectral flux, voice
+  activity) yields two or three scalars, no recording and no retention. A state rule
+  "many/few/empty" influences the dramaturgy. A physical token switches listening mode with a
+  fixed opening and closing action. No cameras, no names, no storage beyond the session.
+- **Smallest test** — Thirty minutes of microphone in a room with zero, two and six people
+  alternating; log only the scalars and compare with a manual count on paper. Then one
+  twenty-minute session with the card on the table and afterwards only words, no data.
+- **Risk/uncertainty** — The estimate is unreliable and may feel like surveillance if people
+  catch on; the card can become a thing instead of an agreement. The biggest gain is perhaps
+  the ritual, not the sensing.
 
 ## 9. Poste restante
 
-*Hypothese, geen eis.*
+*Hypothesis, not a requirement.*
 
-- **Gedachte** — Twee of meer kamers zijn geen netwerk maar correspondenten. Ze sturen
-  elkaar korte telegrammen over wat er gebeurde — geen audio, alleen een beschrijving of id
-  — en de ontvanger mag het interpreteren zoals hij wil. Een kamer kan een telegram weigeren
-  of in een la leggen en het pas veel later openen. Onbestelbare berichten blijven rondwaren.
-- **Waarom het past** — Een feest heeft meerdere kamers; het kind onder de tafel hoort de
-  keuken en de woonkamer als twee werelden die via deuren met elkaar praten. Vertraging en
-  misinterpretatie horen bij herinnering.
-- **Artistiek effect** — De kamers voelen als buren die elkaar brieven schrijven. Een
-  gebeurtenis in kamer A landt in kamer B pas veel later, en dan anders. Bezoekers kunnen
-  van kamer naar kamer lopen en de correspondentie horen.
-- **Ruwe technische vorm** — Telegrammen met een minimale set velden (id, tijd, soort, duur,
-  kleur of beschrijving, seed), geen audio. Bounded queue, rate limit, eigen regels per
-  ontvanger voor openen, uitstellen of weigeren, en een dead-letter-lade met verval. Elke
-  kamer is lokaal autonoom; geen gedeelde klok. Alleen als los experiment, niet in de plugin.
-- **Kleinste test** — Twee laptops, één telegram per minuut, kunstmatig vijf seconden
-  vertraging en twintig procent verlies. Luister of de kamers als correspondenten voelen of
-  als kapotte kopie. Eén telegram gaat "poste restante" en wordt pas na vijf minuten
-  geopend.
-- **Risico/onzekerheid** — Dit is zo goed als een nieuw project; scope-explosie. De kunst
-  zit in de vertraging en de misinterpretatie, niet in het protocol. Als het technisch te
-  veel vraagt, doe het met twee mensen en een telefoon.
+- **Idea** — Two or more rooms are not a network but correspondents. They send each other
+  short telegrams about what happened — no audio, only a description or id — and the receiver
+  may interpret them as it likes. A room can refuse a telegram or put it in a drawer and open
+  it much later. Undeliverable messages keep haunting the place.
+- **Why it fits** — A party has several rooms; the child under the table hears the kitchen and
+  the living room as two worlds that talk to each other through doors. Delay and
+  misinterpretation belong to memory.
+- **Artistic effect** — The rooms feel like neighbours writing each other letters. An event in
+  room A lands in room B much later, and differently. Visitors can walk from room to room and
+  hear the correspondence.
+- **Rough technical shape** — Telegrams with a minimal set of fields (id, time, kind, duration,
+  colour or description, seed), no audio. Bounded queue, rate limit, per-receiver rules for
+  opening, postponing or refusing, and a dead-letter drawer with expiry. Each room is locally
+  autonomous; no shared clock. Only as a separate experiment, not in the plug-in.
+- **Smallest test** — Two laptops, one telegram per minute, an artificial delay of five
+  seconds and twenty percent loss. Listen whether the rooms feel like correspondents or like a
+  broken copy. One telegram goes "poste restante" and is opened only after five minutes.
+- **Risk/uncertainty** — This is as good as a new project; scope explosion. The art lies in
+  the delay and the misinterpretation, not in the protocol. If it asks too much technically,
+  do it with two people and a telephone.
 
-## 10. De bijna-gebeurtenis
+## 10. The almost-event (*de bijna-gebeurtenis*)
 
-*Hypothese, geen eis.*
+*Hypothesis, not a requirement.*
 
-- **Gedachte** — Sommige gebeurtenissen worden voorbereid en dan afgebroken: een lichtgrain
-  die zeventig procent van zijn helderheid haalt en dooft, een klank die begint en wordt
-  teruggetrokken. Het publiek ziet de schaduw van een gebeurtenis. Bijna-gebeurtenissen
-  vormen een eigen categorie in de partituur, met eigen regels: hoe vaak, hoe dicht bij "af".
-- **Waarom het past** — Het kind onder de tafel hoort de volwassenen vaak een zin beginnen
-  die niet afkomt. Geborgen geluid zit vol onaffe dingen. In plaats van nog een event is dit
-  de dramaturgie van het uitgestelde en het nagelaten.
-- **Artistiek effect** — Meer spanning dan een volledige gebeurtenis; bezoekers vullen de
-  bijna-gebeurtenis zelf in, waardoor het stuk persoonlijk wordt. Een reeks bijna's bouwt
-  een verwachting op die nooit wordt betaald, of één keer wel.
-- **Ruwe technische vorm** — Events met een abort-punt en een envelope die voor het
-  hoogtepunt stopt. De engine speelt de aanloop en stopt op een fractie van de duur;
-  meetbaar is hoeveel procent van de envelope is gehaald en hoe vaak. Licht: een korte,
-  onvolledige stijging. Geluid: een aangezette maar niet-ontwikkelde grain. Deterministisch
-  en exporteerbaar.
-- **Kleinste test** — Zestig seconden met zes volledige en zes bijna-gebeurtenissen. Laat
-  luisteraars achteraf de volgorde proberen te reconstrueren. Als ze de bijna's als gemiste
-  momenten benoemen, werkt het; als ze het als foutjes horen, is het te ver doorgeschoten.
-- **Risico/onzekerheid** — De grens tussen "bijna" en "kapot" is klein en verschilt per
-  apparaat. Licht heeft misschien geen merkbare aanloop; dan is "bijna" alleen voor geluid
-  en moet het idee smaller worden.
+- **Idea** — Some events are prepared and then aborted: a light grain that reaches seventy
+  percent of its brightness and goes out, a sound that begins and is withdrawn. The audience
+  sees the shadow of an event. Almost-events form a category of their own in the score, with
+  their own rules: how often, how close to "done".
+- **Why it fits** — The child under the table often hears the adults begin a sentence that
+  does not finish. Geborgen Geluid is full of unfinished things. Instead of yet another event,
+  this is the dramaturgy of the postponed and the left unsaid.
+- **Artistic effect** — More tension than a complete event; visitors fill in the almost-event
+  themselves, which makes the piece personal. A series of almosts builds an expectation that
+  is never paid out, or once.
+- **Rough technical shape** — Events with an abort point and an envelope that stops before the
+  peak. The engine plays the rise and stops at a fraction of the duration; what is measurable
+  is how much of the envelope was reached and how often. Light: a short, incomplete rise.
+  Sound: a grain that is triggered but not developed. Deterministic and exportable.
+- **Smallest test** — Sixty seconds with six complete and six almost-events. Ask listeners
+  afterwards to reconstruct the order. If they name the almosts as missed moments, it works;
+  if they hear them as glitches, it has gone too far.
+- **Risk/uncertainty** — The boundary between "almost" and "broken" is narrow and differs per
+  device. Light may have no perceptible rise; then "almost" applies only to sound and the idea
+  must become narrower.
 
 ---
 
-## Dwarsverbanden
+## Cross-connections
 
-- 1 en 9 delen de gedachte dat een gebeurtenis een boodschap is die onderweg kan veranderen.
-- 2, 3 en 10 zijn alle drie varianten van hetzelfde materiaal: wat niet gebeurt, wat
-  geweigerd wordt en wat half gebeurt. Ze kunnen als één dramaturgische familie worden
-  getest, maar niet als één feature.
-- 6, 7 en 8 raken elkaar in de trage toestand die het gedrag van snelle gebeurtenissen
-  verandert; 8 voegt de sociale laag toe.
-- 4 en 5 gaan over eigenaarschap van het licht: de een door regels, de ander door toestand.
+- 1 and 9 share the thought that an event is a message that can change on the way.
+- 2, 3 and 10 are all three variants of the same material: what does not happen, what is
+  refused and what happens halfway. They can be tested as one dramaturgical family, but not as
+  one feature.
+- 6, 7 and 8 touch each other in the slow state that changes the behaviour of fast events; 8
+  adds the social layer.
+- 4 and 5 are about ownership of the light: one through rules, the other through state.
 
 ## Status
 
-Alles in dit bestand is hypothese of uitnodiging. Geen enkel idee is een v1-vereiste, een
-contract, een parameter of een release-criterium. Wie hier iets van wil uitproberen, doet dat
-in een los experiment buiten de plugin, met een eigen kleine test, en pas na expliciete
-activering door Lonn.
+Everything in this file is a hypothesis or an invitation. No idea is a v1 requirement, a
+contract, a parameter or a release criterion. Anyone who wants to try something here does so
+in a separate experiment outside the plug-in, with its own small test, and only after explicit
+activation by Lonn.
 
-## Reviewnoot (na onafhankelijke review)
+## Review note (after independent review)
 
-De onafhankelijke review vond #2 (**het vergeetboek**) en #3 (**de kunst van het
-negeren**) de sterkste en meest toetsbare ideeën; die twee zijn de aangewezen
-kandidaten voor een tweede experiment. #5 (de verveelde lamp), #10 (de
-bijna-gebeurtenis) en #8 (aanwezigheid zonder beelden) werden als zwakker
-beoordeeld: #5 en #10 als effect-trucs, #8 omdat de sensing onbetrouwbaar en
-privacygevoelig is terwijl het sterkste deel — de kaart op tafel als ritueel —
-geen sensing nodig heeft. Dat is een notitie, geen schrapping: de ideeën blijven
-uitnodigingen, maar ze zijn nu geprioriteerd. Zie
-[REVIEWS.md](REVIEWS.md).
+The independent review found #2 (**The book of forgetting**) and #3 (**The art of ignoring**)
+the strongest and most testable ideas; those two are the designated candidates for a second
+experiment. #5 (the bored lamp), #10 (the almost-event) and #8 (presence without images) were
+judged weaker: #5 and #10 as effect tricks, #8 because the sensing is unreliable and
+privacy-sensitive while the strongest part — the card on the table as ritual — needs no
+sensing at all. That is a note, not a deletion: the ideas remain invitations, but they are now
+prioritised. See [REVIEWS.md](REVIEWS.md).

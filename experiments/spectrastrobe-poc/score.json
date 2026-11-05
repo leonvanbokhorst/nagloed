@@ -9,19 +9,19 @@
     "sample_rates_hz": [48000, 44100],
     "bit_depths": [24, 16],
     "sections": [
-      {"t0": 0.0, "t1": 8.0, "label": "kamer"},
-      {"t0": 8.0, "t1": 14.0, "label": "eerste gloed"},
-      {"t0": 14.0, "t1": 28.0, "label": "naleven"},
-      {"t0": 28.0, "t1": 46.0, "label": "terughoudendheid"},
-      {"t0": 46.0, "t1": 52.0, "label": "herinnering"},
-      {"t0": 52.0, "t1": 72.0, "label": "uitdoving"}
+      {"t0": 0.0, "t1": 8.0, "label": "room"},
+      {"t0": 8.0, "t1": 14.0, "label": "first glow"},
+      {"t0": 14.0, "t1": 28.0, "label": "afterglow"},
+      {"t0": 28.0, "t1": 46.0, "label": "restraint"},
+      {"t0": 46.0, "t1": 52.0, "label": "memory"},
+      {"t0": 52.0, "t1": 72.0, "label": "fade-out"}
     ],
-    "description": "Vier momenten, veel ruimte ertussen. Een amberkleurig lichtgrain drijft van links naar rechts en dooft in 20 ms. 180 ms later antwoordt een lage impact met een niet-identieke envelope en lange decay. Een zwak lichtgrain blijft opzettelijk onbeantwoord. Veel later keert het gebaar terug: omgekeerd, verlaagd en dimmer."
+    "description": "Four moments, much space in between. An amber-coloured light grain drifts from left to right and fades in 20 ms. 180 ms later a low impact answers with a non-identical envelope and a long decay. A weak light grain deliberately remains unanswered. Much later the gesture returns: reversed, lowered and dimmer."
   },
   "exposures": {
-    "full": {"scale": 1.0, "max_colour_ratio": 0.20, "label": "volledig 20%"},
-    "mid": {"scale": 0.625, "max_colour_ratio": 0.125, "label": "midden 12,5%"},
-    "dim": {"scale": 0.3125, "max_colour_ratio": 0.0625, "label": "dim 6,25% (eerste hardware-exposure)"}
+    "full": {"scale": 1.0, "max_colour_ratio": 0.20, "label": "full 20%"},
+    "mid": {"scale": 0.625, "max_colour_ratio": 0.125, "label": "middle 12.5%"},
+    "dim": {"scale": 0.3125, "max_colour_ratio": 0.0625, "label": "dim 6.25% (first hardware exposure)"}
   },
   "envelope_rules": {
     "min_attack_ms": 20.0,
@@ -29,7 +29,7 @@
     "l1_release_ms_range": [20.0, 40.0],
     "l2_fade_in_ms": 50.0,
     "require_zero_start_end": true,
-    "note": "R4/R5 uit docs/v2/SAFETY-PRIVACY.md: attack/release ≥ 20 ms hard, ≥ 50 ms voor artistieke events. L1 heeft een eenmalige geïsoleerde extinctie van 20 ms; L2 start met een 50 ms fade-in."
+    "note": "R4/R5 from docs/v2/SAFETY-PRIVACY.md: attack/release ≥ 20 ms hard, ≥ 50 ms for artistic events. L1 has a single isolated 20 ms extinction; L2 starts with a 50 ms fade-in."
   },
   "carriers": {
     "reference": {
@@ -50,7 +50,7 @@
     },
     "colour_pan_law": "linear_0db_center",
     "max_colour_ratio": 0.25,
-    "note": "Referentie = -30 dBFS piekamplitude (bindend, M2), continu aanwezig; panning = gelijkvermogen-panlaw zodat de totale dragerenergie constant blijft. Kleuren = directe kanaalamplitude met lineaire 0-dB-middenpanning (geen -3 dB center law). Harde veiligheidsclamp in render.py: elk kleurkanaal ≤ 25% van de referentiepiek; som per oor wordt apart gerapporteerd (R3)."
+    "note": "Reference = -30 dBFS peak amplitude (binding, M2), continuously present; panning = equal-power pan law so that total carrier energy stays constant. Colours = direct channel amplitude with linear 0 dB centre panning (no -3 dB centre law). Hard safety clamp in render.py: every colour channel ≤ 25% of the reference peak; the sum per ear is reported separately (R3)."
   },
   "program": {
     "band_limit_hz": 15500.0,
@@ -69,8 +69,8 @@
           {"type": "bandpass", "hz": 420.0, "q": 1.1},
           {"type": "lowpass", "hz": 1200.0, "q": 0.707}
         ]},
-        "role": "zeer schaars kamerbeeld: één ver fragment",
-        "relation": "geen; kamer alleen"
+        "role": "very sparse room image: one distant fragment",
+        "relation": "none; room only"
       },
       {
         "id": "A1",
@@ -85,8 +85,8 @@
           {"type": "lowpass", "hz": 260.0, "q": 0.707},
           {"type": "lowpass", "hz": 260.0, "q": 0.707}
         ]},
-        "role": "lage impact als antwoord",
-        "relation": "reactie op L1-extinctie, 180 ms later, andere decay (2,5 s) dan het licht (20 ms)"
+        "role": "low impact as answer",
+        "relation": "response to L1 extinction, 180 ms later, different decay (2.5 s) than the light (20 ms)"
       },
       {
         "id": "A2",
@@ -96,8 +96,8 @@
         "peak_dbfs": -22.0,
         "pan": -0.12,
         "transform": {"reverse": true, "pitch_ratio": 0.75},
-        "role": "herinnerde, omgekeerde en verlaagde impact",
-        "relation": "transformatie van A1; 400 ms na aanvang van L4"
+        "role": "remembered, reversed and lowered impact",
+        "relation": "transformation of A1; 400 ms after the start of L4"
       }
     ]
   },
@@ -110,9 +110,9 @@
         "rgb": [0.20, 0.075, 0.02],
         "env": [[0.0, 0.0], [1.2, 0.55], [3.5, 0.75], [5.4, 0.95], [5.98, 1.0], [6.0, 0.0]],
         "pan": [[0.0, -1.0], [0.9, -1.0], [6.0, 0.6]],
-        "role": "amberkleurig lichtgrain: start hard links, drijft langzaam naar rechts, wordt iets helderder",
-        "extinction": "eenmalige geïsoleerde extinctie van 20 ms (R4)",
-        "relation": "de extinctie om 14,0 s is de aanleiding voor A1"
+        "role": "amber-coloured light grain: starts hard left, drifts slowly to the right, becomes slightly brighter",
+        "extinction": "single isolated 20 ms extinction (R4)",
+        "relation": "the extinction at 14.0 s is the trigger for A1"
       },
       {
         "id": "L2",
@@ -121,9 +121,9 @@
         "rgb": [0.055, 0.018, 0.004],
         "env": [[0.0, 0.0], [0.05, 0.35], [3.0, 0.6], [6.0, 0.4], [9.0, 0.7], [12.0, 0.45], [14.0, 0.0]],
         "pan": [[0.0, -0.5], [4.0, 0.5], [8.0, -0.4], [11.0, 0.45], [14.0, 0.0]],
-        "role": "diffuus amberrood veld dat langzaam ademt en dooft; het licht overleeft het geluid",
-        "extinction": "langzame fade",
-        "relation": "naleven na A1; geen nieuw audio-antwoord"
+        "role": "diffuse amber-red field that slowly breathes and fades; the light outlives the sound",
+        "extinction": "slow fade",
+        "relation": "afterglow after A1; no new audio answer"
       },
       {
         "id": "L3",
@@ -132,9 +132,9 @@
         "rgb": [0.035, 0.07, 0.10],
         "env": [[0.0, 0.0], [0.6, 1.0], [2.5, 0.8], [3.0, 0.0]],
         "pan": [[0.0, -0.2], [3.0, 0.2]],
-        "role": "zwak, koel lichtgrain dat vanzelf dooft",
-        "extinction": "langzame fade",
-        "relation": "opzettelijk onbeantwoord: geen audio, geen latere terugkeer"
+        "role": "weak, cool light grain that fades by itself",
+        "extinction": "slow fade",
+        "relation": "deliberately unanswered: no audio, no later return"
       },
       {
         "id": "L4",
@@ -143,25 +143,25 @@
         "rgb": [0.11, 0.04125, 0.011],
         "env": [[0.0, 0.0], [1.6, 0.7], [3.6, 0.9], [4.6, 0.85], [5.0, 0.0]],
         "pan": [[0.0, 0.6], [5.0, -0.85]],
-        "role": "dimmere, tragere echo van L1: omgekeerde beweging, andere timing",
-        "extinction": "langzame fade",
-        "relation": "herinnerde terugkeer van L1, 38 s later; transformatie van A1 klinkt 400 ms later"
+        "role": "dimmer, slower echo of L1: reversed movement, different timing",
+        "extinction": "slow fade",
+        "relation": "remembered return of L1, 38 s later; transformation of A1 sounds 400 ms later"
       }
     ]
   },
   "relations": [
-    {"id": "R1", "from": ["L1"], "to": ["A1"], "kind": "verwantschap, geen synchronie", "detail": "180 ms na de 20 ms-extinctie; audio-envelope 30 ms attack / 2,5 s decay, licht 1,2 s attack / 20 ms extinctie."},
-    {"id": "R2", "from": ["A1"], "to": ["L2"], "kind": "licht overleeft geluid", "detail": "De diffuse amberrode gloed ademt door nadat de impact weg is; geen nieuw geluid."},
-    {"id": "R3", "from": ["L3"], "to": [], "kind": "opzettelijk onbeantwoord", "detail": "Zwak lichtgrain om 38 s krijgt geen audio en geen latere echo."},
-    {"id": "R4", "from": ["L1", "A1"], "to": ["L4", "A2"], "kind": "herinnering", "detail": "38 s later: L4 is een dimmere, tragere, omgekeerde echo; A2 is A1 omgekeerd en verlaagd (pitch 0,75), 400 ms na L4-aanvang."}
+    {"id": "R1", "from": ["L1"], "to": ["A1"], "kind": "kinship, not synchrony", "detail": "180 ms after the 20 ms extinction; audio envelope 30 ms attack / 2.5 s decay, light 1.2 s attack / 20 ms extinction."},
+    {"id": "R2", "from": ["A1"], "to": ["L2"], "kind": "light outlives sound", "detail": "The diffuse amber-red glow keeps breathing after the impact is gone; no new sound."},
+    {"id": "R3", "from": ["L3"], "to": [], "kind": "deliberately unanswered", "detail": "The weak light grain at 38 s gets no audio and no later echo."},
+    {"id": "R4", "from": ["L1", "A1"], "to": ["L4", "A2"], "kind": "memory", "detail": "38 s later: L4 is a dimmer, slower, reversed echo; A2 is A1 reversed and lowered (pitch 0.75), 400 ms after the start of L4."}
   ],
   "safety": {
     "colour_clamp_ratio": 0.25,
     "score_max_colour_ratio": 0.20,
     "reference_level_dbfs": -30.0,
     "target_true_peak_dbfs": -6.0,
-    "stop": "Deze offline WAV heeft GEEN encoder-panic en GEEN geteste 50 ms-softwareramp. Primaire stop: weergave stoppen + Kasina-helderheid naar minimum + bril af (of één oog bedekken).",
-    "notes": "Conservatief eerste experiment: geen bedoelde luminantiemodulatie in de kleurkanalen; alleen langzame kleurovergangen en één geïsoleerde 20 ms-extinctie. Referentie-panning van 20 Hz is door het formaat voorgeschreven en blijft een open aanname (geen zichtbaar kanaal). Kleuren ≤ 25% per drager (score 20%; ladder 6,25/12,5/20%). Geen medische of wellness-claims."
+    "stop": "This offline WAV has NO encoder panic and NO tested 50 ms software ramp. Primary stop: stop playback + Kasina brightness to minimum + glasses off (or cover one eye).",
+    "notes": "Conservative first experiment: no intended luminance modulation in the colour channels; only slow colour transitions and one isolated 20 ms extinction. The 20 Hz reference panning is prescribed by the format and remains an open assumption (not a visible channel). Colours ≤ 25% per carrier (score 20%; ladder 6.25/12.5/20%). No medical or wellness claims."
   },
   "verify": {
     "reference_windows_s": [[20.0, 21.3656], [40.0, 41.3656], [60.0, 61.3656]],

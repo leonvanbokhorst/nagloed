@@ -1,411 +1,409 @@
-# NAGLOED v2 — architectuur-opties
+# NAGLOED v2 — architecture options
 
-Verkenning, geen werkorder. Dit document hoort bij issue #14
-(`leonvanbokhorst/nagloed`) en is **expliciet buiten scope van v1.0.4**. Het
-beschrijft wat de huidige code doet, welke decomposities denkbaar zijn en welke
-richting het eerste experiment het minste risico geeft. Niets hierin is een
-implementatievoorstel voor `src/`, `CMakeLists.txt`, presets of release.
+Exploration, not a work order. This document belongs to issue #14
+(`leonvanbokhorst/nagloed`) and is **explicitly out of scope for v1.0.4**. It
+describes what the current code does, which decompositions are conceivable and
+which direction gives the first experiment the least risk. Nothing here is an
+implementation proposal for `src/`, `CMakeLists.txt`, presets or release.
 
-Leeswijzer: elke bewering is gemarkeerd als **[F] feit in deze checkout**,
-**[T] technische oplossing/hypothese**, **[I] artistieke intentie** of
-**[O] open onderzoeksvraag**. Aannames met een ID (U01, U02, …) staan uitgewerkt
-in `docs/v2/TECHNICAL-UNCERTAINTIES.md`. Dit document is een **bijlage** bij de
-verkenning, geen poort en geen backlog: alleen de artistieke visie, het
-experiment en het veiligheidsblad zijn nu leidend.
+Reading guide: every claim is marked as **[F] fact in this checkout**,
+**[T] technical solution/hypothesis**, **[I] artistic intent** or
+**[O] open research question**. Assumptions with an ID (U01, U02, …) are worked
+out in `docs/v2/TECHNICAL-UNCERTAINTIES.md`. This document is an **appendix**
+to the exploration, not a gate and not a backlog: only the artistic vision, the
+experiment and the safety sheet are currently authoritative.
 
 ---
 
-## 1. Huidige architectuur zoals aangetroffen
+## 1. Current architecture as found
 
-### 1.1 Signaalpad en lagen
+### 1.1 Signal path and layers
 
-| Laag | Plek | Wat het doet | Bewijs |
+| Layer | Location | What it does | Evidence |
 |---|---|---|---|
-| Contracts | `src/core/` | Bevroren publieke typen: parameter-IDs, ranges, `EngineParams`, `VisualState`, `PresetAccess` | `docs/ARCHITECTURE.md:17-24` |
-| DSP | `src/dsp/` | `Engine` (pimpl) rond `EngineDSP`; Sintel → Ruimte → EAR | `src/dsp/EngineDSP.h:28-47` |
-| GUI | `src/ui/` | Praat alleen via `VisualSource` + APVTS; include nooit `src/dsp` | `README.md:184-186`, `docs/ARCHITECTURE.md:32-34` |
-| Plugin-glue | `src/plugin/` | `NagloedProcessor`: APVTS, buslayout, state, presets | `src/plugin/PluginProcessor.h:15-67` |
-| Tools | `tools/` | `nagl_tests`, `nagl_render`, `nagl_preview` compileren dezelfde bronnen | `README.md:127-138`, `CMakeLists.txt:112-143` |
+| Contracts | `src/core/` | Frozen public types: parameter IDs, ranges, `EngineParams`, `VisualState`, `PresetAccess` | `docs/ARCHITECTURE.md:17-24` |
+| DSP | `src/dsp/` | `Engine` (pimpl) around `EngineDSP`; Sintel → Ruimte → EAR | `src/dsp/EngineDSP.h:28-47` |
+| GUI | `src/ui/` | Talks only via `VisualSource` + APVTS; never includes `src/dsp` | `README.md:184-186`, `docs/ARCHITECTURE.md:32-34` |
+| Plugin glue | `src/plugin/` | `NagloedProcessor`: APVTS, bus layout, state, presets | `src/plugin/PluginProcessor.h:15-67` |
+| Tools | `tools/` | `nagl_tests`, `nagl_render`, `nagl_preview` compile the same sources | `README.md:127-138`, `CMakeLists.txt:112-143` |
 
-Het audiopad per blok: extra kanalen wissen, `readParams(apvts)` →
+The audio path per block: clear extra channels, `readParams(apvts)` →
 `engine.setParams(...)` → `engine.process(...)` → `engine.getVisual(v)` →
-`visualChannel.publish(v)` (`src/plugin/PluginProcessor.cpp:41-55`). Binnen de
-engine: capture + grains (Sintel), FDN (Ruimte), analoge keten + eindlimiter
-(EAR), met een harde ±2.0-clamp als laatste veiligheidsstap
-(`src/dsp/EngineDSP.cpp:600-664`). De latency is 51 samples bij 48 kHz
+`visualChannel.publish(v)` (`src/plugin/PluginProcessor.cpp:41-55`). Inside the
+engine: capture + grains (Sintel), FDN (Ruimte), analogue chain + output limiter
+(EAR), with a hard ±2.0 clamp as the final safety stage
+(`src/dsp/EngineDSP.cpp:600-664`). The latency is 51 samples at 48 kHz
 (`docs/VALIDATION.md:52-53`).
 
-### 1.2 De echte seams
+### 1.2 The real seams
 
-De vraag uit issue #14 is of `VisualState` als eventbus kan dienen. Dat kan
-niet: het is een **displaykanaal**. De seams die er werkelijk zijn:
+The question from issue #14 is whether `VisualState` can serve as an event bus.
+It cannot: it is a **display channel**. The seams that actually exist:
 
-| Seam | Plek | Richting | Resolutie | Geschikt als eventbus? |
+| Seam | Location | Direction | Resolution | Suitable as an event bus? |
 |---|---|---|---|---|
-| `VisualState` / `SnapshotChannel` | `src/core/Contracts.h:27-57`, `src/core/Snapshot.h:9-32`; publicatie `PluginProcessor.cpp:52-54` | audio → GUI | 1× per blok, 256 `GrainView`-records | **Nee.** Display-kopie; engine mag een subset sturen (`docs/ARCHITECTURE.md:34`); geen tijdstempels, geen identiteit, geen geschiedenis, verlieslatend |
-| `EngineParams` / APVTS | `src/core/EngineParams.h:12-76`, `src/core/Parameters.h:193-260` | host/bericht → audio | 1× per blok; parameters staan aan blokstart | **Nee.** Alleen actuele controlwaarden; geen events, geen `t`, geen oorzaak |
-| Audio-blokgrens | `PluginProcessor.cpp:41`, `EngineDSP.cpp:502-504` | host ↔ plugin | 128–4096 samples | **Nee.** Alleen audio I/O; geen metadata-kanaal |
-| MIDI-buffer | `PluginProcessor.h:32`, `EngineDSP.cpp:502-504` | host → plugin | — | **Nee.** `acceptsMidi()` is `false`; de engine negeert de buffer expliciet |
-| `getVisual()` | `EngineDSP.cpp:671-701` | audio-thread, direct na `process()` | 1× per blok | **Nee.** Zelfde displaydoel, uitsluitend voor de GUI |
-| Capture-ring / grainpool | `src/dsp/GrainEngine.h:150-166` | intern, per sample | 12 s ring, 256 stemmen | **Nee.** Privaat achter de pimpl (`Engine.h:39-43`) |
-| Offline score/automation | `tools/DemoScore.h:13-26`, `tools/render_main.cpp:81-106` | score → processor | per blok, tijdgestuurd | **Bijna.** Bestaand reproduceerbaar renderpad, maar zonder licht- of eventmodel |
-| APVTS-state/presets | `PluginProcessor.cpp:88-136`, `presets/*.json` | opslag | per save/load | **Nee.** Session-state, geen runtime-kanaal |
+| `VisualState` / `SnapshotChannel` | `src/core/Contracts.h:27-57`, `src/core/Snapshot.h:9-32`; publication `PluginProcessor.cpp:52-54` | audio → GUI | 1× per block, 256 `GrainView` records | **No.** Display copy; the engine may send a subset (`docs/ARCHITECTURE.md:34`); no timestamps, no identity, no history, lossy |
+| `EngineParams` / APVTS | `src/core/EngineParams.h:12-76`, `src/core/Parameters.h:193-260` | host/message → audio | 1× per block; parameters are set at block start | **No.** Current control values only; no events, no `t`, no cause |
+| Audio block boundary | `PluginProcessor.cpp:41`, `EngineDSP.cpp:502-504` | host ↔ plugin | 128–4096 samples | **No.** Audio I/O only; no metadata channel |
+| MIDI buffer | `PluginProcessor.h:32`, `EngineDSP.cpp:502-504` | host → plugin | — | **No.** `acceptsMidi()` is `false`; the engine explicitly ignores the buffer |
+| `getVisual()` | `EngineDSP.cpp:671-701` | audio thread, immediately after `process()` | 1× per block | **No.** Same display purpose, solely for the GUI |
+| Capture ring / grain pool | `src/dsp/GrainEngine.h:150-166` | internal, per sample | 12 s ring, 256 voices | **No.** Private behind the pimpl (`Engine.h:39-43`) |
+| Offline score/automation | `tools/DemoScore.h:13-26`, `tools/render_main.cpp:81-106` | score → processor | per block, time-driven | **Almost.** Existing reproducible render path, but without a light or event model |
+| APVTS state/presets | `PluginProcessor.cpp:88-136`, `presets/*.json` | storage | per save/load | **No.** Session state, no runtime channel |
 
-Conclusie **[F]**: er is in v1 geen sample-accurate eventbus en geen
-licht-uitgang. De enige echte realtime-seam is de audioblokgrens plus
-parameterupdates aan blokstart. Een v2-eventseam moet gebouwd worden, niet
-hergebruikt. De interne control-rate is weliswaar 16 samples
-(`src/dsp/EngineDSP.h:73`, absoluut sampleteller in
-`src/dsp/EngineDSP.cpp:580-598`), maar dat is een *interne* rekensnelheid; de
-plugin levert geen events op die resolutie.
+Conclusion **[F]**: there is no sample-accurate event bus and no light output in
+v1. The only real realtime seam is the audio block boundary plus parameter
+updates at block start. A v2 event seam must be built, not reused. The internal
+control rate is indeed 16 samples (`src/dsp/EngineDSP.h:73`, absolute sample
+counter in `src/dsp/EngineDSP.cpp:580-598`), but that is an *internal*
+computation rate; the plugin does not emit events at that resolution.
 
-### 1.3 Realtime- en threadingfeiten
+### 1.3 Realtime and threading facts
 
-- **[F]** `prepare()` alloceert; `process()`/`setParams()`/`getVisual()` niet.
-  Bewezen met een global-`operator new`-teller: 0 allocaties
+- **[F]** `prepare()` allocates; `process()`/`setParams()`/`getVisual()` do not.
+  Proven with a global `operator new` counter: 0 allocations
   (`tests/DspTests.cpp:1060-1119`, `docs/VALIDATION.md:48-49`).
-- **[F]** Het audioresultaat is blokgrootte-onafhankelijk binnen 2% RMS voor
+- **[F]** The audio result is block-size independent within 2% RMS for
   128/512/4096 (`tests/DspTests.cpp:699-735`).
-- **[F]** CPU ≈ 1.9–2.2% van één core bij 48 kHz/128 samples met een 64-grain
-  cloud; ≈ 5.6% bij 200 grains (`docs/VALIDATION.md:50-51`).
-- **[F]** Parameters worden aan blokstart gelezen; hostautomation is dus
-  blokgekwantiseerd, ook al rekent de engine intern op 16-sampleframes
-  (`src/core/Parameters.h:190-260`).
-- **[F]** De GUI kan de engine niet bereiken buiten `VisualSource` om; de
-  pimpl houdt `EngineDSP` privé (`src/dsp/Engine.h:14-44`).
-- **[F]** Determinisme is alleen aantoonbaar per build/platform (offscreen
-  editorbeeld byte-identiek, `README.md:148-150`); de demo-render is een
-  offline WAV van 48 kHz/24-bit (`tools/render_main.cpp:49-51,74-76`).
+- **[F]** CPU ≈ 1.9–2.2% of one core at 48 kHz/128 samples with a 64-grain
+  cloud; ≈ 5.6% at 200 grains (`docs/VALIDATION.md:50-51`).
+- **[F]** Parameters are read at block start; host automation is therefore
+  block-quantised, even though the engine computes internally on 16-sample
+  frames (`src/core/Parameters.h:190-260`).
+- **[F]** The GUI cannot reach the engine outside `VisualSource`; the pimpl
+  keeps `EngineDSP` private (`src/dsp/Engine.h:14-44`).
+- **[F]** Determinism is only demonstrable per build/platform (offscreen
+  editor image byte-identical, `README.md:148-150`); the demo render is an
+  offline 48 kHz/24-bit WAV (`tools/render_main.cpp:49-51,74-76`).
 
-### 1.4 Wat voor v2 ontbreekt
+### 1.4 What v2 lacks
 
-**[F]** Geen event/gesture-representatie, geen scheduler met tijdstempels, geen
-geheugen/vergeten, geen licht-engine of SpectraStrobe-encoder, geen
-post-DSP-routing, geen netwerktransport, geen consent-/privacylaag. Dat zijn
-precies de zeven onderzoeksvragen uit issue #14 (Representation, Timing and
+**[F]** No event/gesture representation, no scheduler with timestamps, no
+memory/forgetting, no light engine or SpectraStrobe encoder, no post-DSP
+routing, no network transport, no consent/privacy layer. These are precisely
+the seven research questions from issue #14 (Representation, Timing and
 history, Audio architecture, SpectraStrobe encoding, Where in the signal chain,
 Host behaviour, Human/hardware experience).
 
 ---
 
-## 2. Vier kandidaat-decomposities
+## 2. Four candidate decompositions
 
-### 2.0 Overzicht
+### 2.0 Overview
 
-| | Hergebruik | Wordt zelfstandig | Grens | Realtime | Grootste risico | Verdict |
+| | Reuse | Becomes independent | Boundary | Realtime | Biggest risk | Verdict |
 |---|---|---|---|---|---|---|
-| **A** Externe companion/offline renderer | v1 volledig, render-toolpatroon | score, event-engine, licht, encoder, renderer | bestand (score → WAV/CSV) | geen (offline) | geen live-ervaring; hardware nog niet bewezen | **Aanbevolen eerste experiment** |
-| **B** In-plugin control-rate event-seam + lichte engine | audiopad + capture-ring als bron | licht-engine, scheduler, geheugen, encoder | nieuwe interne API + bounded queue; build-flag | audio-thread of lock-free worker, 0,33 ms raster | v1 aanraken, host-routing, runaway | Fase 2, alleen na A + hardware |
-| **C** Herbruikbare core + nieuwe v2-host | GrainEngine, Ruimte, EAR, EngineDSP | core-library + aparte v2-host | library-API + event-API; apart CMake-target | zelfde discipline, host kiest raster | grote refactor, regressie, dubbele QA | Middellange termijn, nieuwe branch |
-| **D** Distributed peer-model | eventvocabulaire + encoder per node | peers, netwerklaag, lokale klok | bounded telegramprotocol | netwerkthread nooit in audiopad | runaway tussen kamers, drift, security | Horizon; detail in `docs/v2/DISTRIBUTED.md` |
+| **A** External companion/offline renderer | v1 in full, render-tool pattern | score, event engine, light, encoder, renderer | file (score → WAV/CSV) | none (offline) | no live experience; hardware not yet proven | **Recommended first experiment** |
+| **B** In-plugin control-rate event seam + light engine | audio path + capture ring as source | light engine, scheduler, memory, encoder | new internal API + bounded queue; build flag | audio thread or lock-free worker, 0.33 ms grid | touching v1, host routing, runaway | Phase 2, only after A + hardware |
+| **C** Extracted reusable core + new v2 host | GrainEngine, Ruimte, EAR, EngineDSP | core library + separate v2 host | library API + event API; separate CMake target | same discipline, host chooses grid | major refactor, regression, double QA | Medium term, new branch |
+| **D** Distributed peer model | event vocabulary + encoder per node | peers, network layer, local clock | bounded telegram protocol | network thread never in the audio path | runaway between rooms, drift, security | Horizon; detail in `docs/v2/DISTRIBUTED.md` |
 
-### 2.A v1 onaangetast + externe companion/offline renderer
+### 2.A v1 untouched + external companion/offline renderer
 
-**[I]** Het eerste artistieke bewijs is niet "de plugin doet licht", maar "één
-gedeelde gebeurtenis voelt verwant zonder synchroon te zijn" (issue #14). Dat
-vraagt geen pluginwijziging.
+**[I]** The first artistic proof is not "the plugin does light", but "one
+shared event feels related without being synchronised" (issue #14). That
+requires no plugin change.
 
-**[T] Hergebruik.** De v1-plugin blijft draaien zoals hij is (AU/VST3/standalone,
-`README.md:64-68`). Het bestaande offline patroon wordt hergebruikt:
-`tools/render_main.cpp:45-115` toont een host-loze lus met een declaratieve
-score (`tools/DemoScore.h:13-26`), blokgrootte 512, 48 kHz en 24-bit WAV. Voor
-audio dat echt door v1 moet: dezelfde bronnen headless linken zoals
-`NAGLOED_HEADLESS` dat al doet (`PluginProcessor.cpp:57-64`).
+**[T] Reuse.** The v1 plugin keeps running as it is (AU/VST3/standalone,
+`README.md:64-68`). The existing offline pattern is reused:
+`tools/render_main.cpp:45-115` shows a host-less loop with a declarative
+score (`tools/DemoScore.h:13-26`), block size 512, 48 kHz and 24-bit WAV. For
+audio that really has to go through v1: link the same sources headless as
+`NAGLOED_HEADLESS` already does (`PluginProcessor.cpp:57-64`).
 
-**[T] Wat zelfstandig wordt.** Een scoreformaat (declaratief, versioneerd), een
-event/gesture-vocabulaire (hypothese), een SpectraStrobe-encoder, een renderer
-en een verificatiestap — alles buiten de plugin, in een aparte map of tool. Geen
-nieuwe parameter-IDs, geen APVTS, geen presetwijziging. **Wat er nog niet is:**
-een echte event/geheugen-engine en een zelfstandige licht-engine met eigen
-toestand. De eerste PoC dekt de signaalhelft (encoder + integriteit); de
-event-engine is een volgende stap, niet iets wat al gebouwd is.
+**[T] What becomes independent.** A score format (declarative, versioned), an
+event/gesture vocabulary (hypothesis), a SpectraStrobe encoder, a renderer and
+a verification step — all outside the plugin, in a separate directory or tool.
+No new parameter IDs, no APVTS, no preset change. **What is not there yet:** a
+real event/memory engine and a self-contained light engine with its own state.
+The first PoC covers the signal half (encoder + integrity); the event engine is
+a next step, not something already built.
 
-**[T] Grens/contract.** Bestandsgebaseerd en eenrichtingsverkeer: score in →
-WAV + `events.csv` + timeline uit. Eén seed per render. Geen gedeeld geheugen,
-geen realtime koppeling, geen plugin-ABI-wijziging. Het scoreformaat is de
-enige nieuwe "API" en die blijft binnen de verkenning.
+**[T] Boundary/contract.** File-based and one-directional: score in →
+WAV + `events.csv` + timeline out. One seed per render. No shared memory, no
+realtime coupling, no plugin ABI change. The score format is the only new
+"API" and it stays within the exploration.
 
-**[T] Realtime/threading.** Geen realtime-eis in v1. De renderer is
-single-threaded en deterministisch; latentie is de duur van een render, niet
-audiolatentie. Optioneel komt er later een apart realtime companion-proces,
-maar dat is een tweede stap.
+**[T] Realtime/threading.** No realtime requirement in v1. The renderer is
+single-threaded and deterministic; latency is the duration of a render, not
+audio latency. Optionally a separate realtime companion process may come later,
+but that is a second step.
 
-**Risico's.** Geen live-ervaring; de artistieke vraag "voelt dit in het echt"
-blijft open tot de hardwaretest. Risico dat er een parallelle architectuur
-groeit die later niet integreert — ondervangen door hetzelfde eventvocabulaire
-(§5) als B te gebruiken. SpectraStrobe-routing in een host blijft ongetest;
-daarom is de hardwareverificatie een harde poort, niet een detail. Zie
-`docs/v2/SPECTRASTROBE.md` voor signaalintegriteit en toleranties.
+**Risks.** No live experience; the artistic question "does this feel real in
+person" stays open until the hardware test. Risk that a parallel architecture
+grows that cannot be integrated later — mitigated by using the same event
+vocabulary (§5) as B. SpectraStrobe routing in a host remains untested; that is
+why hardware verification is a hard gate, not a detail. See
+`docs/v2/SPECTRASTROBE.md` for signal integrity and tolerances.
 
-**Te toetsen aannames.** U05, U06, U12, U14, U22 (determinisme), plus de
-artistieke U02/U03.
+**Assumptions to test.** U05, U06, U12, U14, U22 (determinism), plus the
+artistic U02/U03.
 
-**Verdict.** Ontwerpkeuze met het minste risico voor v1.0.4. Dit is ook
-letterlijk de "suggested first experiment" uit issue #14.
+**Verdict.** Design choice with the least risk for v1.0.4. This is also
+literally the "suggested first experiment" from issue #14.
 
-### 2.B In-plugin control-rate event-seam + zelfstandige licht-engine
+### 2.B In-plugin control-rate event seam + self-contained light engine
 
-**[I]** Als A artistiek overtuigt, is de volgende vraag of de koppeling *in* de
-plugin kan leven zonder de bestaande stabiliteit te breken.
+**[I]** If A convinces artistically, the next question is whether the coupling
+can live *inside* the plugin without breaking the existing stability.
 
-**[T] Hergebruik.** Het volledige audiopad en de capture-ring als bron. De
-bestaande control-rate van 16 samples (`EngineDSP.h:73`) kan als raster voor
-een event-tap dienen: één event-frame per 16 samples (≈0,33 ms bij 48 kHz),
-mits de engine dat als *extra* kanaal naast `VisualState` aanbiedt.
+**[T] Reuse.** The full audio path and the capture ring as source. The existing
+control rate of 16 samples (`EngineDSP.h:73`) can serve as the grid for an
+event tap: one event frame per 16 samples (≈0.33 ms at 48 kHz), provided the
+engine offers that as an *extra* channel next to `VisualState`.
 
-**[T] Wat zelfstandig wordt.** Een licht-engine met eigen toestand, scheduler,
-RNG en geheugen; een encoder; een optioneel eventlog. De audio-DSP blijft
-inhoudelijk ongemoeid.
+**[T] What becomes independent.** A light engine with its own state, scheduler,
+RNG and memory; an encoder; an optional event log. The audio DSP itself remains
+untouched.
 
-**[T] Grens/contract.** Een nieuwe interne API, bijvoorbeeld
-`EventSink::push(const Event&) noexcept` (audio-thread) plus
-`LightEngine::render(...)`, met een vaste capaciteit en expliciete
-drop-policy. **Niet** `VisualState` hergebruiken of uitbreiden. Alles achter
-een build-flag (`NAGLOED_V2_EXPERIMENTAL`) en nooit op de v1.0.x-releasebranch.
-SpectraStrobe-carriers kunnen niet door de bestaande keten
-(`EngineDSP.cpp:600-664` bevat low-pass, saturatie, limiter); ze moeten na de
-DSP worden toegevoegd of via een aparte bus/offline export. Dat is een
-routingvraag, geen DSP-vraag — zie `docs/v2/SPECTRASTROBE.md`.
+**[T] Boundary/contract.** A new internal API, for example
+`EventSink::push(const Event&) noexcept` (audio thread) plus
+`LightEngine::render(...)`, with fixed capacity and an explicit drop policy.
+**Do not** reuse or extend `VisualState`. Everything behind a build flag
+(`NAGLOED_V2_EXPERIMENTAL`) and never on the v1.0.x release branch.
+SpectraStrobe carriers cannot pass through the existing chain
+(`EngineDSP.cpp:600-664` contains low-pass, saturation, limiter); they must be
+added after the DSP or via a separate bus/offline export. That is a routing
+question, not a DSP question — see `docs/v2/SPECTRASTROBE.md`.
 
-**[T] Realtime/threading.** Event-engine op de audio-thread of op een
-lock-free worker met bounded queue; nooit blokkeren, nooit alloceren. CPU moet
-binnen het bestaande budget blijven (U17). Refractaire periodes en budgets
-(U18/U19) zijn hier geen optimalisatie maar een veiligheidsvoorwaarde.
+**[T] Realtime/threading.** Event engine on the audio thread or on a lock-free
+worker with a bounded queue; never block, never allocate. CPU must stay within
+the existing budget (U17). Refractory periods and budgets (U18/U19) are not an
+optimisation here but a safety condition.
 
-**Risico's.** Aanraken van `src/plugin` en `CMakeLists.txt` is onvermijdelijk;
-dat is precies wat de guardrails van issue #14 verbieden zolang v1 niet klaar
-is. Host-routing van carriers is onbewezen. Een audio↔licht-lus kan ontaarden.
-De v1-realtimegaranties (0 allocaties, blokinvariantie) moeten opnieuw bewezen
-worden met de extra module.
+**Risks.** Touching `src/plugin` and `CMakeLists.txt` is unavoidable; that is
+exactly what the guardrails of issue #14 forbid as long as v1 is not finished.
+Host routing of carriers is unproven. An audio↔light loop can run away. The v1
+realtime guarantees (0 allocations, block invariance) must be proven again with
+the extra module.
 
-**Te toetsen aannames.** U01–U04, U12, U13, U17–U21.
+**Assumptions to test.** U01–U04, U12, U13, U17–U21.
 
-**Verdict.** Fase 2, alleen na een geslaagde A + hardwareverificatie. Niet in
-deze verkenning bouwen.
+**Verdict.** Phase 2, only after a successful A + hardware verification. Not to
+be built in this exploration.
 
-### 2.C Losgetrokken herbruikbare core + nieuwe v2-host
+### 2.C Extracted reusable core + new v2 host
 
-**[I]** Op lange termijn is NAGLOED mogelijk niet één plugin maar een
-granulaire kern met meerdere gastheren: de v1-plugin, een installatie-app, een
-renderer.
+**[I]** In the long term NAGLOED may not be one plugin but a granular core with
+several hosts: the v1 plugin, an installation app, a renderer.
 
-**[T] Hergebruik.** `GrainEngine`, `RuimteReverb`, `AnalogChain`, `Modulation`,
-`DspUtil` en de `EngineDSP`-orkestratie; de tests grotendeels. Extractie naar
-een library-target (`nagl_core`) met een stabiele, host-agnostische API.
+**[T] Reuse.** `GrainEngine`, `RuimteReverb`, `AnalogChain`, `Modulation`,
+`DspUtil` and the `EngineDSP` orchestration; the tests largely. Extraction into
+a library target (`nagl_core`) with a stable, host-agnostic API.
 
-**[T] Wat zelfstandig wordt.** De core-library; daarnaast een nieuwe v2-host
-(standalone of nieuwe plugin) die event-engine, licht, routing en UI bezit. v1
-blijft op de releasebranch bevroren.
+**[T] What becomes independent.** The core library; plus a new v2 host
+(standalone or new plugin) that owns the event engine, light, routing and UI.
+v1 stays frozen on the release branch.
 
-**[T] Grens/contract.** Library-API (`prepare/reset/setParams/process/
-getVisual`) plus event-API; eigenaarschap van buffers; geen GUI-afhankelijkheid
-in de core. Let op: de huidige `Engine`-signatuur gebruikt `juce::AudioBuffer`
-en `juce::MidiBuffer` (`src/dsp/Engine.h:34`), dus "JUCE-vrij" is een separaat
-besluit, geen automatisme.
+**[T] Boundary/contract.** Library API (`prepare/reset/setParams/process/
+getVisual`) plus event API; buffer ownership; no GUI dependency in the core.
+Note: the current `Engine` signature uses `juce::AudioBuffer` and
+`juce::MidiBuffer` (`src/dsp/Engine.h:34`), so "JUCE-free" is a separate
+decision, not automatic.
 
-**[T] Realtime/threading.** Zelfde discipline als v1; de nieuwe host kiest
-blokgrootte en control-rate. Distributie en licensing veranderen niet
-(GPL-3.0-or-later, eigen JUCE-licentie; `README.md:205-213`).
+**[T] Realtime/threading.** Same discipline as v1; the new host chooses block
+size and control rate. Distribution and licensing do not change
+(GPL-3.0-or-later, own JUCE licence; `README.md:205-213`).
 
-**Risico's.** Grote refactor, CMake-churn, regressierisico, dubbele QA en
-onderhoud, en een tweede product met eigen release/validatie. Voor het eerste
-experiment is dit overkill.
+**Risks.** Major refactor, CMake churn, regression risk, double QA and
+maintenance, and a second product with its own release/validation. For the
+first experiment this is overkill.
 
-**Te toetsen aannames.** U05, U17, U20, U21.
+**Assumptions to test.** U05, U17, U20, U21.
 
-**Verdict.** Middellange termijn, als aparte branch en nieuw target — nooit als
-in-place herstructurering van v1.
+**Verdict.** Medium term, as a separate branch and new target — never as an
+in-place restructuring of v1.
 
-### 2.D Distributed peer-model
+### 2.D Distributed peer model
 
-**[I]** Kamers als gedeeltelijk autonome luisteraars: telegrammen, herinneringen
-die tussen ruimtes reizen, bewuste drift (issue #14; detail in
+**[I]** Rooms as partially autonomous listeners: telegrams, memories that
+travel between rooms, deliberate drift (issue #14; detail in
 `docs/v2/DISTRIBUTED.md`).
 
-**[T] Hergebruik.** Het eventvocabulaire en de encoder per node; elke node
-draait zijn eigen audio- en lichtwereld.
+**[T] Reuse.** The event vocabulary and the encoder per node; each node runs
+its own audio and light world.
 
-**[T] Wat zelfstandig wordt.** De peer-/netwerklaag: bounded telegrammen over
-OSC, lokale klokautonomie, drop-policy, optionele gedeelde klok. Geen
-netwerkaudio in fase 1.
+**[T] What becomes independent.** The peer/network layer: bounded telegrams
+over OSC, local clock autonomy, drop policy, optional shared clock. No network
+audio in phase 1.
 
-**[T] Grens/contract.** Minimaal telegram (id, kind, tijd, parameters, seed,
-cause), rate limits, vertrouwd lokaal netwerk, geen PII. De netwerkthread raakt
-het audiopad nooit direct.
+**[T] Boundary/contract.** Minimal telegram (id, kind, time, parameters, seed,
+cause), rate limits, trusted local network, no PII. The network thread never
+touches the audio path directly.
 
-**Risico's.** Runaway feedback tussen kamers, klokdrift, duplicaten,
-beveiliging, en een veel grotere complexiteit dan het eerste experiment
-rechtvaardigt. Dit versterkt U25–U28.
+**Risks.** Runaway feedback between rooms, clock drift, duplicates, security,
+and much greater complexity than the first experiment justifies. This
+reinforces U25–U28.
 
-**Verdict.** Horizon. Pas zinvol als het eventvocabulaire uit A/B stabiel is.
-Cross-ref: `docs/v2/DISTRIBUTED.md`.
-
----
-
-## 3. Aanbevolen richting voor het eerste experiment
-
-**[T]** Kies **A**, in twee strikt gescheiden stappen, en houd v1.0.4
-onaangetast:
-
-1. **A1 — losse offline renderer, zonder v1-code.** Een declaratieve score van
-   60–90 s, een eigen deterministische renderer, een SpectraStrobe-encoder en
-   een verificatiestap; uitvoer 48 kHz/24-bit stereo plus een 44,1 kHz/16-bit
-   variant, dim-/mid-varianten voor de hardwareladder, een program-only
-   A/B-WAV, `events.csv` en een tijdlijn. Inhoudelijk minimaal: één lichtkorrel
-   met beweging en abrupte extinctie, één auditieve respons met *niet-gelijke*
-   envelope en bewuste vertraging, één getransformeerde terugkeer veel later, en
-   minimaal één bewust onbeantwoord licht-event. **A1 dekt in deze verkenning de
-   signaalhelft, niet de event-engine of het geheugenmodel:** een echte
-   scheduler met budgets, refractaire periodes en `remember`/`forget` is nog
-   niet gebouwd en is een volgende stap.
-2. **A2 — dezelfde score door de echte v1-processor.** Alleen als A1 slaagt:
-   een headless render-tool in de geest van `tools/render_main.cpp` die v1
-   audio produceert, zodat hetzelfde scoremateriaal met echt NAGLOED-materiaal
-   klinkt. Geen wijziging aan `src/`; wel een apart buildproject of een
-   expliciet goedgekeurde CMake-uitzondering, want een nieuw target in
-   `CMakeLists.txt` botst met de bevriezing. A2 hergebruikt het A1-programma
-   niet letterlijk: v1 heeft andere bronnen (breedbandige noise/drone), wat de
-   M7-poort juist uitdagender maakt.
-
-De concrete invulling van A1 staat uitgewerkt in `docs/v2/EXPERIMENT-01.md`
-("Eerste Gloed"); de uitvoerbare vorm hoort in `experiments/spectrastrobe-poc/`.
-
-Harde poorten **[T]**:
-
-- SpectraStrobe-verificatie op echte hardware (Kasina + DeepVision Ganzfeld),
-  conservatief, met directe stop; zonder die meting geen integratie. Protocol
-  en toleranties: `docs/v2/SPECTRASTROBE.md`.
-- Deterministische rerender: byte-identieke WAV en `events.csv` bij gelijke
-  seed, platform en samplerate (U22).
-- Anti-runaway-scenario's moeten aantoonbaar begrensd blijven (U19). Deze poort
-  is pas toetsbaar zodra er een event-engine bestaat; A1 dekt haar niet.
-- Als de carriers een host-bounce niet overleven of de hardwaredetectie
-  onbetrouwbaar is: **stop**, en ga niet naar B.
-
-Pas daarna, en alleen met expliciete toestemming van Lonn: **B** achter een
-build-flag, vervolgens **C** als nieuwe branch, **D** als onderzoekslijn.
+**Verdict.** Horizon. Only meaningful once the event vocabulary from A/B is
+stable. Cross-ref: `docs/v2/DISTRIBUTED.md`.
 
 ---
 
-## 4. Niet aanraken
+## 3. Recommended direction for the first experiment
 
-Deze lijst is bindend voor de verkenning. Wijzigingen hieraan gaan via een
-aparte, gereviewde PR buiten deze documenten om.
+**[T]** Choose **A**, in two strictly separated steps, and keep v1.0.4
+untouched:
 
-| Niet aanraken | Waarom | Bewijs |
+1. **A1 — standalone offline renderer, without v1 code.** A declarative score
+   of 60–90 s, an own deterministic renderer, a SpectraStrobe encoder and a
+   verification step; output 48 kHz/24-bit stereo plus a 44.1 kHz/16-bit
+   variant, dim/mid variants for the hardware ladder, a program-only A/B WAV,
+   `events.csv` and a timeline. Substantively minimal: one light grain with
+   movement and abrupt extinction, one auditory response with a *non-identical*
+   envelope and deliberate delay, one transformed return much later, and at
+   least one deliberately unanswered light event. **In this exploration A1
+   covers the signal half, not the event engine or the memory model:** a real
+   scheduler with budgets, refractory periods and `remember`/`forget` is not
+   yet built and is a next step.
+2. **A2 — the same score through the real v1 processor.** Only if A1 succeeds:
+   a headless render tool in the spirit of `tools/render_main.cpp` that
+   produces v1 audio, so that the same score material sounds with real NAGLOED
+   material. No change to `src/`; though a separate build project or an
+   explicitly approved CMake exception is needed, because a new target in
+   `CMakeLists.txt` conflicts with the freeze. A2 does not reuse the A1
+   programme literally: v1 has different sources (broadband noise/drone),
+   which makes the M7 gate more challenging rather than less.
+
+The concrete elaboration of A1 is worked out in `docs/v2/EXPERIMENT-01.md`
+("Eerste Gloed"); the executable form belongs in `experiments/spectrastrobe-poc/`.
+
+Hard gates **[T]**:
+
+- SpectraStrobe verification on real hardware (Kasina + DeepVision Ganzfeld),
+  conservative, with direct stop; without that measurement, no integration.
+  Protocol and tolerances: `docs/v2/SPECTRASTROBE.md`.
+- Deterministic re-render: byte-identical WAV and `events.csv` at equal seed,
+  platform and sample rate (U22).
+- Anti-runaway scenarios must remain demonstrably bounded (U19). This gate is
+  only testable once an event engine exists; A1 does not cover it.
+- If the carriers do not survive a host bounce or hardware detection is
+  unreliable: **stop**, and do not go to B.
+
+Only after that, and only with Lonn's explicit permission: **B** behind a
+build flag, then **C** as a new branch, **D** as a research line.
+
+---
+
+## 4. Do not touch
+
+This list is binding for the exploration. Changes to it go through a separate,
+reviewed PR outside these documents.
+
+| Do not touch | Why | Evidence |
 |---|---|---|
-| `src/core/ParamIDs.h` | Parameter-IDs zijn permanente API; automation, presets en sessies adresseren ze | `ParamIDs.h:3-4` |
-| Parameterlayout, ranges, defaults, choice-tabellen | GUI, presetvalidator en DSP-adapter lezen hieruit; drift is een releasebug | `src/core/Parameters.h:24-56,84-186` |
-| `presets/*.json` en het stateformaat | Sessies en pluginval hangen eraan | `PluginProcessor.cpp:88-136` |
-| `Engine`/`EngineDSP`-contract en pimpl | Realtimecontract en informatiedichtheid van de DSP-laag | `Engine.h:14-44`, `EngineDSP.h:34-47` |
-| `GrainEngine`-contract, 256 stemmen, 12 s ring | Bevroren muzikale en realtime-eigenschappen | `GrainEngine.h:43-47,105,150-152` |
-| `VisualState`, `GrainView`, `SnapshotChannel` | Displaycontract; mag niet als eventbus worden hergebruikt | `Contracts.h:27-57`, `Snapshot.h:9-32` |
-| Signaalvolgorde Sintel → Ruimte → EAR, latency 51 samples | Klank en hostcompensatie | `ARCHITECTURE.md:3-13`, `EngineDSP.cpp:600-664`, `VALIDATION.md:52-53` |
-| `CMakeLists.txt`, `CMakePresets.json`, `scripts/`, `.github/` | Build- en releasepoorten; tools compileren dezelfde bronnen | `CMakeLists.txt:70-143`, `README.md:140-163` |
-| `tests/`-drempels en harnesses | Bewijzen de realtime- en determinismeclaims | `tests/DspTests.cpp:699-735,1060-1119`, `tools/preview_main.cpp:235-388` |
-| `Demo/`, `docs/ui-preview.png`, `docs/demo-spectrogram.png` | Release-artefacten met deterministische hero-claim | `README.md:144-168` |
-| `README.md`, `docs/ARCHITECTURE.md`, `.gitignore` | Alleen additief in `docs/v2/`; geen herschrijving | taakafspraak |
-| `main`, `release/1.0.4`, tag `v1.0.4` | v1 is de basis; de verkenning is een aparte branch | `docs/CONTRIBUTING.md:6-15` |
-| GPL-3.0-or-later en de JUCE-licentievoorwaarden | Juridische basis van het project | `README.md:205-213` |
+| `src/core/ParamIDs.h` | Parameter IDs are permanent API; automation, presets and sessions address them | `ParamIDs.h:3-4` |
+| Parameter layout, ranges, defaults, choice tables | GUI, preset validator and DSP adapter read from them; drift is a release bug | `src/core/Parameters.h:24-56,84-186` |
+| `presets/*.json` and the state format | Sessions and pluginval depend on them | `PluginProcessor.cpp:88-136` |
+| `Engine`/`EngineDSP` contract and pimpl | Realtime contract and information density of the DSP layer | `Engine.h:14-44`, `EngineDSP.h:34-47` |
+| `GrainEngine` contract, 256 voices, 12 s ring | Frozen musical and realtime properties | `GrainEngine.h:43-47,105,150-152` |
+| `VisualState`, `GrainView`, `SnapshotChannel` | Display contract; must not be reused as an event bus | `Contracts.h:27-57`, `Snapshot.h:9-32` |
+| Signal order Sintel → Ruimte → EAR, latency 51 samples | Sound and host compensation | `ARCHITECTURE.md:3-13`, `EngineDSP.cpp:600-664`, `VALIDATION.md:52-53` |
+| `CMakeLists.txt`, `CMakePresets.json`, `scripts/`, `.github/` | Build and release gates; tools compile the same sources | `CMakeLists.txt:70-143`, `README.md:140-163` |
+| `tests/` thresholds and harnesses | Prove the realtime and determinism claims | `tests/DspTests.cpp:699-735,1060-1119`, `tools/preview_main.cpp:235-388` |
+| `Demo/`, `docs/ui-preview.png`, `docs/demo-spectrogram.png` | Release artefacts with a deterministic hero claim | `README.md:144-168` |
+| `README.md`, `docs/ARCHITECTURE.md`, `.gitignore` | Only additive in `docs/v2/`; no rewriting | task agreement |
+| `main`, `release/1.0.4`, tag `v1.0.4` | v1 is the basis; the exploration is a separate branch | `docs/CONTRIBUTING.md:6-15` |
+| GPL-3.0-or-later and the JUCE licence terms | Legal basis of the project | `README.md:205-213` |
 
 ---
 
-## 5. Hypothese: minimaal, begrensd event/gesture-vocabulaire
+## 5. Hypothesis: minimal, bounded event/gesture vocabulary
 
-> **Status: hypothese.** Dit is geen API, geen code en geen voorstel voor
-> `src/core/`. Het is een toetsbaar vocabulaire voor een offline experiment,
-> bedoeld om A en later B hetzelfde te laten praten. Alle getallen zijn
-> **illustratief**, geen startwaarden en geen eisen. Minstens twee alternatieven
-> blijven expliciet open tot een luistertest beslist: (a) continu geheugen versus
-> event-geheugen, en (b) aandachtsbudget versus waarschijnlijkheid per
-> gebeurtenis.
+> **Status: hypothesis.** This is not an API, not code and not a proposal for
+> `src/core/`. It is a testable vocabulary for an offline experiment, intended
+> to let A and later B speak the same language. All numbers are
+> **illustrative**, not starting values and not requirements. At least two
+> alternatives remain explicitly open until a listening test decides:
+> (a) continuous memory versus event memory, and (b) attention budget versus
+> probability per event.
 
-### 5.1 Uitgangspunten
+### 5.1 Principles
 
-- **[I]** Relaties worden uitgedrukt als *gebeurtenissen met een oorzaak en een
-  delta*, niet als continue mapping. Een licht-event "hoort bij" een
-  audio-event omdat ze dezelfde oorzaak delen of omdat het ene het andere
-  later echo't — niet omdat ze frame-synchroon zijn (issue #14).
-- **[I]** Niet-optreden is een geldige gebeurtenis (`rest`, `ignore`), even
-  belangrijk als wél reageren.
-- **[T]** Het vocabulaire is bounded: vaste structuur, vaste capaciteiten,
-  expliciete budgets, één seed, sampletijd. Alles wat niet past wordt geweigerd
-  of gedropt, nooit stilletjes oneindig.
-- **[T]** Het staat volledig los van de bestaande DSP: het vervangt
-  `EngineParams` niet, breidt `VisualState` niet uit, voegt geen parameter-IDs
-  toe en compileert niet mee in v1.
-- **[T]** De term *gesture* botst met het bestaande merkvocaulaire (BRAND.md
-  definieert "gesture" als een bewuste performance move: macro, freeze,
-  scan-sweep; `docs/BRAND.md:267`). In dit vocabulaire heet het daarom
-  `score_gesture`: een gesamplede, benoemde beweging, geen continue modulatie.
+- **[I]** Relations are expressed as *events with a cause and a delta*, not as
+  continuous mapping. A light event "belongs to" an audio event because they
+  share the same cause or because one later echoes the other — not because
+  they are frame-synchronised (issue #14).
+- **[I]** Non-occurrence is a valid event (`rest`, `ignore`), as important as
+  responding.
+- **[T]** The vocabulary is bounded: fixed structure, fixed capacities,
+  explicit budgets, one seed, sample time. Anything that does not fit is
+  rejected or dropped, never silently unbounded.
+- **[T]** It is completely separate from the existing DSP: it does not replace
+  `EngineParams`, does not extend `VisualState`, adds no parameter IDs and does
+  not compile into v1.
+- **[T]** The term *gesture* collides with the existing brand vocabulary
+  (BRAND.md defines "gesture" as a deliberate performance move: macro, freeze,
+  scan sweep; `docs/BRAND.md:267`). In this vocabulary it is therefore called
+  `score_gesture`: a sampled, named movement, not continuous modulation.
 
 ### 5.2 Event kinds
 
-| Kind | Domein | Betekenis | Verplicht | Typische duur |
+| Kind | Domain | Meaning | Required | Typical duration |
 |---|---|---|---|---|
-| `audio_grain` | audio | Eén korrel of korte korrelgroep uit een bron | bron, positie, duur, envelope | 5–500 ms |
-| `light_grain` | licht | Eén lichtkorrel met kleur, helderheid, beweging, verval | RGB, helderheid, duur, positie | 20 ms–8 s |
-| `score_gesture` | beide | Benoemde, begrensde beweging (freeze, scan-sweep, macro) | naam, duur, doel | 0,5–20 s |
-| `rest` | — | Intentional niet-gebeuren; blokkeert events in zijn venster | start, duur | 0,5–30 s |
-| `remember` | beide | Materiaal vastleggen voor later gebruik | `memoryId`, bron, levensduur | direct |
-| `forget` | beide | Herinnering vrijgeven/vervallen | `memoryId` | direct |
-| `echo` | beide | Later terugkeren van een event, getransformeerd | `parentId`, delay, transformatie | delay 10 ms–60 s |
-| `ignore` | beide | Bewuste non-respons; beëindigt een causale keten | `causeId` | direct |
+| `audio_grain` | audio | A single grain or short grain group from a source | source, position, duration, envelope | 5–500 ms |
+| `light_grain` | light | A single light grain with colour, brightness, movement, decay | RGB, brightness, duration, position | 20 ms–8 s |
+| `score_gesture` | both | Named, bounded movement (freeze, scan sweep, macro) | name, duration, target | 0.5–20 s |
+| `rest` | — | Intentional non-event; blocks events in its window | start, duration | 0.5–30 s |
+| `remember` | both | Capture material for later use | `memoryId`, source, lifetime | direct |
+| `forget` | both | Release/expire a memory | `memoryId` | direct |
+| `echo` | both | Later return of an event, transformed | `parentId`, delay, transformation | delay 10 ms–60 s |
+| `ignore` | both | Deliberate non-response; terminates a causal chain | `causeId` | direct |
 
-### 5.3 Eigenschappen (vaste, kleine struct)
+### 5.3 Properties (fixed, small struct)
 
-Gemeenschappelijk: `schemaVersion`, `id` (monotone u32), `kind`, `domain`,
-`t` (int64 samples in de score-samplerate), `durationSamples`, `source`
-(input/capture/noise/drone/memory), `causeId` (0 = geen), `delaySamples`, `seed`
-(afgeleid), `budgetClass` (`sparse`/`normal`/`dense`), `priority`.
+Common: `schemaVersion`, `id` (monotonic u32), `kind`, `domain`,
+`t` (int64 samples in the score sample rate), `durationSamples`, `source`
+(input/capture/noise/drone/memory), `causeId` (0 = none), `delaySamples`, `seed`
+(derived), `budgetClass` (`sparse`/`normal`/`dense`), `priority`.
 
-Per domein, optioneel: `pitchSemis`, `position` (0..1 in de capture),
-`pitchSpread`, `pan` (-1..1), `gain` (0..1), en voor licht `rgb` (3×0..1),
-`brightness` (0..1), `eye` (-1..1), `movement` (doelpositie aan het einde),
-`envelope` (vorm-id), `persistence` (0..1). Leeg = standaardwaarde. Geen
-vrije-tekstvelden, geen PII, geen bestandspaden in events.
+Per domain, optional: `pitchSemis`, `position` (0..1 in the capture),
+`pitchSpread`, `pan` (-1..1), `gain` (0..1), and for light `rgb` (3×0..1),
+`brightness` (0..1), `eye` (-1..1), `movement` (target position at the end),
+`envelope` (shape id), `persistence` (0..1). Empty = default value. No
+free-text fields, no PII, no file paths in events.
 
-### 5.4 Scheduling, refractaire periode, budgets
+### 5.4 Scheduling, refractory period, budgets
 
-- **[T]** Events worden gesorteerd op `(t, id)` en in sampletijd afgespeeld;
-  de scheduler kent geen wandklok en geen hostblokken. Late events worden
-  volgens een expliciete policy gedropt of naar voren geklemd, nooit
-  onbeperkt ingehaald.
-- **[T]** **Refractair:** per `(kind, source)` en per causale keten geldt een
-  minimumafstand (startwaarde: 20 ms voor `light_grain`, 40 ms voor
-  `audio_grain`, 250 ms voor `echo`). Binnen de periode wordt een event
-  geweigerd, niet vertraagd.
-- **[T]** **Budgets:** maximaal 8 events/s totaal in `sparse`, 32/s in
-  `normal`, 128/s in `dense`; maximaal 16 gelijktijdige `light_grain`s;
-  maximaal 8 herinneringen; maximaal 256 gelijktijdige audio-grains (bestaande
-  pool, `GrainEngine.h:105`); een attention-budget per seconde waarin elk kind
-  een vaste kost heeft (artistieke onderbouwing: "aandacht: een budget, geen
-  duty cycle", `docs/v2/ARTISTIC-VISION.md` §4.2).
-- **[T]** **Anti-runaway:** causale diepte ≤ 3 (audio→licht→audio telt als 2);
-  `echo` van een `echo` alleen als het budget dat toelaat; `ignore` beëindigt
-  de keten; geen event mag zijn eigen `causeId`-keten terugvinden; de renderer
-  controleert achteraf de invarianten en faalt hard bij overschrijding.
-- **[T]** **Seeded determinisme:** één `seed` in de score; elke event-RNG is
-  afgeleid van `(seed, id)` met een deterministische hash, zodat de uitkomst
-  niet van uitvoeringsvolgorde afhangt. Geen `std::random_device`, geen
-  wandklok, vaste float-volgorde, samplerate in de score vastgelegd.
+- **[T]** Events are sorted by `(t, id)` and played in sample time; the
+  scheduler knows no wall clock and no host blocks. Late events are dropped or
+  clamped forward according to an explicit policy, never caught up without
+  bound.
+- **[T]** **Refractory:** per `(kind, source)` and per causal chain a minimum
+  spacing applies (starting value: 20 ms for `light_grain`, 40 ms for
+  `audio_grain`, 250 ms for `echo`). Within the period an event is rejected,
+  not delayed.
+- **[T]** **Budgets:** at most 8 events/s total in `sparse`, 32/s in `normal`,
+  128/s in `dense`; at most 16 simultaneous `light_grain`s; at most 8
+  memories; at most 256 simultaneous audio grains (existing pool,
+  `GrainEngine.h:105`); an attention budget per second in which each kind has
+  a fixed cost (artistic grounding: "attention: a budget, not a duty cycle",
+  `docs/v2/ARTISTIC-VISION.md` §4.2).
+- **[T]** **Anti-runaway:** causal depth ≤ 3 (audio→light→audio counts as 2);
+  `echo` of an `echo` only if the budget allows it; `ignore` terminates the
+  chain; no event may find its own `causeId` chain; the renderer checks the
+  invariants afterwards and fails hard on violation.
+- **[T]** **Seed determinism:** one `seed` in the score; every event RNG is
+  derived from `(seed, id)` with a deterministic hash, so the outcome does not
+  depend on execution order. No `std::random_device`, no wall clock, fixed
+  float order, sample rate fixed in the score.
 
-### 5.5 Hoe dit los staat van de bestaande DSP
+### 5.5 How this stays separate from the existing DSP
 
-- **[T]** `EngineParams` (`src/core/EngineParams.h:12-76`) blijft de enige
-  parameteringang van de audio-engine; het vocabulaire raakt die niet.
-- **[T]** `VisualState` blijft display-only; er komt geen extra veld bij
+- **[T]** `EngineParams` (`src/core/EngineParams.h:12-76`) remains the only
+  parameter input of the audio engine; the vocabulary does not touch it.
+- **[T]** `VisualState` stays display-only; no extra field is added
   (`src/core/Contracts.h:27-50`).
-- **[T]** In A mapt de renderer events op zijn eigen synthese (of later op
-  v1-automation via `tools/render_main.cpp`-patroon); in B zou een aparte
-  module events consumeren. In beide gevallen verandert er niets aan de
-  bestaande DSP-contracten of parameter-IDs.
-- **[T]** De eerste acceptatietest is inhoudelijk, niet technisch: één gedeeld
-  event met ongelijke envelopes en bewuste vertraging, één herinnerde
-  terugkeer, één onbeantwoord licht-event, en een adversarieel scenario dat
-  aantoont dat de budgets houden.
+- **[T]** In A the renderer maps events onto its own synthesis (or later onto
+  v1 automation via the `tools/render_main.cpp` pattern); in B a separate
+  module would consume events. In both cases nothing changes in the existing
+  DSP contracts or parameter IDs.
+- **[T]** The first acceptance test is substantive, not technical: one shared
+  event with non-identical envelopes and deliberate delay, one remembered
+  return, one unanswered light event, and an adversarial scenario that shows
+  the budgets hold.
 
-### 5.6 Illustratie (indicatief, geen API)
+### 5.6 Illustration (indicative, not an API)
 
 ```json
 {
@@ -429,20 +427,20 @@ vrije-tekstvelden, geen PII, geen bestandspaden in events.
 
 ---
 
-## 6. Open vragen en verwijzingen
+## 6. Open questions and references
 
-- **[O]** Wat is de kleinst waarneembare delta waarbij audio en licht nog als
-  verwant gelden, en wanneer wordt het "reactie" of "toeval"? (U03)
-- **[O]** Hoe lang mag een herinnering duren voordat zij haar betekenis
-  verliest, gegeven de 12 s capture-ring? (U10)
-- **[O]** Overleeft een carrier een echte host-bounce, en zo niet, welke
-  exportstap is artistiek acceptabel? (`docs/v2/SPECTRASTROBE.md`; U12/U13)
-- **[O]** Is een in-plugin eventseam ooit nodig, of volstaat een externe
-  companion voor de gewenste ervaring? (A vs. B)
-- **[O]** Welke mate van netwerkverlies en drift is artistiek gewenst in plaats
-  van hinderlijk? (`docs/v2/DISTRIBUTED.md`; U25–U27)
+- **[O]** What is the smallest observable delta at which audio and light still
+  count as related, and when does it become "response" or "coincidence"? (U03)
+- **[O]** How long may a memory last before it loses its meaning, given the
+  12 s capture ring? (U10)
+- **[O]** Does a carrier survive a real host bounce, and if not, which export
+  step is artistically acceptable? (`docs/v2/SPECTRASTROBE.md`; U12/U13)
+- **[O]** Is an in-plugin event seam ever needed, or does an external
+  companion suffice for the desired experience? (A vs. B)
+- **[O]** What degree of network loss and drift is artistically desirable
+  rather than disruptive? (`docs/v2/DISTRIBUTED.md`; U25–U27)
 
-Verwante documenten: `docs/v2/TECHNICAL-UNCERTAINTIES.md`,
+Related documents: `docs/v2/TECHNICAL-UNCERTAINTIES.md`,
 `docs/v2/ARTISTIC-VISION.md`, `docs/v2/EXPERIMENT-01.md`,
 `docs/v2/SPECTRASTROBE.md`, `docs/v2/DISTRIBUTED.md`,
 `docs/v2/SAFETY-PRIVACY.md`, `docs/v2/IDEAS.md`, issue #14.

@@ -1,162 +1,156 @@
-# Hardwareprotocol — Eerste Gloed (SpectraStrobe PoC)
+# Hardware protocol — Eerste Gloed (SpectraStrobe PoC)
 
-> **EXPERIMENT — geen deel van NAGLOED v1.0.4.**
-> Dit protocol hoort bij `experiments/spectrastrobe-poc/`. Het is een
-> conservatieve, menselijke verificatie van het signaal op een echte MindPlace
-> Kasina + DeepVision Ganzfeld. **Geen medische, therapeutische of
-> wellness-claims.** Het doel is vaststellen of het signaal wordt herkend en of
-> het gebaar artistiek iets doet — niets meer.
+> **EXPERIMENT — not part of NAGLOED v1.0.4.**
+> This protocol belongs to `experiments/spectrastrobe-poc/`. It is a
+> conservative, human verification of the signal on a real MindPlace Kasina +
+> DeepVision Ganzfeld. **No medical, therapeutic or wellness claims.** The goal
+> is to establish whether the signal is recognised and whether the gesture does
+> something artistically — nothing more.
 >
-> Bindend: `docs/v2/SAFETY-PRIVACY.md` (R1–R12) en
-> `docs/v2/SPECTRASTROBE.md` §4 (M11–M13). Dit document is de korte,
-> uitvoerbare variant voor *Eerste Gloed*.
+> Binding: `docs/v2/SAFETY-PRIVACY.md` (R1–R12) and
+> `docs/v2/SPECTRASTROBE.md` §4 (M11–M13). This document is the short,
+> executable variant for *Eerste Gloed*.
 
-## 1. Vooraf — veiligheid en toestemming
+## 1. Beforehand — safety and consent
 
-- **Geen persoon met (vermoede) fotosensitiviteit of epilepsie in de ruimte.**
-  Bij twijfel: niet doen. Kinderen/jongeren alleen met begeleiding én
-  toestemming van een volwassene (R9).
-- **Toestemming en mondelinge instructie vooraf:** wat je gaat zien, dat het
-  licht fel kan zijn, dat je altijd mag stoppen, hoe je de bril afzet.
-  Geen gebruik door mensen die niet kunnen of willen instemmen (slapend, onder
-  invloed, kinderen zonder begeleiding).
-- **Eén persoon bedient, één persoon kijkt.** De bediener kijkt niet mee in de
-  bril en houdt de stop binnen handbereik.
-- Ruimte verlicht, geen andere flikkerbronnen (spotlights, beamers, discolicht)
-  in hetzelfde gezichtsveld.
-- **Eén oog bedekken (R11)** is een geldige noodmaatregel en dempt het effect
-  sterk; de bediener moet dat kunnen instrueren.
-- **Stopmiddelen binnen handbereik:** weergave stopzetten, Kasina-helderheid
-  naar minimum, stekker/voeding, bril af. Stop is altijd toegestaan zonder
-  uitleg; "dit is genoeg" is een geldige reden.
-- Bij ongemak, hoofdpijn, duizeligheid, onverklaarbare flits of detectieverlies:
-  **direct stoppen** en noteren. Dat is informatie, geen mislukking.
-- **Geen software-panic-claim.** Deze offline WAV heeft **geen encoder-panic en
-  geen geteste 50 ms-softwareramp**. De primaire stop is menselijk: weergave
-  stoppen + Kasina-helderheid laag + bril af. (Een realtime panic hoort bij
-  fase B; zie `docs/v2/SPECTRASTROBE.md` §6.)
+- **No person with (suspected) photosensitivity or epilepsy in the room.**
+  In doubt: do not proceed. Children/adolescents only with supervision and
+  consent of an adult (R9).
+- **Consent and verbal instruction beforehand:** what you are going to see,
+  that the light can be bright, that you may always stop, and how to take the
+  glasses off. Do not use with people who cannot or do not want to consent
+  (asleep, under the influence, children without supervision).
+- **One person operates, one person watches.** The operator does not watch
+  inside the glasses and keeps the stop within reach.
+- Room lit, no other flicker sources (spotlights, beamers, disco lights) in the
+  same field of view.
+- **Covering one eye (R11)** is a valid emergency measure and strongly reduces
+  the effect; the operator must be able to instruct it.
+- **Stop means within reach:** stop playback, Kasina brightness to minimum,
+  plug/power, glasses off. Stopping is always allowed without explanation;
+  "this is enough" is a valid reason.
+- On discomfort, headache, dizziness, an unexplained flash or loss of
+  detection: **stop immediately** and note it. That is information, not failure.
+- **No software panic claim.** This offline WAV has **no encoder panic and no
+  tested 50 ms software ramp**. The primary stop is human: stop playback +
+  Kasina brightness low + glasses off. (A realtime panic belongs to phase B;
+  see `docs/v2/SPECTRASTROBE.md` §6.)
 
-## 2. Gehoor en niveau — vóór de sessie
+## 2. Hearing and level — before the session
 
-- De dragers (18,2–19,7 kHz) zijn **niet gegarandeerd onhoorbaar**; dat hangt af
-  van leeftijd, gehoor, transducers en weergaveniveau (open aanname **U15**).
-- Kies **één vast, genoteerd playbackniveau** (niet "zo hard als nodig om het
-  programma te horen"). Noteer het in het formulier.
-- **Comfortbeluistering (10 s, dragers-only)** op het bedoelde niveau:
-  genereer daarvoor een dragers-only fragment in een aparte map:
-  `python3 render.py --carriers-only --colour-scale 0.3125 --out-dir out/carriers-only`.
-  Speel 10 s op het bedoelde niveau; dit bestand bevat alleen de vier dragers,
-  geen programma. Vraag naar hoorbaarheid, scherpte of ongemak. Bij tinnitus,
-  hyperacusis, jonge oren of twijfel: lager niveau of niet deelnemen. Dit is een
-  comfort- en gehoorspreventiemaatregel, geen medische test.
+- The carriers (18.2–19.7 kHz) are **not guaranteed inaudible**; that depends
+  on age, hearing, transducers and playback level (open assumption **U15**).
+- Choose **one fixed, noted playback level** (not "as loud as needed to hear
+  the programme"). Note it on the form.
+- **Comfort listening test (10 s, carriers only)** at the intended level: play
+  `spectrastrobe-dim-44k1-16bit.wav` or the first seconds of the master, and
+  ask about audibility, sharpness or discomfort. With tinnitus, hyperacusis,
+  young ears or doubt: lower the level or do not take part. This is a comfort
+  and hearing-prevention measure, not a medical test.
 
-## 3. Materiaal
+## 3. Material
 
-- Mac met deze map; `./run.sh` moet groen zijn (exitcode 0) vóór de sessie.
-- Kopieer naar een microSD-kaart, **zonder metadata**, korte bestandsnamen:
-  - `spectrastrobe-dim-44k1-16bit.wav` — **6,25% max**: eerste exposure
-  - `spectrastrobe-mid-44k1-16bit.wav` — **12,5% max**
-  - `spectrastrobe-44k1-16bit.wav` — **20% max** (volledige score)
-  - `program-only-44k1-16bit.wav` — A/B zonder dragers
-  - `spectrastrobe-48k-24bit.wav` — **niet op de Kasina geverifieerd**; alleen
-    als de firmware 24-bit/48 kHz aankan (onbekend, open vraag 8 in
+- Mac with this directory; `./run.sh` must be green (exit code 0) before the
+  session.
+- Copy to a microSD card, **without metadata**, short file names:
+  - `spectrastrobe-dim-44k1-16bit.wav` — **6.25% max**: first exposure
+  - `spectrastrobe-mid-44k1-16bit.wav` — **12.5% max**
+  - `spectrastrobe-44k1-16bit.wav` — **20% max** (full score)
+  - `program-only-44k1-16bit.wav` — A/B without carriers
+  - `spectrastrobe-48k-24bit.wav` — **not verified on the Kasina**; only if the
+    firmware can handle 24-bit/48 kHz (unknown, open question 8 in
     `docs/v2/SPECTRASTROBE.md`)
-- Kasina met actuele firmware. LED-helderheid op een **vaste, genoteerde
-  stand** — niet "max". Audio- en LED-helderheid zijn aparte knoppen.
-- Standaard Ganzframes (ogen dicht, eerste stappen) en DeepVision Ganzframes
-  (ogen open, diffuser, feller). DeepVision pas na een comfortabele ladder.
+- Kasina with current firmware. LED brightness at a **fixed, noted position** —
+  not "max". Audio and LED brightness are separate controls.
+- Standard Ganzframes (eyes closed, first steps) and DeepVision Ganzframes
+  (eyes open, diffuser, brighter). DeepVision only after a comfortable ladder.
 
-## 4. Conservatieve helderheidsladder (niet overslaan)
+## 4. Conservative brightness ladder (do not skip)
 
-Elke trede: **10–15 s**, daarna 5 s donker. Bij twijfel: terug naar 0 en stoppen.
+Every step: **10–15 s**, then 5 s dark. In doubt: back to 0 and stop.
 
-| Trede | Bestand | Max kleur | Doel |
+| Step | File | Max colour | Goal |
 |---|---|---|---|
-| T0 | `spectrastrobe-dim-44k1-16bit.wav` | 6,25% | **Detectie**: Kasina-display moet `Mode SpectraStr/AS` tonen met SpectraStr actief. Speel eventueel alleen de eerste seconden (referentie-only). Geen SpectraStr? Stop: formaat-/panningprobleem. |
-| T1 | `spectrastrobe-dim-44k1-16bit.wav` | 6,25% | **Eerste exposure**: eerste 15 s (lichtgrain + 20 ms-extinctie + 180 ms-impact) op lage Kasina-helderheid. |
-| T2 | `spectrastrobe-mid-44k1-16bit.wav` | 12,5% | **Midden**: volledige 72 s op dezelfde Kasina-stand. |
-| T3 | `spectrastrobe-44k1-16bit.wav` | 20% | **Volledig**: volledige 72 s op dezelfde Kasina-stand. |
-| T4 | `spectrastrobe-48k-24bit.wav` | 20% | **48 kHz/24-bit**: alleen als T0–T3 comfortabel waren én de firmware het formaat aankan. Verschil in detectie/helderheid is een bevinding. |
-| T5 | `spectrastrobe-44k1-16bit.wav` | 20% | **DeepVision, ogen open**, op **lagere** Kasina-helderheid dan T3 (DeepVision komt veel feller over). Alleen na T0–T4. |
-| T6 | `program-only-44k1-16bit.wav` | n.v.t. | **A/B zonder Ganzfeld**: alleen luisteren. Staat het geluid op zichzelf? Draagt de stilte? |
+| T0 | `spectrastrobe-dim-44k1-16bit.wav` | 6.25% | **Detection**: the Kasina display must show `Mode SpectraStr/AS` with SpectraStr active. If needed, play only the first seconds (reference only). No SpectraStr? Stop: format/panning problem. |
+| T1 | `spectrastrobe-dim-44k1-16bit.wav` | 6.25% | **First exposure**: first 15 s (light grain + 20 ms extinction + 180 ms impact) at low Kasina brightness. |
+| T2 | `spectrastrobe-mid-44k1-16bit.wav` | 12.5% | **Middle**: full 72 s at the same Kasina setting. |
+| T3 | `spectrastrobe-44k1-16bit.wav` | 20% | **Full**: full 72 s at the same Kasina setting. |
+| T4 | `spectrastrobe-48k-24bit.wav` | 20% | **48 kHz/24-bit**: only if T0–T3 were comfortable and the firmware supports the format. A difference in detection/brightness is a finding. |
+| T5 | `spectrastrobe-44k1-16bit.wav` | 20% | **DeepVision, eyes open**, at **lower** Kasina brightness than T3 (DeepVision feels much brighter). Only after T0–T4. |
+| T6 | `program-only-44k1-16bit.wav` | n/a | **A/B without Ganzfeld**: listen only. Does the sound stand on its own? Does the silence carry? |
 
-Daarna optioneel, als aparte fase-0-observatie (geen bewijs): een **tweede keer
-kijken** (wetend wat er komt) om te horen of herkenning de verwantschap
-verandert. Doe dit niet als extra technische trede en niet binnen de fase-1-toets.
+Then optionally: **watch a second time** (knowing what is coming) to hear
+whether recognition changes the sense of kinship.
 
-## 5. Observatieformulier
+## 5. Observation form
 
-Vul dit in tijdens of direct na elke trede. Kort mag.
+Fill this in during or immediately after each step. Short is fine.
 
-| Vraag | T0 | T1 | T2 | T3 | T4 | T5 | T6 |
+| Question | T0 | T1 | T2 | T3 | T4 | T5 | T6 |
 |---|---|---|---|---|---|---|---|
-| Detectie (SpectraStr ja/nee) | | | | | | | n.v.t. |
-| Zichtbare kleur(en) | | | | | | | n.v.t. |
-| Ongewenste kanalen / flikkering | | | | | | | n.v.t. |
-| Beweging links→rechts herkenbaar | | | | | | | n.v.t. |
-| Abrupte extinctie (20 ms) gezien | | | | | | | n.v.t. |
-| Impact als antwoord ervaren | | | | | | | n.v.t. |
-| Stilte 28–46 s gedragen | | | | | | | |
-| Late echo herkenbaar | | | | | | | n.v.t. |
-| Eén oog bedekt getest (R11) | | | | | | | n.v.t. |
+| Detection (SpectraStr yes/no) | | | | | | | n/a |
+| Visible colour(s) | | | | | | | n/a |
+| Unwanted channels / flicker | | | | | | | n/a |
+| Left→right movement recognisable | | | | | | | n/a |
+| Abrupt extinction (20 ms) seen | | | | | | | n/a |
+| Impact experienced as an answer | | | | | | | n/a |
+| Silence 28–46 s carried | | | | | | | |
+| Unanswered grain at 38 s noticed | | | | | | | n/a |
+| Late echo recognisable | | | | | | | n/a |
+| Covering one eye tested (R11) | | | | | | | n/a |
 | Comfort (1–5) | | | | | | | |
-| Opmerkingen | | | | | | | |
+| Notes | | | | | | | |
 
-Deze tabel is voor de **technische ladder** en de fase-0-auteurstest. Er staat
-bewust **geen** vraag in over het onbeantwoorde grain: dat zou de waarnemer
-vooraf cueën. Deel de 38 s-gebeurtenis ook niet vooraf.
+Context to record: firmware version, Kasina brightness setting, playback level,
+sample rate, Ganzframe type, order of the steps, date. Without that context the
+observation is not reproducible.
 
-Vast te leggen context: firmwareversie, Kasina-helderheidsstand, playbackniveau,
-sample rate, Ganzframe-type, volgorde van de treden, datum. Zonder die context
-is de observatie niet reproduceerbaar.
+Five perceptual questions (from `docs/v2/EXPERIMENT-01.md` §5), afterwards:
 
-**Artistieke observatie, fase 0 (auteurstest, verkennend, geen bewijs).** Stel
-achteraf eerst één open vraag: "Wat merkte je op?" Noteer het antwoord letterlijk
-en in eigen woorden. Pas daarna mogen de gerichte vragen uit
-`docs/v2/EXPERIMENT-01.md` §5 worden gesteld. Deze fase is één persoon (Lonn),
-niet geblindeerd en geen bewijs; ze mag de compositie bijsturen.
+1. Did light and sound feel related to you, or did they seem like two separate
+   things?
+2. Did you notice that they were not synchronised — did that bother you, or did
+   it make the relationship more interesting?
+3. What did the silence between 28 and 46 seconds do?
+4. Did you notice that the light grain at 38 seconds received no answer? Did
+   that feel like intention or like something missing?
+5. What stayed with you: the light, the sound, the silence, or nothing?
 
-**Fase 1 (vooraf geregistreerd, onafhankelijke deelnemers)** gebruikt een apart
-formulier met open-eerst-vragen, gerandomiseerde/blinde condities en
-beslissingsregels uit `docs/v2/EXPERIMENT-01.md` §5. Die fase wordt pas
-uitgevoerd als de controleversies zijn gerenderd en het formulier vooraf is
-vastgelegd. Ze hoort **niet** in deze eerste hardware-sessie.
+## 6. Stop and acceptance criteria
 
-## 6. Stop- en acceptatiecriteria
+- **Continue** only if T0 gives detection and T1–T3 pass without unwanted
+  channels, flicker or discomfort. T4 (48k) and T5 (DeepVision) only afterwards.
+- **Stop and report** on: no detection, visible flicker outside the intended
+  colour transition, discomfort/headache, or an unexplained flash.
+- **Never** raise brightness to mask a detection problem. First signal
+  integrity (the offline check), then hardware.
+- **No conclusions about therapy, relaxation or health.** Only: did detection
+  work, what did the light look like, how did the gesture feel.
 
-- **Doorgaan** alleen als T0 detectie geeft en T1–T3 zonder ongewenste kanalen,
-  flikkering of ongemak verlopen. T4 (48k) en T5 (DeepVision) pas daarna.
-- **Stoppen en rapporteren** bij: geen detectie, zichtbare flikkering buiten de
-  bedoelde kleurovergang, ongemak/hoofdpijn, of een onverklaarbare flits.
-- **Nooit** de helderheid opvoeren om een detectieprobleem te maskeren.
-  Eerst signaalintegriteit (de offline check), dan pas hardware.
-- **Geen conclusies over therapie, ontspanning of gezondheid.** Alleen:
-  werkte de detectie, hoe zag het licht eruit, hoe voelde het gebaar.
+## 7. Technical check after the session
 
-## 7. Technische controle na de sessie
+- M11: 120 s of uninterrupted SpectraStr detection on the Kasina display
+  (repeat with dim/mid/full and note any dropouts).
+- M12 (optional, photodiode + audio interface): no periodic luminance
+  modulation at 3–30 Hz with ≥ 10% depth; brightness monotonic with the ladder.
+  Without a photodiode: visual only, explicitly noted as "not objective".
+- M13: stop latency — measure how quickly the carriers/LEDs are off after the
+  **human** stop action (stop playback + Kasina brightness low). There is no
+  software panic to measure; state that explicitly.
+- Compare the observations with `out/verify-report.md` (offline figures) and
+  with the corruption matrix (what survives playback/transport).
 
-- M11: 120 s onafgebroken SpectraStr-detectie op het Kasina-display (herhaal
-  met dim/mid/full en noteer eventuele uitval).
-- M12 (optioneel, fotodiode + audio-interface): geen periodieke
-  luminantiemodulatie 3–30 Hz met ≥ 10% diepte; helderheid monotoon met de
-  ladder. Zonder fotodiode: alleen visueel, expliciet als "niet objectief"
-  noteren.
-- M13: stop-latentie — meet hoe snel de dragers/LED's uit zijn na de
-  **menselijke** stopactie (weergave stoppen + Kasina-helderheid laag). Er is
-  geen software-panic om te meten; noteer dat expliciet.
-- Vergelijk de observaties met `out/verify-report.md` (offline cijfers) en met
-  de corruptiematrix (wat overleeft weergave/transport).
+## 8. If the hardware recognises nothing
 
-## 8. Als de hardware niets herkent
+That is a **signal-integrity or detection problem**, not an artistic failure.
+Check in this order:
 
-Dat is een **signaalintegriteit- of detectieprobleem**, geen artistiek falen.
-Controleer in deze volgorde:
+1. Is the correct WAV playing (not a 44.1 file at 48 kHz or vice versa)?
+2. Is the reference really continuously present (the master has a lead-in of
+   ≥ 1 s)?
+3. Is the playback chain clean: no EQ, normalisation, spatial audio,
+   loudness processing, Bluetooth or lossy compression?
+4. Has the WAV not been through a DAW/limiter after the render?
+5. Repeat the offline check (`./run.sh`) and the corruption matrix.
 
-1. Speelt de juiste WAV (geen 44,1-bestand op 48 kHz of omgekeerd)?
-2. Is de referentie echt continu aanwezig (master heeft lead-in van ≥ 1 s)?
-3. Is de weergaveketen schoon: geen EQ, normalisatie, spatial audio,
-   loudness-processing, Bluetooth of lossy compressie?
-4. Is de WAV niet door een DAW/limiter gehaald na de render?
-5. Herhaal de offline check (`./run.sh`) en de corruptiematrix.
-
-Pas daarna opnieuw proberen, met dezelfde conservatieve helderheid.
+Only then try again, with the same conservative brightness.
