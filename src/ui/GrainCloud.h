@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <array>
 #include <memory>
 #include <random>
 #include <vector>
@@ -19,6 +20,11 @@ namespace nagloed::ui
 //
 //  * a phosphor screen (persistence buffer) that accumulates embers additively
 //    and decays slowly, so moving grains draw their own afterglow trails;
+//  * living grain particles: every ember is born from a real GrainView at the
+//    point where the grain reads in the buffer, at its real pitch, then flies
+//    on its own buoyancy/turbulence and cools when the grain ends (issue #32).
+//    The engine publishes anonymous display copies, so identity is approximated
+//    frame-to-frame; the flight is the UI's interpretation of grain life;
 //  * a live capture-buffer timeline underneath with focus marker, spray halo,
 //    buffer fill and scan direction;
 //  * direct-manipulation gestures: drag = focus/pitch, shift-drag = spray,
@@ -50,6 +56,33 @@ public:
 
     /** QA hook: false means the phosphor buffer lost its opacity invariant. */
     bool alphaInvariantHeld() const noexcept { return ! phosphor.hasBrokenAlpha(); }
+
+    // -------------------------------------------------------------------------
+    // QA hooks for the grain-motion harness (issue #32). UI-side measurement
+    // only: nothing here is read or written by the audio thread.
+    // -------------------------------------------------------------------------
+    struct ParticleStats
+    {
+        int   live = 0;            // all simulated particles
+        int   matched = 0;         // currently matched to a live GrainView
+        int   afterglow = 0;       // grain ended, ember still cooling
+        int   stray = 0;           // subset of afterglow in the long drift state
+        float meanSpeed = 0.0f;    // field widths per second
+        float meanTravel = 0.0f;   // field widths from the birth home
+        float meanAge = 0.0f;      // seconds
+        float meanTrack = 0.0f;    // seconds of continuous matched identity
+        float activity = 0.0f;     // 0..1 smoothed musical activity
+        float luminanceProxy = 0.0f; // 0..1 estimate of ember energy, not pixels
+        bool  finite = true;       // false if any particle state went non-finite
+    };
+
+    ParticleStats particleStatsForTest() const noexcept;
+
+    /** QA hook: copies normalised field coordinates (x right, y down; the
+        nominal field is 0..1, edge embers may sit slightly outside before they
+        fade). Returns the number copied; order is internal slot order and is
+        NOT stable across frames (identity is resolved internally). */
+    int copyParticlePositionsForTest (juce::Point<float>* out, int maxOut) const noexcept;
 
     void collectParameterIds (juce::StringArray& ids) const;
 
@@ -108,6 +141,31 @@ private:
         bool wanderer = false;
     };
 
+    // One living ember. Born from a real GrainView, then flown and faded by
+    // the UI. `home` keeps the data-anchored birth point (capture position +
+    // pan, pitch); the current position is the artistic interpretation.
+    struct Particle
+    {
+        float homeX = 0.5f, homeY = 0.5f;  // data home, field coords
+        float x = 0.5f, y = 0.5f;          // current field coords
+        float vx = 0.0f, vy = 0.0f;        // field widths per second
+        float progress = 0.0f;             // last matched GrainView.progress
+        float env = 0.0f;                  // last matched GrainView.env
+        float pitch = 0.0f;                // semitones, drives colour
+        float pan = 0.0f;
+        float brightness = 0.5f;
+        float age = 0.0f;                  // seconds
+        float track = 0.0f;                // seconds continuously matched
+        float life = 0.0f;                 // afterglow seconds left (0 = none)
+        float afterglowLife = 1.0f;        // configured afterglow duration
+        float energy = 0.0f;               // 0..1 current ember energy
+        float radius = 1.5f;               // logical px at birth scale
+        float phase = 0.0f;                // small flicker phase
+        float seed = 0.0f;                 // per-particle noise offset
+        bool  matched = false;
+        bool  stray = false;
+    };
+
     class FieldOverlayCache final : public theme::CachedBackground
     {
     public:
@@ -155,8 +213,13 @@ private:
     void advanceMote (Mote&, float timeScale);
     int  targetMoteCount() const;
     void drawDust (float timeScale, float energyScale);
-    void drawGrains();
-    void drawGhostGrains();
+    void updateParticles (const VisualState& snapshot, float dt);
+    void integrateParticles (float dt);
+    void matchGrainViews (const VisualState& snapshot, float dt);
+    void spawnParticle (const GrainView& view);
+    void beginAfterglow (Particle& particle);
+    void drawParticles();
+    void drawParticleTrail (const Particle&);
     void updateReadouts();
     void drawScreenForeground (juce::Graphics&, juce::Rectangle<float>);
 
@@ -213,6 +276,21 @@ private:
     std::vector<Mote> motes;
     std::mt19937 rng { 0x4e41474cu };
     float windPhase = 0.0f;
+
+    // --- living grain particles ---------------------------------------------
+    static constexpr int kMaxParticles = 360;
+    std::array<Particle, (size_t) kMaxParticles> particles {};
+    int particleCount = 0;
+
+    float activityHeat = 0.0f;   // 0..1 smoothed musical activity
+    float flowPhase = 0.0f;      // global curl/wind phase
+    float gust = 0.0f;           // 0..1 transient from output peaks
+    float lastOutPeak = 0.0f;
+    float particleLuminance = 0.0f;   // per-frame ember energy proxy
+
+    float nextRandom();          // deterministic 0..1
+    float nextSigned();          // deterministic -1..1
+    float pitchToFieldY (float semitones) const;   // 0 top (+24) .. 1 bottom (-24)
 
     // Cached readout strings (regenerated at ~10 Hz, never per frame).
     juce::String focusText, sprayText, densityText, bufferText;

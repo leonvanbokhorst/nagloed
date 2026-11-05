@@ -62,6 +62,13 @@ jobs:
       - name: Offscreen UI snapshot
         run: ./build/nagl_preview_artefacts/Release/nagl_preview
 
+      # Issue #32: deterministic motion QA on the GrainCloud particle model.
+      # Self-checks motion, silence decay, density contrast, determinism
+      # (two fresh pipelines must hash frames identically), bounded tick/paint
+      # cost and finite/in-bounds/resize-safe particle state.
+      - name: Grain-field motion QA (deterministic, issue #32)
+        run: ./build/nagl_preview_artefacts/Release/nagl_preview --motion
+
       - name: Deterministic hero (render twice, must be byte-identical)
         run: |
           ./build/nagl_preview_artefacts/Release/nagl_preview

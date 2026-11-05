@@ -1,8 +1,8 @@
-# NAGLOED 1.0.4 — validation report
+# NAGLOED 1.0.5 — validation report
 
-Everything below was produced on the release candidate on the build machine
-described here. The point is not a badge: it is that the numbers can be
-reproduced with the commands given.
+Everything below was produced on the **NAGLOED 1.0.5 release candidate
+(5 November 2026)** on the build machine described here. The point is not a
+badge: it is that the numbers can be reproduced with the commands given.
 
 ## Environment
 
@@ -27,6 +27,11 @@ build/NAGLOED_artefacts/Release/Standalone/NAGLOED.app
 
 AU identity: type `aufx`, subtype `Nagl`, manufacturer `MLLW`. The build copies
 AU and VST3 into `~/Library/Audio/Plug-Ins/{Components,VST3}`.
+
+Version metadata in the 1.0.5 bundles: `CFBundleShortVersionString` and
+`CFBundleVersion` are `1.0.5` for AU and VST3 (`PROJECT_VERSION`, rendered from
+`CMakeLists.txt` and `src/core/Version.h`). AU/VST3 plug-in identity and the state
+format are unchanged from 1.0.4, so existing sessions load normally.
 
 ## Automated checks
 
@@ -118,10 +123,12 @@ plug-in uses in a host.
 
 Renders the real `AudioProcessorEditor` offscreen to `docs/ui-preview.png`
 (2360 × 1360, i.e. 1180 × 680 at 2×) after loading a factory preset and feeding
-the engine audio, so the snapshot shows the live grain field. The editor advanced
-a fixed number of frames with the wall-clock timer stopped, the dust generator's
-fixed seed and pinned visualiser phases, so the PNG is **byte-reproducible for a
-given build and platform**; CI renders it twice on the runner and compares hashes.
+the engine audio, so the snapshot shows the live grain field. The wall-clock timer
+is stopped and the frame is advanced deterministically while audio is fed in fixed
+chunks (`advanceForPreview(0)` followed by 40 × (0.1 s chord + six 1/60 s
+frames)), with the dust generator's fixed seed and pinned visualiser phases. The
+PNG is therefore **byte-reproducible for a given build and platform**; CI renders
+it twice on the runner and compares hashes.
 
 ### Grain-field phosphor soak
 
@@ -140,6 +147,59 @@ byte as well as the colour, so the opaque phosphor screen became translucent and
 the field washed out; independently, additive splats clipped bright channels to
 white discs. It prints `SOAK PASS`; reverting the decay prints `alphaOk=0` /
 `SOAK FAIL`, and the loose colour cap prints `clippedRatio=0.00038` / `SOAK FAIL`.
+
+### Grain-field motion QA
+
+```
+./build/nagl_preview_artefacts/Release/nagl_preview --motion
+```
+
+Deterministic PASS/FAIL checks for the Sintel particle layer (issue #32), using
+only the public `GrainCloud` QA hooks and a fixed 60 fps dt. It asserts that
+embers actually move while the engine plays (mean speed, nearest-neighbour
+displacement, matching continuity), that the **rendered field pixels** change
+frame to frame (a render guard against the macOS native-image freeze, independent
+of particle state), that the ember population **decays from the dense playing
+peak** when digital silence follows on the same pipeline (no state reset), that
+dense material has clearly more matched embers than sparse, that two fresh
+editor pipelines produce identical frame hashes, that dense-phase tick + paint
+cost stays inside one 60 Hz frame, and that particle state stays finite,
+in-field and resize-safe. It prints `MOTION PASS`; the baseline renderer prints
+`MOTION SKIP` because the hooks did not exist yet.
+
+Measured on the 1.0.5 release build (dense phase, preset 07, 1180 × 680):
+
+```
+[PASS] motion      meanSpeed=0.1124 fw/s  medianNN=1.09 px/frame  continuity=1.00
+                   meanTrack=0.16 s  matched=37.5
+[PASS] render      dense field frames: 60 distinct (floor 54), 59/59 consecutive differ
+[PASS] silence     dense peak live=174 afterglow=138 proxy=1.000;
+                   after 2.33 s silence: live=1, afterglow=1, matched=0, proxy=0.001
+[PASS] density     dense matched=37.0 vs sparse 1.1 = 32.63x
+[PASS] cost        tick mean 1.76 ms / p95 1.94 ms, paint 1.70 ms,
+                   tick+paint 3.46 ms (caps 8 / 20 / 16.7 ms)
+[PASS] determinism runA = runB = baf8b4e3c0e843fb
+[PASS] stability   finite, in-field, 900×520 / 1400×800 / 1180×680
+MOTION PASS
+```
+
+Timing varies by a few hundredths of a millisecond between runs; frame content is
+deterministic. The render check exists because the field was frozen on macOS in
+1.0.2–1.0.4 (see [SINTEL-MOTION.md](SINTEL-MOTION.md)); reverting the
+`SoftwareImageType` fix makes it fail.
+
+### Deterministic before/after frame capture
+
+```
+./build/nagl_preview_artefacts/Release/nagl_preview --frames /tmp/issue32-after
+```
+
+Runs the fixed 8-second evidence scenario (dense → sparse → near silence →
+return) one audio chunk and one visual frame at a time, writes field/UI frames,
+2× stills and a per-frame `metrics.csv` (mean luminance, bright-pixel centroid,
+frame delta, coverage). The same harness runs on the old renderer, which is how
+the issue #32 before/after evidence was produced; see
+[issue-32/evidence/EVIDENCE.md](issue-32/evidence/EVIDENCE.md).
 
 ### Editor refresh in a host-style mount
 
@@ -175,8 +235,8 @@ One command reproduces everything above, provided pluginval is present in
 ```
 
 GitHub Actions CI (`.github/workflows/ci.yml`) builds the AU/VST3/Standalone
-targets, runs the suite, validates the AU, runs the CI-safe `--headless-host` and
-`--soak` regressions (the windowed `--embedded` variant needs a desktop window
+targets, runs the suite, validates the AU, runs the CI-safe `--headless-host`,
+`--soak` and `--motion` regressions (the windowed `--embedded` variant needs a desktop window
 server and stays local), checks the hero is byte-identical across two renders on
 the runner, and runs pluginval strictness 10 on VST3 and AU; it runs on every `v*`
 tag (and on demand). A tag run is not cited by number here because it changes with
@@ -206,6 +266,18 @@ every release.
 - **Focused-grain position at maximum Focus with default Spray** averages 0.94
   rather than 1.0; the spray window is clamped at the newest edge on purpose.
   The suite asserts 0.004 / 0.500 / 0.996 at Focus 0 / 0.5 / 1 without spray.
+- **Retina paint cost is estimated, not profiled at the cap.** The phosphor is
+  software-backed now (necessary for correct animation on macOS), so each paint
+  builds a CGImage from the buffer. Measured paint ~1.5–1.7 ms at 1180 × 680;
+  the phosphor is capped at 4.5 MP, which projects to roughly ~2 ms. A profile on
+  a large Retina window remains a sensible follow-up, not a 1.0.5 blocker.
+- **High-density worst case is bounded, not exercised.** The motion QA dense
+  phase reaches 37 matched / 174 live particles. The engine itself bounds
+  concurrency (density ≤ 200 g/s, grain size ≤ 500 ms ⇒ ≈100 voices) and the
+  particle pool is a hard 360; worst-case matcher cost is ≤ 256 × 360 score
+  comparisons, and rendering is bounded by three core + two trail splats per
+  particle. No unbounded path was found; a dedicated max-density soak is a
+  possible follow-up.
 
 ## Not covered by automation
 
@@ -214,3 +286,7 @@ every release.
   and both formats are already validated by the host-agnostic validators above.
 - Subjective sound quality. The numbers prove stability, range and CPU, not
   taste; the demo and the preset library are the listening evidence.
+- Subjective motion feel. The owner accepted the living Sintel grain field for
+  issue #32 on 5 November 2026; the automated checks prove motion, render
+  integrity, silence, density contrast, determinism and cost — not whether it
+  *feels* alive.
