@@ -1,0 +1,35 @@
+{
+  "captured_from": "out/ab-manifest.json (pre-correction state)",
+  "captured_on": "2026-11-05",
+  "note": "SHA256 baseline of the seven existing A/B WAVs, captured from the current out/ab-manifest.json before the issue #31 ceiling correction. The new manifest records old and new hashes and states that these existing files were not altered.",
+  "files": {
+    "ab-direct-m54p1-44k1-16bit.wav": {
+      "sha256": "cd929a72b79defc945176b3f7ff8ac21ea3470571af94a5dac476e9a0bb5950f",
+      "bytes": 1693484
+    },
+    "ab-direct-m42p0-44k1-16bit.wav": {
+      "sha256": "3437c04fb99b01e344f771bc6e596ca471610267f7f0afd9965003033863f03a",
+      "bytes": 1693484
+    },
+    "ab-direct-m36p0-44k1-16bit.wav": {
+      "sha256": "39908e72e30396b37a7b9d1e051af57f8b540a1037e3bdd741c9dd62c147ca66",
+      "bytes": 1693484
+    },
+    "ab-direct-m30p0-44k1-16bit.wav": {
+      "sha256": "ff3f3de0920b4255ea04903c0d80e1f9bfe86e6446f0dafc922c13141a8c3bf3",
+      "bytes": 1693484
+    },
+    "ab-direct-m24p0-44k1-16bit.wav": {
+      "sha256": "e66d40ae47ad448bb063de5112ec44448f17baae2b753fbad01ce81e0160e6e3",
+      "bytes": 1693484
+    },
+    "ab-overlap-24-44k1-16bit.wav": {
+      "sha256": "7b424eb41168523793b8b04204cb7b6e8d418225020ec2f88a49f5e618ac2f7f",
+      "bytes": 1693484
+    },
+    "ab-lr-24-44k1-16bit.wav": {
+      "sha256": "861f40a9acdcefd0f68276211ff689c51863f09f632ae169db9600974182356d",
+      "bytes": 1164284
+    }
+  }
+}

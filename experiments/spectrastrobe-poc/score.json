@@ -1,0 +1,180 @@
+{
+  "meta": {
+    "title": "Eerste Gloed",
+    "subtitle": "NAGLOED v2 — SpectraStrobe proof-of-concept",
+    "status": "experiment",
+    "version": "0.2.0",
+    "seed": 20261105,
+    "duration_s": 72.0,
+    "sample_rates_hz": [48000, 44100],
+    "bit_depths": [24, 16],
+    "sections": [
+      {"t0": 0.0, "t1": 8.0, "label": "room"},
+      {"t0": 8.0, "t1": 14.0, "label": "first glow"},
+      {"t0": 14.0, "t1": 28.0, "label": "afterglow"},
+      {"t0": 28.0, "t1": 46.0, "label": "restraint"},
+      {"t0": 46.0, "t1": 52.0, "label": "memory"},
+      {"t0": 52.0, "t1": 72.0, "label": "fade-out"}
+    ],
+    "description": "Four moments, much space in between. An amber-coloured light grain drifts from left to right and fades in 20 ms. 180 ms later a low impact answers with a non-identical envelope and a long decay. A weak light grain deliberately remains unanswered. Much later the gesture returns: reversed, lowered and dimmer."
+  },
+  "exposures": {
+    "full": {"scale": 1.0, "max_colour_ratio": 0.20, "label": "full 20%"},
+    "mid": {"scale": 0.625, "max_colour_ratio": 0.125, "label": "middle 12.5%"},
+    "dim": {"scale": 0.3125, "max_colour_ratio": 0.0625, "label": "dim 6.25% (first hardware exposure)"}
+  },
+  "envelope_rules": {
+    "min_attack_ms": 20.0,
+    "min_release_ms": 20.0,
+    "l1_release_ms_range": [20.0, 40.0],
+    "l2_fade_in_ms": 50.0,
+    "require_zero_start_end": true,
+    "note": "R4/R5 from docs/v2/SAFETY-PRIVACY.md: attack/release ≥ 20 ms hard, ≥ 50 ms for artistic events. L1 has a single isolated 20 ms extinction; L2 starts with a 50 ms fade-in."
+  },
+  "carriers": {
+    "reference": {
+      "hz": 18200.0,
+      "level_dbfs": -30.0,
+      "pan_lfo_hz": 20.0,
+      "pan_lfo_shape": "sine",
+      "pan_lfo_offset": 0.0,
+      "pan_lfo_depth": 1.0,
+      "pan_law": "equal_power",
+      "fade_in_ms": 250.0,
+      "fade_out_ms": 400.0
+    },
+    "colours": {
+      "red": {"hz": 18700.0, "phase_rad": 0.35},
+      "green": {"hz": 19200.0, "phase_rad": 1.15},
+      "blue": {"hz": 19700.0, "phase_rad": 2.05}
+    },
+    "colour_pan_law": "linear_0db_center",
+    "max_colour_ratio": 0.25,
+    "note": "Reference = -30 dBFS peak amplitude (binding, M2), continuously present; panning = equal-power pan law so that total carrier energy stays constant. Colours = direct channel amplitude with linear 0 dB centre panning (no -3 dB centre law). Hard safety clamp in render.py: every colour channel ≤ 25% of the reference peak; the sum per ear is reported separately (R3)."
+  },
+  "program": {
+    "band_limit_hz": 15500.0,
+    "lowpass_order": 8,
+    "events": [
+      {
+        "id": "A0",
+        "type": "impact",
+        "start_s": 3.2,
+        "duration_s": 1.6,
+        "peak_dbfs": -38.0,
+        "pan": -0.25,
+        "env": [[0.0, 0.0], [0.5, 0.7], [0.9, 1.0], [1.2, 0.55], [1.6, 0.0]],
+        "sweep": {"f_start_hz": 62.0, "f_end_hz": 48.0, "sweep_s": 1.2, "harmonics": [1.0, 0.28, 0.08], "gain": 0.55},
+        "noise": {"gain": 0.55, "filters": [
+          {"type": "bandpass", "hz": 420.0, "q": 1.1},
+          {"type": "lowpass", "hz": 1200.0, "q": 0.707}
+        ]},
+        "role": "very sparse room image: one distant fragment",
+        "relation": "none; room only"
+      },
+      {
+        "id": "A1",
+        "type": "impact",
+        "start_s": 14.18,
+        "duration_s": 2.5,
+        "peak_dbfs": -17.0,
+        "pan": 0.15,
+        "env": [[0.0, 0.0], [0.03, 1.0], [0.5, 0.5], [1.4, 0.22], [2.5, 0.0]],
+        "sweep": {"f_start_hz": 110.0, "f_end_hz": 45.0, "sweep_s": 1.1, "harmonics": [1.0, 0.32, 0.10], "gain": 0.8},
+        "noise": {"gain": 0.45, "filters": [
+          {"type": "lowpass", "hz": 260.0, "q": 0.707},
+          {"type": "lowpass", "hz": 260.0, "q": 0.707}
+        ]},
+        "role": "low impact as answer",
+        "relation": "response to L1 extinction, 180 ms later, different decay (2.5 s) than the light (20 ms)"
+      },
+      {
+        "id": "A2",
+        "type": "transform",
+        "source": "A1",
+        "start_s": 46.4,
+        "peak_dbfs": -22.0,
+        "pan": -0.12,
+        "transform": {"reverse": true, "pitch_ratio": 0.75},
+        "role": "remembered, reversed and lowered impact",
+        "relation": "transformation of A1; 400 ms after the start of L4"
+      }
+    ]
+  },
+  "light": {
+    "events": [
+      {
+        "id": "L1",
+        "start_s": 8.0,
+        "end_s": 14.0,
+        "rgb": [0.20, 0.075, 0.02],
+        "env": [[0.0, 0.0], [1.2, 0.55], [3.5, 0.75], [5.4, 0.95], [5.98, 1.0], [6.0, 0.0]],
+        "pan": [[0.0, -1.0], [0.9, -1.0], [6.0, 0.6]],
+        "role": "amber-coloured light grain: starts hard left, drifts slowly to the right, becomes slightly brighter",
+        "extinction": "single isolated 20 ms extinction (R4)",
+        "relation": "the extinction at 14.0 s is the trigger for A1"
+      },
+      {
+        "id": "L2",
+        "start_s": 14.0,
+        "end_s": 28.0,
+        "rgb": [0.055, 0.018, 0.004],
+        "env": [[0.0, 0.0], [0.05, 0.35], [3.0, 0.6], [6.0, 0.4], [9.0, 0.7], [12.0, 0.45], [14.0, 0.0]],
+        "pan": [[0.0, -0.5], [4.0, 0.5], [8.0, -0.4], [11.0, 0.45], [14.0, 0.0]],
+        "role": "diffuse amber-red field that slowly breathes and fades; the light outlives the sound",
+        "extinction": "slow fade",
+        "relation": "afterglow after A1; no new audio answer"
+      },
+      {
+        "id": "L3",
+        "start_s": 38.0,
+        "end_s": 41.0,
+        "rgb": [0.035, 0.07, 0.10],
+        "env": [[0.0, 0.0], [0.6, 1.0], [2.5, 0.8], [3.0, 0.0]],
+        "pan": [[0.0, -0.2], [3.0, 0.2]],
+        "role": "weak, cool light grain that fades by itself",
+        "extinction": "slow fade",
+        "relation": "deliberately unanswered: no audio, no later return"
+      },
+      {
+        "id": "L4",
+        "start_s": 46.0,
+        "end_s": 51.0,
+        "rgb": [0.11, 0.04125, 0.011],
+        "env": [[0.0, 0.0], [1.6, 0.7], [3.6, 0.9], [4.6, 0.85], [5.0, 0.0]],
+        "pan": [[0.0, 0.6], [5.0, -0.85]],
+        "role": "dimmer, slower echo of L1: reversed movement, different timing",
+        "extinction": "slow fade",
+        "relation": "remembered return of L1, 38 s later; transformation of A1 sounds 400 ms later"
+      }
+    ]
+  },
+  "relations": [
+    {"id": "R1", "from": ["L1"], "to": ["A1"], "kind": "kinship, not synchrony", "detail": "180 ms after the 20 ms extinction; audio envelope 30 ms attack / 2.5 s decay, light 1.2 s attack / 20 ms extinction."},
+    {"id": "R2", "from": ["A1"], "to": ["L2"], "kind": "light outlives sound", "detail": "The diffuse amber-red glow keeps breathing after the impact is gone; no new sound."},
+    {"id": "R3", "from": ["L3"], "to": [], "kind": "deliberately unanswered", "detail": "The weak light grain at 38 s gets no audio and no later echo."},
+    {"id": "R4", "from": ["L1", "A1"], "to": ["L4", "A2"], "kind": "memory", "detail": "38 s later: L4 is a dimmer, slower, reversed echo; A2 is A1 reversed and lowered (pitch 0.75), 400 ms after the start of L4."}
+  ],
+  "safety": {
+    "colour_clamp_ratio": 0.25,
+    "score_max_colour_ratio": 0.20,
+    "reference_level_dbfs": -30.0,
+    "target_true_peak_dbfs": -6.0,
+    "stop": "This offline WAV has NO encoder panic and NO tested 50 ms software ramp. Primary stop: stop playback + Kasina brightness to minimum + glasses off (or cover one eye).",
+    "notes": "Conservative first experiment: no intended luminance modulation in the colour channels; only slow colour transitions and one isolated 20 ms extinction. The 20 Hz reference panning is prescribed by the format and remains an open assumption (not a visible channel). Colours ≤ 25% per carrier (score 20%; ladder 6.25/12.5/20%). No medical or wellness claims."
+  },
+  "verify": {
+    "reference_windows_s": [[20.0, 21.3656], [40.0, 41.3656], [60.0, 61.3656]],
+    "lfo_window_s": [20.0, 24.0],
+    "colour_probes": [
+      {"event": "L1", "t0": 13.0, "t1": 13.1},
+      {"event": "L2", "t0": 16.0, "t1": 16.1},
+      {"event": "L3", "t0": 38.6, "t1": 38.7},
+      {"event": "L4", "t0": 49.0, "t1": 49.1}
+    ],
+    "hard_pan_probe": {"event": "L1", "t0": 8.5, "t1": 8.65},
+    "silent_window_s": [29.0, 30.4],
+    "programme_window_s": [14.5, 15.8656],
+    "intercarrier_probe_s": [1.5, 2.8656]
+  }
+}
