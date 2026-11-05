@@ -1,5 +1,6 @@
 #include "AfterglowLookAndFeel.h"
 #include "Theme.h"
+#include "core/Gloop.h"
 
 #include <cmath>
 
@@ -36,6 +37,19 @@ juce::String roleOf (const juce::Button& b)
 juce::String glyphOf (const juce::Button& b)
 {
     return b.getProperties().getWithDefault ("glyph", juce::String()).toString();
+}
+
+// --- Gloop mode buttons ------------------------------------------------------
+// The label and the palette follow the lane's *actual* state, which the panel
+// copies from VisualState into properties on every tick.
+int gloopStateOf (const juce::Button& b)
+{
+    return (int) (int) b.getProperties().getWithDefault ("gloopState", 0);
+}
+
+bool gloopHasGestureOf (const juce::Button& b)
+{
+    return (bool) b.getProperties().getWithDefault ("gloopHasGesture", false);
 }
 
 juce::Point<float> polar (float cx, float cy, float radius, float angle)
@@ -353,6 +367,74 @@ void AfterglowLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, in
         }
     }
 
+    // --- Gloop influence: one cool-blue arc around the live value ------------
+    //
+    // The knob's own ember arc and pointer are the live parameter value; Gloop
+    // must never look as if it is turning the physical knob. applyGloopVisual()
+    // stamps one combined offset per knob ("gloopOffset" + "gloopAmount"), so
+    // several lanes appear as one readable blue influence. The playhead/phase
+    // lives in the Gloop lane panel, not here.
+    {
+        const auto& props = slider.getProperties();
+
+        if (props.contains (juce::Identifier ("gloopOffset")))
+        {
+            const auto offset = (float) (double) props.getWithDefault ("gloopOffset", 0.0);
+            const auto amount = juce::jlimit (0.0f, 1.0f,
+                                               (float) (double) props.getWithDefault ("gloopAmount", 0.0));
+
+            if (std::abs (offset) > 0.002f)
+            {
+                const auto span = rotaryEndAngle - rotaryStartAngle;
+                const auto influenceAngle = juce::jlimit (rotaryStartAngle, rotaryEndAngle,
+                                                           angle + offset * span);
+                const auto trackR = radius + 3.5f * s;
+                const auto ringLimit = juce::jmin (cx - bounds.getX(), bounds.getRight() - cx,
+                                                   cy - bounds.getY(), bounds.getBottom() - cy);
+
+                // Keep the blue orbit outside the orange tick/value ring when
+                // there is room; on the tight EAR filter cells fall back to a
+                // smaller arc on the knob face.
+                auto blueR = juce::jmin (radius + 9.0f * s, ringLimit - 1.5f * s);
+
+                if (blueR < trackR + 1.0f * s)
+                    blueR = juce::jmax (radius * 0.72f, 3.0f * s);
+
+                juce::Path influence;
+                addArc (influence, cx, cy, blueR, angle, influenceAngle);
+
+                if (! influence.isEmpty())
+                {
+                    const auto blue = theme::gloopMotion();
+                    const auto heat = 0.65f + 0.35f * amount;
+
+                    // Three-pass soft glow: cool, quiet, clearly not the ember
+                    // live-value arc underneath.
+                    g.setColour (blue.withAlpha (0.10f * heat));
+                    g.strokePath (influence, juce::PathStrokeType (6.5f * s,
+                                                                   juce::PathStrokeType::curved,
+                                                                   juce::PathStrokeType::rounded));
+                    g.setColour (blue.withAlpha (0.30f * heat));
+                    g.strokePath (influence, juce::PathStrokeType (3.2f * s,
+                                                                   juce::PathStrokeType::curved,
+                                                                   juce::PathStrokeType::rounded));
+                    g.setColour (blue.withAlpha (0.90f));
+                    g.strokePath (influence, juce::PathStrokeType (1.5f * s,
+                                                                   juce::PathStrokeType::curved,
+                                                                   juce::PathStrokeType::rounded));
+
+                    // A small end marker makes the current offset legible in a
+                    // still frame without implying a playhead.
+                    const auto end = polar (cx, cy, blueR, influenceAngle);
+                    theme::drawGlowDot (g, end.x, end.y, 1.4f * s, blue,
+                                        0.65f + 0.35f * amount, s);
+                    g.setColour (blue.interpolatedWith (juce::Colours::white, 0.35f));
+                    g.fillEllipse (end.x - 1.3f * s, end.y - 1.3f * s, 2.6f * s, 2.6f * s);
+                }
+            }
+        }
+    }
+
     // --- engraved label / live value ----------------------------------------
     {
         const auto area = juce::Rectangle<float> (bounds.getX(), labelTop,
@@ -518,6 +600,95 @@ void AfterglowLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button
         return;
     }
 
+    if (role == "gloopToggle")
+    {
+        // The overlay opener: a quiet chip over the phosphor field that lights
+        // up while the Gloop lanes are open.
+        const auto open = (bool) button.getProperties().getWithDefault ("gloopOpen", false);
+        const auto hot = (highlighted || down) ? 1.0f : 0.0f;
+
+        juce::ColourGradient base (open ? juce::Colour (0xff25120a) : juce::Colour (0xff10151d),
+                                   bounds.getCentreX(), bounds.getY(),
+                                   open ? juce::Colour (0xff0d0705) : juce::Colour (0xff080b10),
+                                   bounds.getCentreX(), bounds.getBottom(), false);
+        g.setGradientFill (base);
+        g.fillRoundedRectangle (bounds, radius * 0.7f);
+
+        g.setColour (open ? theme::ember.withAlpha (0.8f)
+                          : theme::panelEdge.withAlpha (0.85f + 0.15f * hot));
+        g.drawRoundedRectangle (bounds, radius * 0.7f, juce::jmax (0.8f, 0.9f * s));
+
+        if (open)
+        {
+            g.setColour (theme::ember.withAlpha (0.35f));
+            g.fillRect (bounds.getX() + 3.0f * s, bounds.getY() + 1.0f * s,
+                        2.0f * s, bounds.getHeight() - 2.0f * s);
+        }
+
+        return;
+    }
+
+    if (role == "gloopMode")
+    {
+        // One Gloop identity, not eight lane colours: neutral chrome, blue for
+        // active looping/fading, and the single ember REC warning.
+        const auto state = gloopStateOf (button);
+        const auto hasGesture = gloopHasGestureOf (button);
+        const auto enabled = button.isEnabled();
+        const auto hot = (highlighted || down) ? 1.0f : 0.0f;
+        const auto pulse = (float) (0.5 + 0.5 * std::sin (juce::Time::getMillisecondCounterHiRes() * 0.006));
+
+        auto fill = juce::Colour (0xff0b0f16);
+        auto outline = theme::lineSoft;
+        auto outlineAlpha = 0.95f;
+
+        if (! enabled)
+        {
+            outline = theme::lineSoft;
+            outlineAlpha = 0.6f;
+        }
+        else if (state == (int) gloop::Mode::Record)
+        {
+            fill = juce::Colour (0xff2a1206);
+            outline = theme::ember;
+            outlineAlpha = 0.65f + 0.30f * pulse;
+        }
+        else if (state == (int) gloop::Mode::Loop)
+        {
+            fill = juce::Colour (0xff0b0f16).interpolatedWith (theme::gloopMotion(), 0.08f);
+            outline = theme::gloopMotion();
+            outlineAlpha = 0.72f;
+        }
+        else if (state == (int) gloop::Mode::Fade)
+        {
+            outline = theme::gloopMotion().withMultipliedAlpha (0.55f);
+            outlineAlpha = 0.70f;
+        }
+        else if (hasGesture)
+        {
+            // READY: stored but silent; neutral, not a movement colour.
+            outline = theme::lineSoft;
+            outlineAlpha = 0.90f;
+        }
+
+        g.setColour (fill);
+        g.fillRoundedRectangle (bounds, radius * 0.7f);
+
+        if (state == (int) gloop::Mode::Record)
+        {
+            juce::ColourGradient glow (theme::ember.withAlpha (0.10f + 0.10f * pulse),
+                                       bounds.getCentreX(), bounds.getCentreY(),
+                                       theme::ember.withAlpha (0.0f),
+                                       bounds.getCentreX(), bounds.getBottom() + 3.0f * s, true);
+            g.setGradientFill (glow);
+            g.fillRoundedRectangle (bounds.expanded (1.5f * s), radius);
+        }
+
+        g.setColour (outline.withAlpha (juce::jlimit (0.0f, 1.0f, outlineAlpha + 0.15f * hot)));
+        g.drawRoundedRectangle (bounds, radius * 0.7f, juce::jmax (0.8f, 0.9f * s));
+        return;
+    }
+
     if (role == "freeze")
     {
         const auto on = button.getToggleState();
@@ -584,6 +755,43 @@ void AfterglowLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& 
             g.strokePath (path, juce::PathStrokeType (1.15f * s, juce::PathStrokeType::curved,
                                                       juce::PathStrokeType::rounded));
         }
+        return;
+    }
+
+    if (role == "gloopToggle")
+    {
+        const auto open = (bool) button.getProperties().getWithDefault ("gloopOpen", false);
+
+        g.setFont (tickFont);
+        g.setColour (open ? theme::paleEmber
+                          : theme::muted.withAlpha (highlighted || down ? 1.0f : 0.85f));
+        g.drawText (button.getButtonText(), bounds.reduced (3.0f * s),
+                    juce::Justification::centred, false);
+        return;
+    }
+
+    if (role == "gloopMode")
+    {
+        const auto state = gloopStateOf (button);
+        const auto hasGesture = gloopHasGestureOf (button);
+
+        auto textColour = theme::muted.withAlpha (0.9f);
+
+        if (! button.isEnabled())
+            textColour = theme::dim.withAlpha (0.8f);
+        else if (state == (int) gloop::Mode::Record)
+            textColour = theme::paleEmber;
+        else if (state == (int) gloop::Mode::Loop)
+            textColour = theme::gloopMotion();
+        else if (state == (int) gloop::Mode::Fade)
+            textColour = theme::gloopMotion().withMultipliedAlpha (0.60f);
+        else if (hasGesture)
+            textColour = theme::text.withAlpha (0.82f);
+
+        g.setFont (tickFont);
+        g.setColour (textColour.withMultipliedAlpha (highlighted || down ? 1.0f : 0.92f));
+        g.drawText (button.getButtonText(), bounds.reduced (2.0f * s),
+                    juce::Justification::centred, false);
         return;
     }
 

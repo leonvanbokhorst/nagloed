@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "AfterglowLookAndFeel.h"
+#include "GloopPanel.h"
 #include "GrainCloud.h"
 #include "Panels.h"
 #include "Theme.h"
@@ -38,7 +39,8 @@ public:
     NagloedEditor (juce::AudioProcessor& audioProcessor,
                    juce::AudioProcessorValueTreeState& apvts,
                    const VisualSource& visualSource,
-                   PresetAccess& presetAccess);
+                   PresetAccess& presetAccess,
+                   GloopControl& gloopControl);
     ~NagloedEditor() override;
 
     void paint (juce::Graphics&) override;
@@ -53,6 +55,19 @@ public:
     /** Deterministic frame advance without stopping the timer or resetting state.
         Used by the soak harness so it does not depend on runner timer delivery. */
     void stepVisualsForPreview (int frames, double dtSeconds = 1.0 / 60.0);
+
+    /** Open/close the Gloop overlay. GrainCloud hides while it is open, so the
+        target knob rings in the Sintel/EAR/bottom panels stay watchable. */
+    void setGloopPanelOpen (bool shouldBeOpen);
+    bool isGloopPanelOpen() const noexcept { return gloopOpen; }
+
+    /** The performance interface the Gloop panel drives (modes, randomize). */
+    GloopControl& getGloopControl() const noexcept { return gloop; }
+
+    /** Deterministic-preview hook: hand the panels (and the Gloop overlay) a
+        fixed lane frame. Used by `nagl_preview --gloop` for the layout/ring
+        documentation image; it does not touch the engine or the timer. */
+    void setGloopVisualForPreview (const gloop::Visual& visual);
 
     /** QA hook: is the animation clock running? (Regression test for the 1.0.0
         host-mount bug, where a visibility change stopped it for good.) */
@@ -78,6 +93,7 @@ private:
     void parameterChanged (const juce::String&, float) override;
     void handleAsyncUpdate() override;
     void layoutAtScale();
+    void layoutGloopToggle();
     void applyScale (float newScale);
     void refreshOnce();
     void verifyParameterCoverage();
@@ -86,6 +102,7 @@ private:
     juce::AudioProcessorValueTreeState& apvts;
     const VisualSource& visual;
     PresetAccess& presets;
+    GloopControl& gloop;
 
     AfterglowLookAndFeel lookAndFeel;
     juce::TooltipWindow tooltipWindow;
@@ -95,12 +112,15 @@ private:
     SintelPanel sintelPanel;
     EarPanel earPanel;
     BottomPanel bottomPanel;
+    GloopPanel gloopPanel;
+    juce::TextButton gloopToggle;
     PageCache pageCache;
 
     VisualState snapshot;
     double lastTickMs = 0.0;
     int tickCounter = 0;
     float uiScale = 1.0f;
+    bool gloopOpen = false;
 
     juce::Rectangle<int> topRect, mainRect, bottomRect, footerRect;
     juce::String coverageError;

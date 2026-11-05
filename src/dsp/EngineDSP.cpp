@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "core/Parameters.h"
+
 namespace nagloed
 {
 
@@ -218,6 +220,7 @@ void EngineDSP::prepare (double sr, int maxBlockSize, int numChannels)
     reverb.prepare (sampleRate);
     analogChain.prepare (sampleRate, maxBlock);
     modulation.prepare (sampleRate, kControlInterval);
+    gloop.prepare (sampleRate);
     smooth.prepare (sampleRate, kControlInterval);
 
     inputL.assign ((size_t) maxBlock, 0.0f);
@@ -242,6 +245,7 @@ void EngineDSP::reset()
     reverb.reset();
     analogChain.reset();
     modulation.reset();
+    gloop.reset();
 
     sampleCounter = 0;
 
@@ -290,6 +294,39 @@ void EngineDSP::setParams (const EngineParams& p) noexcept
     }
 }
 
+bool EngineDSP::publishGloopGesture (int lane, const gloop::Gesture& gesture) noexcept
+{
+    // Message thread only. The GloopEngine queue is preallocated, so this copies
+    // and publishes without allocating; a full queue is reported, never waited on.
+    return gloop.publish (lane, gesture);
+}
+
+bool EngineDSP::publishGloopGesture (int lane, const float* offsets, int count,
+                                     float durationSeconds) noexcept
+{
+    if (lane < 0 || lane >= gloop::kNumLanes || count < 0
+        || count > gloop::kMaxGestureSamples || (count > 0 && offsets == nullptr))
+        return false;
+
+    gloop::Gesture gesture;
+    gesture.count = count;
+    gesture.durationSeconds = durationSeconds;
+    gesture.numTracks = count >= 2 ? 1 : 0;
+
+    if (count > 0)
+    {
+        int target = params.gloopLanes[(size_t) lane].target;
+
+        if (target <= (int) gloop::Target::Off || target >= gloop::kNumTargets)
+            target = (int) gloop::Target::Focus;
+
+        gesture.tracks[0].target = target;
+        std::copy (offsets, offsets + count, gesture.tracks[0].offsets.begin());
+    }
+
+    return gloop.publish (lane, gesture);
+}
+
 // =============================================================================
 // Control rate
 // =============================================================================
@@ -298,7 +335,28 @@ void EngineDSP::updateControlFrame() noexcept
 {
     smooth.tick();
 
+    // Gloop advances at the same control rate as the rest of the matrix: one
+    // frame is exactly kControlInterval samples, so a lane's phase, fades and
+    // glides depend on seconds rather than on the host block size.
+    gloop.processFrame ((double) kControlInterval / sampleRate);
+
     const auto& p = params;
+
+    // Gloop is applied to the *raw* smoothed knob value (the "live centre" the
+    // UI ring starts from) before the macros and the LFO add their contribution.
+    // That keeps the ring and the audible centre in agreement, and it means an
+    // active lane can never clamp a macro-raised value back into the knob's
+    // range. gloopApplyOffset() returns its input untouched for a zero offset,
+    // so all-idle lanes stay bit-identical to the pre-Gloop engine.
+    const auto gloopOffset = [this] (gloop::Target target) noexcept
+    {
+        return gloop.offsetFor (target);
+    };
+
+    const auto gloopKnob = [&gloopOffset] (gloop::Target target, float knobValue) noexcept
+    {
+        return gloopApplyOffset ((int) target, knobValue, gloopOffset (target));
+    };
 
     // --- macros --------------------------------------------------------------
     // Mappings (all additive on top of the manual parameters):
@@ -317,7 +375,8 @@ void EngineDSP::updateControlFrame() noexcept
     const float macroSpace   = smooth.macroSpace.value();
 
     // --- modulation sources --------------------------------------------------
-    const float driftAmount = clamp01 (smooth.drift.value() + 0.8f * macroDrift);
+    const float driftAmount = clamp01 (gloopKnob (gloop::Target::Drift, smooth.drift.value())
+                                           + 0.8f * macroDrift);
     const float autoAmount  = clamp01 (smooth.autoMotion.value());
     modulation.update (smooth.lfoRate.value(), p.lfoShape, driftAmount, autoAmount);
 
@@ -350,19 +409,32 @@ void EngineDSP::updateControlFrame() noexcept
     // --- Sintel controls -----------------------------------------------------
     const float grainOffset = (macroGrain - 0.5f) * 2.0f;   // -1..1, 0 at centre
 
-    const float density = dsp::clamp (smooth.density.value() * std::pow (2.0f, grainOffset * 1.2f)
+    const float density = dsp::clamp (gloopKnob (gloop::Target::Density, smooth.density.value())
+                                          * std::pow (2.0f, grainOffset * 1.2f)
                                           * densityLfoMul,
                                       0.1f, 400.0f);
-    const float grainSeconds = dsp::clamp (smooth.sizeMs.value(), 5.0f, 500.0f) * 0.001f;
-    const float spray   = clamp01 (smooth.spray.value() + 0.30f * mod.sprayAuto + 0.25f * grainOffset);
-    const float focus   = clamp01 (smooth.focus.value() + 0.30f * mod.focusAuto + focusLfo);
-    const float width   = clamp01 (smooth.width.value() + 0.35f * grainOffset);
-    const float spread  = dsp::clamp (smooth.spread.value() + 6.0f * grainOffset, 0.0f, 24.0f);
+    const float grainSeconds = dsp::clamp (gloopKnob (gloop::Target::Grain,
+                                                      smooth.sizeMs.value()),
+                                           5.0f, 500.0f)
+                               * 0.001f;
+    const float spray   = clamp01 (gloopKnob (gloop::Target::Spray, smooth.spray.value())
+                                       + 0.30f * mod.sprayAuto + 0.25f * grainOffset);
+    const float focus   = clamp01 (gloopKnob (gloop::Target::Focus, smooth.focus.value())
+                                       + 0.30f * mod.focusAuto + focusLfo);
+    const float width   = clamp01 (gloopKnob (gloop::Target::Width, smooth.width.value())
+                                       + 0.35f * grainOffset);
+    const float spread  = dsp::clamp (gloopKnob (gloop::Target::Spread, smooth.spread.value())
+                                          + 6.0f * grainOffset,
+                                      0.0f, 24.0f);
+    const float shape   = clamp01 (gloopKnob (gloop::Target::Shape, smooth.shape.value()));
     const float scan    = dsp::clamp (smooth.scan.value(), -1.0f, 1.0f);
-    const float pitch   = dsp::clamp (smooth.pitch.value() + mod.pitchAutoSemis
-                                          + mod.pitchDriftSemis + pitchLfoSemis,
+    const float pitch   = dsp::clamp (gloopKnob (gloop::Target::Pitch, smooth.pitch.value())
+                                          + mod.pitchAutoSemis + mod.pitchDriftSemis
+                                          + pitchLfoSemis,
                                       -48.0f, 48.0f);
-    const float feedback = dsp::clamp (smooth.feedback.value(), 0.0f, 0.95f);
+    const float feedback = dsp::clamp (gloopKnob (gloop::Target::Feedback,
+                                                  smooth.feedback.value()),
+                                       0.0f, 0.95f);
 
     // Feedback stability, part 1: reading the buffer faster than real time
     // multiplies the energy that the feedback loop sees, so upward pitch scales
@@ -387,7 +459,7 @@ void EngineDSP::updateControlFrame() noexcept
     // by the inverse of that worst case keeps the loop gain below unity at every
     // density and every window shape, so the cloud decays once the source
     // stops — while sparse/dense clouds still receive a musical amount.
-    const float shapePos = clamp01 (smooth.shape.value()) * 2.0f;
+    const float shapePos = shape * 2.0f;
     const float windowMean = shapePos <= 1.0f
                                  ? 0.50f + 0.25f * shapePos          // Hann -> Tukey
                                  : 0.75f - 0.45f * (shapePos - 1.0f); // Tukey -> expodec
@@ -403,7 +475,7 @@ void EngineDSP::updateControlFrame() noexcept
     grainControls.pitchSpread   = spread;
     grainControls.reverse       = clamp01 (smooth.reverse.value());
     grainControls.jitter        = clamp01 (smooth.jitter.value());
-    grainControls.shape         = clamp01 (smooth.shape.value());
+    grainControls.shape         = shape;
     grainControls.width         = width;
     grainControls.feedback      = feedback;
     grainControls.focus         = focus;
@@ -421,7 +493,7 @@ void EngineDSP::updateControlFrame() noexcept
     visualDensity = density;
 
     // --- EAR: cutoff / resonance --------------------------------------------
-    const float cutoff = dsp::clamp (smooth.cutoff.value()
+    const float cutoff = dsp::clamp (gloopKnob (gloop::Target::Cutoff, smooth.cutoff.value())
                                          * std::pow (2.0f, -1.2f * macroGlow
                                                               + mod.cutoffDriftOct
                                                               + cutoffLfoOct),
@@ -433,8 +505,8 @@ void EngineDSP::updateControlFrame() noexcept
     reverbControls.mod  = clamp01 (smooth.spaceMod.value() + 0.30f * macroSpace
                                        + 0.15f * macroShimmer);
 
-    currentSpaceMix = clamp01 (smooth.spaceMix.value() + 0.35f * macroSpace
-                                   + 0.12f * macroShimmer + spaceLfo);
+    currentSpaceMix = clamp01 (gloopKnob (gloop::Target::Space, smooth.spaceMix.value())
+                                   + 0.35f * macroSpace + 0.12f * macroShimmer + spaceLfo);
 
     reverb.update (reverbControls);
 
@@ -442,12 +514,17 @@ void EngineDSP::updateControlFrame() noexcept
     const float srScale   = (float) (sampleRate / (double) kSampleRateReference);
     const float osRate    = (float) sampleRate * 2.0f;
 
-    const float driveDb   = dsp::clamp (smooth.driveDb.value() + 8.0f * macroGlow, 0.0f, 36.0f);
+    const float driveDb   = dsp::clamp (gloopKnob (gloop::Target::Drive, smooth.driveDb.value())
+                                            + 8.0f * macroGlow,
+                                        0.0f, 36.0f);
     const float hissEff   = clamp01 (smooth.hiss.value() + 0.35f * macroGlow);
-    const float toneEff   = clamp01 (smooth.tone.value() - 0.20f * macroGlow);
-    const float reso      = clamp01 (smooth.reso.value());
-    const float wowEff    = clamp01 (smooth.wow.value() + 0.5f * macroDrift);
-    const float tapeEff   = clamp01 (smooth.tape.value() + 0.4f * macroDrift);
+    const float toneEff   = clamp01 (gloopKnob (gloop::Target::Tone, smooth.tone.value())
+                                         - 0.20f * macroGlow);
+    const float reso      = clamp01 (gloopKnob (gloop::Target::Reso, smooth.reso.value()));
+    const float wowEff    = clamp01 (gloopKnob (gloop::Target::Wow, smooth.wow.value())
+                                         + 0.5f * macroDrift);
+    const float tapeEff   = clamp01 (gloopKnob (gloop::Target::Tape, smooth.tape.value())
+                                         + 0.4f * macroDrift);
     const float lofiEff   = clamp01 (smooth.lofi.value());
 
     earControls.inputGain = dsp::gainFromDb (fit (smooth.inputDb.value(), 0.0f, -24.0f, 24.0f));
@@ -508,6 +585,11 @@ void EngineDSP::process (juce::AudioBuffer<float>& io, const juce::MidiBuffer& m
         io.clear();
         return;
     }
+
+    // Install any Gloop take published by the message thread *before* the first
+    // control frame of this block, so a take that arrives together with a LOOP
+    // request is audible in this block instead of the next one.
+    gloop.beginBlock (params);
 
     const int numSamples = io.getNumSamples();
     const int numCh      = io.getNumChannels();
@@ -693,6 +775,10 @@ void EngineDSP::getVisual (VisualState& out) const noexcept
     out.bufferFill  = grainEngine.bufferFill();
     out.reduce      = visualLofi;
     out.drive       = dsp::clamp (visualDriveDb / 30.0f, 0.0f, 1.0f);
+
+    // Gloop lanes: playhead, actual mode and the effective offset this frame, so
+    // a target knob can draw its moving ring without ever reading the APVTS.
+    gloop.copyVisual (out.gloop, visualFrame);
 
     // No note input in NAGLOED: it is an effect/instrument that never sees MIDI.
     out.mpePressure = 0.0f;

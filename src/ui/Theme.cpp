@@ -418,4 +418,13 @@ Colour pitchColour (float semitones)
     return emberRamp (0.12f + 0.62f * t);
 }
 
+Colour gloopMotion() noexcept
+{
+    // Ice-blue: the one cool accent in the instrument, used only for Gloop's
+    // audible offset. Kept bright enough to read on the dark phosphor field and
+    // far enough from the ember ramp that it cannot be mistaken for the knob's
+    // own live-value arc.
+    return Colour (0xff82d4ff);
+}
+
 } // namespace nagloed::ui::theme

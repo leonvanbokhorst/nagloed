@@ -11,5 +11,6 @@ namespace nagloed::ui
 std::unique_ptr<juce::AudioProcessorEditor> createEditor (juce::AudioProcessor& processor,
                                                           juce::AudioProcessorValueTreeState& apvts,
                                                           const VisualSource& visual,
-                                                          PresetAccess& presets);
+                                                          PresetAccess& presets,
+                                                          GloopControl& gloop);
 } // namespace nagloed::ui

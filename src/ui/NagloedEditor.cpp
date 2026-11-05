@@ -90,11 +90,13 @@ private:
 NagloedEditor::NagloedEditor (juce::AudioProcessor& audioProcessor,
                               juce::AudioProcessorValueTreeState& state,
                               const VisualSource& visualSource,
-                              PresetAccess& presetAccess)
+                              PresetAccess& presetAccess,
+                              GloopControl& gloopControl)
     : juce::AudioProcessorEditor (&audioProcessor),
       apvts (state),
       visual (visualSource),
       presets (presetAccess),
+      gloop (gloopControl),
       lookAndFeel(),
       tooltipWindow (this, 650),
       topBar (state, presetAccess, lookAndFeel),
@@ -102,6 +104,7 @@ NagloedEditor::NagloedEditor (juce::AudioProcessor& audioProcessor,
       sintelPanel (state, lookAndFeel),
       earPanel (state, lookAndFeel),
       bottomPanel (state, lookAndFeel),
+      gloopPanel (state, lookAndFeel, gloopControl),
       pageCache (*this)
 {
     setLookAndFeel (&lookAndFeel);
@@ -117,6 +120,19 @@ NagloedEditor::NagloedEditor (juce::AudioProcessor& audioProcessor,
     addAndMakeVisible (sintelPanel);
     addAndMakeVisible (earPanel);
     addAndMakeVisible (bottomPanel);
+
+    // Gloop: an overlay over the grain-cloud area only, opened from a small
+    // toggle in that area's top-right corner.
+    addChildComponent (gloopPanel);
+
+    gloopToggle.getProperties().set ("role", "gloopToggle");
+    gloopToggle.getProperties().set ("gloopOpen", false);
+    gloopToggle.setButtonText ("GLOOP");
+    gloopToggle.setTitle ("Open the Gloop gesture lanes");
+    gloopToggle.setTooltip ("Eight gesture loopers that orbit the knob they record");
+    gloopToggle.setWantsKeyboardFocus (true);
+    gloopToggle.onClick = [this] { setGloopPanelOpen (! gloopOpen); };
+    addAndMakeVisible (gloopToggle);
 
     resizeGrip = std::make_unique<CornerResizeGrip> (*this);
     addAndMakeVisible (*resizeGrip);
@@ -157,6 +173,7 @@ void NagloedEditor::verifyParameterCoverage()
     sintelPanel.collectParameterIds (covered);
     earPanel.collectParameterIds (covered);
     bottomPanel.collectParameterIds (covered);
+    gloopPanel.collectParameterIds (covered);
 
     juce::StringArray missing;
 
@@ -216,12 +233,21 @@ void NagloedEditor::stepVisualsForPreview (int frames, double dtSeconds)
     {
         grainCloud.tick (snapshot, dtSeconds);
 
+        // The Gloop rings are part of the visual frame, so the deterministic
+        // preview path feeds them exactly like the live timer does.
+        sintelPanel.applyGloopVisual (snapshot.gloop);
+        earPanel.applyGloopVisual (snapshot.gloop);
+        bottomPanel.applyGloopVisual (snapshot.gloop);
+
         if ((i & 1) == 0)
         {
             sintelPanel.tick (snapshot, dtSeconds * 2.0);
             earPanel.tick (snapshot, dtSeconds * 2.0);
             bottomPanel.tick (snapshot, dtSeconds * 2.0);
             topBar.setStatus (snapshot.grainRate, snapshot.numGrains > 0);
+
+            if (gloopOpen)
+                gloopPanel.tick (snapshot.gloop, dtSeconds * 2.0);
         }
 
         if (i % 12 == 0)
@@ -254,6 +280,12 @@ void NagloedEditor::refreshOnce()
     sintelPanel.tick (snapshot, dt);
     earPanel.tick (snapshot, dt);
     bottomPanel.tick (snapshot, dt);
+    sintelPanel.applyGloopVisual (snapshot.gloop);
+    earPanel.applyGloopVisual (snapshot.gloop);
+    bottomPanel.applyGloopVisual (snapshot.gloop);
+
+    if (gloopOpen)
+        gloopPanel.tick (snapshot.gloop, dt);
     topBar.setStatus (snapshot.grainRate, snapshot.numGrains > 0);
     topBar.refreshPresets();
 }
@@ -305,12 +337,21 @@ void NagloedEditor::timerCallback()
 
     grainCloud.tick (snapshot, dt);
 
+    // The Gloop rings belong to the knobs, so they follow the 60 Hz tick even
+    // when the overlay is closed: you watch the targets, not the panel.
+    sintelPanel.applyGloopVisual (snapshot.gloop);
+    earPanel.applyGloopVisual (snapshot.gloop);
+    bottomPanel.applyGloopVisual (snapshot.gloop);
+
     if ((tickCounter & 1) == 0)
     {
         sintelPanel.tick (snapshot, dt * 2.0);
         earPanel.tick (snapshot, dt * 2.0);
         bottomPanel.tick (snapshot, dt * 2.0);
         topBar.setStatus (snapshot.grainRate, snapshot.numGrains > 0);
+
+        if (gloopOpen)
+            gloopPanel.tick (snapshot.gloop, dt * 2.0);
     }
 
     if (tickCounter % 12 == 0)
@@ -320,6 +361,71 @@ void NagloedEditor::timerCallback()
         topBar.tick();
 
     ++tickCounter;
+}
+
+// -----------------------------------------------------------------------------
+void NagloedEditor::setGloopPanelOpen (bool shouldBeOpen)
+{
+    if (gloopOpen == shouldBeOpen)
+        return;
+
+    gloopOpen = shouldBeOpen;
+
+    gloopPanel.setVisible (gloopOpen);
+    grainCloud.setVisible (! gloopOpen);
+
+    gloopToggle.setButtonText (gloopOpen ? utf8 ("GLOOP \u00d7") : "GLOOP");
+    gloopToggle.getProperties().set ("gloopOpen", gloopOpen);
+    gloopToggle.setTitle (gloopOpen ? "Close the Gloop gesture lanes"
+                                    : "Open the Gloop gesture lanes");
+    gloopToggle.repaint();
+
+    layoutGloopToggle();
+
+    if (gloopOpen)
+    {
+        gloopPanel.tick (snapshot.gloop, 1.0 / 30.0);
+        gloopPanel.repaint();
+    }
+
+    repaint();
+}
+
+void NagloedEditor::layoutGloopToggle()
+{
+    const auto s = uiScale;
+    const auto cloud = grainCloud.getBounds();
+
+    if (cloud.isEmpty())
+        return;
+
+    const auto w = juce::roundToInt (juce::jlimit (58.0f, 78.0f, 66.0f * s));
+    const auto h = juce::roundToInt (juce::jlimit (15.0f, 21.0f, 18.0f * s));
+    const auto inset = juce::roundToInt (5.0f * s);
+
+    // Closed: it floats in the top-right corner of the grain field. Open: it
+    // moves up into the Gloop panel's header row, which keeps that corner free,
+    // so the same button both opens and closes without ever covering a lane.
+    const auto y = gloopOpen ? cloud.getY() + juce::roundToInt (11.0f * s)
+                             : cloud.getY() + juce::roundToInt (34.0f * s);
+
+    gloopToggle.setBounds (cloud.getRight() - w - inset, y, w, h);
+    gloopToggle.toFront (false);
+
+    if (resizeGrip != nullptr)
+        resizeGrip->toFront (false);
+}
+
+void NagloedEditor::setGloopVisualForPreview (const gloop::Visual& gloopVisual)
+{
+    snapshot.gloop = gloopVisual;
+
+    sintelPanel.applyGloopVisual (snapshot.gloop);
+    earPanel.applyGloopVisual (snapshot.gloop);
+    bottomPanel.applyGloopVisual (snapshot.gloop);
+    gloopPanel.tick (snapshot.gloop, 1.0 / 30.0);
+
+    repaint();
 }
 
 // -----------------------------------------------------------------------------
@@ -346,6 +452,8 @@ void NagloedEditor::applyScale (float newScale)
     sintelPanel.setUiScale (uiScale);
     earPanel.setUiScale (uiScale);
     bottomPanel.setUiScale (uiScale);
+    gloopPanel.setUiScale (uiScale);
+    gloopToggle.getProperties().set ("uiScale", (double) uiScale);
     pageCache.invalidate();
 }
 
@@ -384,6 +492,11 @@ void NagloedEditor::layoutAtScale()
 
     topBar.setBounds (topRect);
     bottomPanel.setBounds (bottomRect);
+
+    // The Gloop overlay covers the grain-cloud area and nothing else: the
+    // Sintel/EAR/bottom knobs (and their rings) stay visible beside it.
+    gloopPanel.setBounds (grainCloud.getBounds());
+    layoutGloopToggle();
 
     if (errorBanner != nullptr)
         errorBanner->setBounds (juce::Rectangle<int> (margin, margin,
@@ -491,6 +604,7 @@ void NagloedEditor::paint (juce::Graphics& g)
     // repaint cheap on large, high-DPI windows.
     if (sintelPanel.getBounds().contains (clip)
         || grainCloud.getBounds().contains (clip)
+        || (gloopOpen && gloopPanel.getBounds().contains (clip))
         || earPanel.getBounds().contains (clip)
         || bottomPanel.getBounds().contains (clip))
         return;

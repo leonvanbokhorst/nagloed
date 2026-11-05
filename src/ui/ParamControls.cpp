@@ -1,5 +1,6 @@
 #include "ParamControls.h"
 #include "Theme.h"
+#include "core/Parameters.h"
 
 namespace nagloed::ui
 {
@@ -132,6 +133,7 @@ ParamSlider& ParamControlSet::addKnob (juce::Component& parent, const char* para
 
     s.getProperties().set ("uiScale", (double) uiScale);
     s.getProperties().set ("caption", caption);
+    s.getProperties().set ("paramId", juce::String (paramId));
 
     if (param != nullptr)
     {
@@ -165,6 +167,8 @@ ParamSlider& ParamControlSet::addKnob (juce::Component& parent, const char* para
         }
     }
 
+    knobsByParamId.emplace_back (juce::String (paramId), &s);
+
     parent.addAndMakeVisible (s);
     controls.push_back (std::move (slider));
 
@@ -183,6 +187,7 @@ juce::Slider& ParamControlSet::addRibbon (juce::Component& parent, const char* p
     s.setSliderStyle (juce::Slider::LinearHorizontal);
     s.getProperties().set ("uiScale", (double) uiScale);
     s.getProperties().set ("caption", caption);
+    s.getProperties().set ("paramId", juce::String (paramId));
 
     if (param != nullptr)
     {
@@ -270,6 +275,112 @@ void ParamControlSet::collectParameterIds (juce::StringArray& ids) const
 {
     for (const auto& id : attachedIds)
         ids.addIfNotAlreadyThere (id);
+}
+
+ParamSlider* ParamControlSet::findKnob (const char* paramId) const
+{
+    if (paramId == nullptr)
+        return nullptr;
+
+    const juce::String wanted (paramId);
+
+    for (const auto& entry : knobsByParamId)
+        if (entry.first == wanted)
+            return entry.second;
+
+    return nullptr;
+}
+
+void ParamControlSet::applyGloopVisual (const gloop::Visual& visual)
+{
+    // One knob can carry several Gloop lanes (a common gesture: two orbits on
+    // Cutoff). The knob must still read at a glance, so all of their effective
+    // offsets are summed into a single influence value. The LookAndFeel draws
+    // that as one light-blue arc around the knob's orange live-value ring; it
+    // never draws per-lane playheads here (phase belongs in the Gloop panel).
+    struct Influence
+    {
+        float offset = 0.0f;
+        float amount = 0.0f;
+    };
+
+    std::vector<std::pair<ParamSlider*, Influence>> affected;
+
+    for (int lane = 0; lane < gloop::kNumLanes; ++lane)
+    {
+        const auto& l = visual.lanes[(size_t) lane];
+        const auto mode = (gloop::Mode) l.mode;
+
+        // Only a lane with actual playback influence draws. READY (Idle) and
+        // RECORD contribute zero by contract; FADE contributes what is left of
+        // its gain, so it keeps drawing while it withdraws.
+        if (mode != gloop::Mode::Loop && mode != gloop::Mode::Fade)
+            continue;
+
+        for (int t = 0; t < l.numTracks; ++t)
+        {
+            const auto& track = l.tracks[(size_t) t];
+            auto* slider = findKnob (gloopTargetParamId (track.target));
+
+            if (slider == nullptr)
+                continue;   // target without a knob in this panel
+
+            Influence* data = nullptr;
+
+            for (auto& entry : affected)
+                if (entry.first == slider)
+                    data = &entry.second;
+
+            if (data == nullptr)
+            {
+                affected.emplace_back (slider, Influence {});
+                data = &affected.back().second;
+            }
+
+            // LaneVisual::offset is already the *effective* normalised offset
+            // (gesture * amount * fade * random) for this track: sum it as-is.
+            // Scaling by amount here would apply the lane's gain twice. `amount`
+            // only drives the arc intensity.
+            data->offset += track.offset;
+            data->amount = juce::jmax (data->amount,
+                                       juce::jlimit (0.0f, 1.0f, l.amount));
+        }
+    }
+
+    // Knobs that dropped out of the active set lose their blue influence once.
+    for (auto* slider : gloopRinged)
+    {
+        bool stillActive = false;
+
+        for (const auto& entry : affected)
+            if (entry.first == slider)
+                stillActive = true;
+
+        if (! stillActive)
+        {
+            auto& props = slider->getProperties();
+            props.remove ("gloopOffset");
+            props.remove ("gloopAmount");
+            props.remove ("gloopActive");
+            slider->repaint();
+        }
+    }
+
+    gloopRinged.clear();
+
+    for (auto& entry : affected)
+    {
+        auto* slider = entry.first;
+        const auto& data = entry.second;
+
+        auto& props = slider->getProperties();
+        props.set ("gloopOffset", juce::var (juce::jlimit (-1.0f, 1.0f, data.offset)));
+        props.set ("gloopAmount", juce::var (juce::jlimit (0.0f, 1.0f, data.amount)));
+        props.set ("gloopActive", juce::var (true));
+
+        gloopRinged.push_back (slider);
+        slider->repaint();
+    }
 }
 
 void ParamControlSet::setUiScale (float newScale)

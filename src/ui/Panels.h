@@ -23,6 +23,9 @@ public:
 
     void setUiScale (float newScale);
     void tick (const VisualState& snapshot, double elapsedSeconds);
+
+    /** Live Gloop state: rings appear on whichever knob is a lane's target. */
+    void applyGloopVisual (const gloop::Visual& visual);
     void paint (juce::Graphics&) override;
     void resized() override;
 
@@ -69,6 +72,9 @@ public:
 
     void setUiScale (float newScale);
     void tick (const VisualState& snapshot, double elapsedSeconds);
+
+    /** Live Gloop state: rings appear on whichever knob is a lane's target. */
+    void applyGloopVisual (const gloop::Visual& visual);
     void paint (juce::Graphics&) override;
     void resized() override;
 
@@ -114,6 +120,9 @@ public:
     /** Deterministic-preview hook: pin the animated visualiser phases. */
     void setPhasesForPreview (float spacePhase, float lfoPhase);
     void tick (const VisualState& snapshot, double elapsedSeconds);
+
+    /** Live Gloop state: rings appear on whichever knob is a lane's target. */
+    void applyGloopVisual (const gloop::Visual& visual);
     void paint (juce::Graphics&) override;
     void resized() override;
 

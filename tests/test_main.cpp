@@ -8,6 +8,8 @@
 
 #include "TestHarness.h"
 #include "DspTests.h"
+#include "GloopDspTests.h"
+#include "GloopProcessorTests.h"
 
 #include "plugin/PluginProcessor.h"
 #include "plugin/Presets.h"
@@ -98,6 +100,10 @@ int main()
 
     // --- DSP suite -----------------------------------------------------------
     runDspTests();
+
+    // --- Gloop suite ---------------------------------------------------------
+    runGloopDspTests();
+    runGloopProcessorTests();
 
     std::printf ("\n%d checks, %d failures\n", nagl_test::gChecks, nagl_test::gFailures);
     return nagl_test::gFailures == 0 ? 0 : 1;

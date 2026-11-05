@@ -259,6 +259,75 @@ automation and preset authoring, and are reserved for the MPE update.
 | **Slide** (`mod.slide`) | 4 choices | Pitch | Pitch, Focus, Cutoff, Pan |
 | **Expression** (`mod.expression`) | 0–100% | 100% | Amount of expression response |
 
+## Gloop — gesture loopers
+
+Gloop records what you do with one or more knobs and lets that movement
+circulate around each knob's **live** value. It is not automation playback: the
+lanes have no shared clock, they drift against each other, and an empty or
+motionless lane contributes nothing. Open the panel with the **GLOOP** button
+over the grain field; the rest of the controls stay visible so you can watch the
+rings.
+
+Each of the eight lanes has:
+
+| Control | Range | Default | What it does |
+|---|---|---|---|
+| **Target** (`gloop.N.target`) | Off, Focus, Pitch, Cutoff, Space, Density, Spray, Width, Shape, Drive, Tone, Reso, Wow, Tape, Feedback, Spread, Grain Size, Drift, **Multi** | Off | A specific target records one knob. **Multi** records every knob you move during REC, up to four tracks. A lane can share a target with other lanes. |
+| **Amount** (`gloop.N.amount`) | 0–100% | 50% | How strongly the recorded movement contributes, from barely perceptible to expressive. |
+| **Speed** (`gloop.N.speed`) | 0.25×–2× | 1× | Playback time of the recorded gesture. Changes glide in phase; they do not restart the loop or synchronise lanes. |
+| **Smooth** (`gloop.smooth`) | 0–100% | 35% | Global glide that turns abrupt gestures into graceful motion (~8–260 ms). |
+
+In the target list, **Grain Size** is Sintel's grain-size control and **Drift** is EAR's drift;
+the parameter ID is always unique even when a caption repeats elsewhere.
+
+**Multi — a gesture through the instrument.** Set a lane's target to **Multi**,
+press REC, and move different knobs at your own pace: for example Grain, then
+Drift, then Space. Each knob that moves more than about 1.5 % of its range becomes
+a track in that lane. Sequential movement is the normal case; several knobs
+moved at once (including by external control) are captured too. All tracks share
+the lane's duration, phase, speed, amount and fade, so the linked movements
+return together. Before a track's first movement it is silent (its offset is
+zero), so the timing of the original gesture is preserved. A lane holds up to
+**four** tracks; additional movements beyond that are ignored. If nothing moves,
+the lane stays EMPTY and silent — Gloop does not invent a gesture. A specific
+target remains the simple one-knob mode and is unchanged.
+
+The mode button walks the lane through its cycle:
+
+1. **REC** — move the target knob (or any knobs, in Multi) while recording. The
+   gesture is captured relative to each knob's position when REC started, so it
+   is movement, not a sequence of absolute values.
+2. **STOP → LOOP** — the take loops indefinitely. The button now reads **LOOP**.
+3. **FADE** — click **LOOP** to withdraw that lane's influence over about
+   2.5 seconds. The button reads **FADE…** while it withdraws. When it finishes
+   the lane is **READY** for a fresh REC.
+4. **READY** — the take is still stored, but silent. Press REC to make a new one.
+
+**Moving the target knob while a loop runs translates the orbit.** The knob's
+own **orange** arc and pointer are always the live value you set; Gloop never
+writes to the parameter, so your hand always wins. Gloop's current contribution
+is the separate **light-blue arc** outside it: it follows the actual summed
+offset, so it is visible only when the lane is moving the value. The lane's
+mini-ring in the Gloop panel is the playback phase; that is deliberately not
+drawn on the parameter knob, so the blue arc cannot be mistaken for a playhead
+or for the physical knob being automated. The Gloop panel uses the same blue for
+active Gloop state and phase, neutral chrome for lanes and inactive states, and
+an ember accent only while recording; there is no separate colour per lane.
+Several lanes may target the same parameter; their offsets are summed into that
+one blue display and bounded by a smooth limiter.
+
+**RANDOMIZE** gently changes the depth and speed of the lanes that are already
+moving, gliding over several seconds. It never starts an idle lane, never
+changes a target and never restarts a phase. Press it again for a new
+relationship; the amount/speed knobs remain the base values you set.
+
+REC, LOOP, FADE and READY are performance states, not host parameters: they are
+saved with the session but are not automatable. Recorded takes also live in the
+session, not in a factory preset. Loading a normal factory preset leaves the
+Gloop targets and takes alone, so the orbits continue around the preset's new
+parameter values; loading **Init** resets the Gloop parameters to Off, which
+silences the lanes. Fade or re-arm them as you wish.
+
 ## Presets
 
 NAGLOED ships with **24 factory presets across eight categories, plus Init**:
@@ -297,6 +366,9 @@ NAGLOED ships with **24 factory presets across eight categories, plus Init**:
   phrases rather than a ramp.
 - **Tune**, **Source**, **Shape** (LFO) and **Dest** are choice parameters. Change
   them between phrases, not mid-grain, if you want a clean transition.
+- **Gloop** target, amount, speed and smooth are ordinary parameters and can be
+  automated. REC/LOOP/FADE and the recorded takes are performance state: they
+  are saved with the session but deliberately not exposed as automation lanes.
 - For performance, automate the five macros or use your host's MIDI learn on
   them; they are designed for large gestures rather than exact values.
 
@@ -332,6 +404,12 @@ REAPER's automation, not a MIDI note.
 
 Presets are loaded through the host's program list. The current program number
 and all parameter values are saved with the session and restored on reload.
+Gloop takes and their READY/LOOP state are saved with the **session**, not with
+a factory preset; moving a session to another machine keeps them, but a preset
+alone does not carry a recorded performance.
+
+Gloop is new in the current development build for the next release (issue #33);
+the manual header and release notes are updated at release time.
 
 ## Troubleshooting
 

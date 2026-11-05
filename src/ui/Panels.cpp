@@ -112,6 +112,11 @@ void SintelPanel::collectParameterIds (juce::StringArray& ids) const
     controls.collectParameterIds (ids);
 }
 
+void SintelPanel::applyGloopVisual (const gloop::Visual& visual)
+{
+    controls.applyGloopVisual (visual);
+}
+
 void SintelPanel::tick (const VisualState& snapshot, double)
 {
     if ((tickCounter++ % 15) != 0)
@@ -323,6 +328,11 @@ void EarPanel::layoutControls()
 void EarPanel::collectParameterIds (juce::StringArray& ids) const
 {
     controls.collectParameterIds (ids);
+}
+
+void EarPanel::applyGloopVisual (const gloop::Visual& visual)
+{
+    controls.applyGloopVisual (visual);
 }
 
 void EarPanel::tick (const VisualState& snapshot, double elapsedSeconds)
@@ -576,6 +586,11 @@ void BottomPanel::layoutControls()
 void BottomPanel::collectParameterIds (juce::StringArray& ids) const
 {
     controls.collectParameterIds (ids);
+}
+
+void BottomPanel::applyGloopVisual (const gloop::Visual& visual)
+{
+    controls.applyGloopVisual (visual);
 }
 
 void BottomPanel::setPhasesForPreview (float spacePhase, float lfoPhase)

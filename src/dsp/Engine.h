@@ -36,6 +36,16 @@ public:
     void getVisual (VisualState& out) const noexcept;
     int  getLatencySamples() const noexcept;
 
+    /** Hand a recorded Gloop gesture to the audio thread.
+        Message thread only; lock-free (SPSC) hand-off. Returns false when the
+        hand-off queue is full, in which case the caller may retry. */
+    bool publishGloopGesture (int lane, const gloop::Gesture& gesture) noexcept;
+
+    /** Compatibility/QA overload: one offset track using the lane's current
+        target from the last setParams() snapshot. */
+    bool publishGloopGesture (int lane, const float* offsets, int count,
+                              float durationSeconds) noexcept;
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl;

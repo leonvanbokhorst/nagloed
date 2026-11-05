@@ -1,7 +1,11 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdint>
+
+#include "Gloop.h"
 
 namespace nagloed
 {
@@ -65,6 +69,13 @@ struct EngineParams
     int   pressureDest = 0;
     int   slideDest    = 0;
     float expression   = 1.0f;
+
+    // --- Gloop: eight asynchronous gesture loopers --------------------------
+    // target/amount/speed arrive from the APVTS; mode is performance state that
+    // the processor injects from atomics (it is deliberately not automatable).
+    std::array<gloop::LaneParams, gloop::kNumLanes> gloopLanes {};
+    float gloopSmoothing = 0.35f;      // 0..1 -> ~8..260 ms glide
+    std::uint32_t gloopRandomize = 0;  // increments on a Randomize press
 
     // Convenience derived values used by the engine.
     float sizeSeconds() const noexcept { return std::clamp (sizeMs, 1.0f, 2000.0f) * 0.001f; }
