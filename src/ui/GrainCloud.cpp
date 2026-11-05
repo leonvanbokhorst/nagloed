@@ -12,10 +12,34 @@ using namespace theme;
 namespace
 {
 constexpr int   kMaxMotes           = 460;
-constexpr int   kLiveFadeShift      = 5;      // 1/32 per frame
+constexpr int   kLiveFadeShift      = 4;      // 1/16 per frame: short ember trails
 constexpr int   kPrewarmFadeShift   = 5;
 constexpr float kMaxPhosphorPixels  = 4.5e6f;
 constexpr float kChromeMaxPixels    = 5.0e6f;
+
+// --- living particle tuning (issue #32) --------------------------------------
+// All speeds are in field widths per second; all times in seconds. The field
+// is 0..1 in both axes, so these numbers are resolution independent.
+constexpr float kBirthImpulse       = 0.045f;  // outward kick at birth
+constexpr float kMatchedSpring      = 6.0f;    // hold a live grain near its home
+constexpr float kAfterglowDrag      = 1.70f;   // ember air resistance
+constexpr float kBuoyancyBase       = 0.040f;  // embers rise...
+constexpr float kBuoyancyActivity   = 0.120f;  // ...more when the cloud is hot
+constexpr float kPitchBuoyancy      = 0.045f;  // high grains rise, low sink
+constexpr float kTurbulenceBase     = 0.014f;
+constexpr float kTurbulenceActivity = 0.050f;
+constexpr float kTurbulenceGust     = 0.080f;
+constexpr float kTrailStep          = 0.022f;  // seconds of flight per trail splat
+constexpr int   kTrailMax           = 1;
+constexpr float kAfterglowMin       = 0.35f;
+constexpr float kAfterglowJitter    = 0.45f;
+constexpr float kStrayGlowMin       = 2.00f;
+constexpr float kStrayGlowJitter    = 1.40f;
+constexpr float kStrayChanceBase    = 0.004f;
+constexpr float kStrayChanceSparse  = 0.045f;
+constexpr int   kMaxStrays          = 3;
+constexpr float kMotionDtMin        = 0.001f;
+constexpr float kMotionDtMax        = 0.050f;  // below 20 fps motion slows, not explodes
 
 juce::String percentText (float normalised)
 {
@@ -80,7 +104,12 @@ bool GrainCloud::PhosphorField::ensure (int logicalWidth, int logicalHeight, flo
     const auto physicalW = juce::jmax (1, juce::roundToInt ((float) logicalWidth * scale));
     const auto physicalH = juce::jmax (1, juce::roundToInt ((float) logicalHeight * scale));
 
-    buffer = juce::Image (juce::Image::ARGB, physicalW, physicalH, true);
+    // Software-backed on purpose. The phosphor is written through a persistent
+    // BitmapData every frame; on macOS a NativeImageType image caches its
+    // CGImage on first draw and never sees those raw writes again, so the field
+    // renders one frozen frame (the "Sintel looks static" half of issue #32).
+    buffer = juce::Image (juce::Image::ARGB, physicalW, physicalH, true,
+                          juce::SoftwareImageType());
     buffer.clear (buffer.getBounds(), juce::Colour (0xff05070a));   // brand phosphor base
 
     pixels = std::make_unique<juce::Image::BitmapData> (buffer, juce::Image::BitmapData::writeOnly);
@@ -355,6 +384,13 @@ float GrainCloud::pitchToY (float semitones) const
     return fieldRect.getBottom() - pitchToNorm (semitones) * fieldRect.getHeight();
 }
 
+float GrainCloud::pitchToFieldY (float semitones) const
+{
+    // Normalised top-down field coordinate: +24 st at the top (0), -24 at the
+    // bottom (1). This is the data anchor of every particle.
+    return 1.0f - pitchToNorm (semitones);
+}
+
 // --- parameter helpers -------------------------------------------------------
 void GrainCloud::setParamNormalised (juce::RangedAudioParameter* param, float normalised)
 {
@@ -622,68 +658,468 @@ void GrainCloud::drawDust (float timeScale, float energyScale)
 
 }
 
-void GrainCloud::drawGrains()
+// =============================================================================
+// Living grain particles (issue #32)
+//
+// The engine only publishes anonymous display copies of the live grains, so the
+// UI approximates identity frame-to-frame by matching each new GrainView to the
+// closest existing particle (progress first, then capture position, pan, pitch).
+//
+// Every ember is born from a real GrainView: its home is the point where the
+// grain reads in the buffer (pos + a small pan offset) at its real pitch. The
+// flight after birth is the UI's interpretation of that grain's life: buoyant,
+// turbulent, then cooling. Nothing is spawned without grain data.
+// =============================================================================
+float GrainCloud::nextRandom()
 {
+    // 24 bits from the existing deterministic mt19937; no allocation.
+    return (float) (rng() >> 8) * (1.0f / 16777215.0f);
+}
+
+float GrainCloud::nextSigned()
+{
+    return nextRandom() * 2.0f - 1.0f;
+}
+
+void GrainCloud::updateParticles (const VisualState& snapshot, float dt)
+{
+    dt = juce::jlimit (kMotionDtMin, kMotionDtMax, dt);
+
+    const auto grainRate = juce::jmax (0.0f, sanitise (snapshot.grainRate));
+    const auto numGrains = juce::jmax (0, snapshot.numGrains);
+    const auto outLevel = juce::jlimit (0.0f, 1.0f,
+                                        (snapshot.outL + snapshot.outR) * 1.6f
+                                            + snapshot.outPeak * 0.6f);
+    const auto activityTarget = juce::jlimit (0.0f, 1.0f,
+        juce::jmax (grainRate / 130.0f,
+        juce::jmax ((float) numGrains / 34.0f, outLevel)));
+
+    activityHeat += (activityTarget - activityHeat) * (1.0f - std::exp (-dt * 5.0f));
+
+    matchGrainViews (snapshot, dt);
+    integrateParticles (dt);
+}
+
+void GrainCloud::matchGrainViews (const VisualState& snapshot, float dt)
+{
+    const auto numViews = juce::jlimit (0, VisualState::kMaxGrainViews, snapshot.numGrains);
+
+    std::array<int, (size_t) VisualState::kMaxGrainViews> claimed {};
+    claimed.fill (-1);
+
+    // 1. Existing particles keep their grain while the match key stays close.
+    for (int pi = 0; pi < particleCount; ++pi)
+    {
+        auto& p = particles[(size_t) pi];
+        p.matched = false;
+
+        if (p.life > 0.0f)
+            continue;   // already a released ember
+
+        int bestView = -1;
+        auto bestScore = 0.0f;
+
+        for (int vi = 0; vi < numViews; ++vi)
+        {
+            if (claimed[(size_t) vi] >= 0)
+                continue;
+
+            const auto& v = snapshot.grains[(size_t) vi];
+            const auto vProgress = juce::jlimit (0.0f, 1.0f, sanitise (v.progress));
+            const auto vPos = juce::jlimit (0.0f, 1.0f, sanitise (v.pos, 0.5f));
+            const auto vPan = juce::jlimit (-1.0f, 1.0f, sanitise (v.pan));
+            const auto vPitch = juce::jlimit (-24.0f, 24.0f, sanitise (v.pitch));
+
+            // A live grain's progress advances. A backwards or huge jump is
+            // either a new voice or the approximation losing track; a mild
+            // penalty keeps the picture continuous without pretending we have
+            // a stable grain id.
+            const auto dProgress = vProgress - p.progress;
+            const auto progressTerm = (dProgress >= -0.08f && dProgress <= 0.65f)
+                                          ? 1.1f * std::abs (dProgress)
+                                          : 0.65f;
+
+            const auto score = 3.2f * std::abs (vPos + vPan * 0.012f - p.homeX)
+                             + 2.4f * std::abs (pitchToFieldY (vPitch) - p.homeY)
+                             + 0.25f * std::abs (vPan - p.pan)
+                             + 0.02f * std::abs (vPitch - p.pitch)
+                             + progressTerm;
+
+            if (bestView < 0 || score < bestScore)
+            {
+                bestView = vi;
+                bestScore = score;
+            }
+        }
+
+        if (bestView >= 0 && bestScore <= 1.0f)
+        {
+            const auto& v = snapshot.grains[(size_t) bestView];
+            claimed[(size_t) bestView] = pi;
+
+            p.matched = true;
+            p.track += dt;
+            p.progress = juce::jlimit (0.0f, 1.0f, sanitise (v.progress));
+            p.env = juce::jlimit (0.0f, 1.0f, sanitise (v.env));
+            p.pitch = juce::jlimit (-24.0f, 24.0f, sanitise (v.pitch));
+            p.pan = juce::jlimit (-1.0f, 1.0f, sanitise (v.pan));
+            p.brightness = juce::jlimit (0.0f, 1.0f, sanitise (v.brightness, 0.5f));
+        }
+    }
+
+    // 2. A particle that no longer matches loses its grain and enters
+    //    afterglow. `age > 0` covers the edge case of a grain that only ever
+    //    appeared in a single snapshot: it was spawned last frame but never
+    //    matched again, and must still leave a fading ember rather than vanish.
+    for (int pi = 0; pi < particleCount; ++pi)
+    {
+        auto& p = particles[(size_t) pi];
+        if (! p.matched && p.life <= 0.0f && p.age > 0.0f)
+            beginAfterglow (p);
+    }
+
+    // 3. Unclaimed views are new grains (or grains we lost track of).
+    for (int vi = 0; vi < numViews; ++vi)
+        if (claimed[(size_t) vi] < 0)
+            spawnParticle (snapshot.grains[(size_t) vi]);
+}
+
+void GrainCloud::spawnParticle (const GrainView& view)
+{
+    int slot = particleCount;
+
+    if (slot >= kMaxParticles)
+    {
+        // The pool is full of released embers: recycle the faintest one so a
+        // new grain is never silently invisible.
+        auto best = -1;
+        auto bestLife = 1.0e9f;
+
+        for (int i = 0; i < particleCount; ++i)
+        {
+            const auto& p = particles[(size_t) i];
+            if (p.life > 0.0f && p.life < bestLife)
+            {
+                best = i;
+                bestLife = p.life;
+            }
+        }
+
+        if (best < 0)
+            return;   // every ember is still attached to a live grain
+
+        slot = best;
+    }
+    else
+    {
+        ++particleCount;
+    }
+
+    const auto pos = juce::jlimit (0.0f, 1.0f, sanitise (view.pos, 0.5f));
+    const auto pan = juce::jlimit (-1.0f, 1.0f, sanitise (view.pan));
+    const auto pitch = juce::jlimit (-24.0f, 24.0f, sanitise (view.pitch));
+    const auto env = juce::jlimit (0.0f, 1.0f, sanitise (view.env));
+    const auto brightness = juce::jlimit (0.0f, 1.0f, sanitise (view.brightness, 0.5f));
+    const auto sizeNorm = paramNormalised (sizeParam);
+
+    Particle p;
+    p.homeX = juce::jlimit (0.03f, 0.97f, pos + pan * 0.012f + nextSigned() * 0.008f);
+    p.homeY = juce::jlimit (0.04f, 0.96f, pitchToFieldY (pitch) + nextSigned() * 0.010f);
+    p.x = juce::jlimit (0.0f, 1.0f, p.homeX + nextSigned() * 0.006f);
+    p.y = juce::jlimit (0.0f, 1.0f, p.homeY + nextSigned() * 0.006f);
+    p.progress = juce::jlimit (0.0f, 1.0f, sanitise (view.progress));
+    p.env = env;
+    p.pitch = pitch;
+    p.pan = pan;
+    p.brightness = brightness;
+    p.radius = (0.70f + 1.90f * env) * (0.75f + 0.55f * sizeNorm);
+    p.energy = juce::jlimit (0.08f, 0.72f, 0.16f + 0.42f * env);
+
+    // A small outward kick at birth: the ember leaves the point where the
+    // grain reads. Direction follows the real pan and the activity level.
+    p.vx = pan * kBirthImpulse * 0.8f + nextSigned() * kBirthImpulse;
+    p.vy = -(0.015f + 0.10f * env + 0.06f * activityHeat) + nextSigned() * 0.020f;
+
+    p.phase = nextRandom() * juce::MathConstants<float>::twoPi;
+    p.seed = nextRandom() * 100.0f;
+    p.matched = true;
+
+    particles[(size_t) slot] = p;
+}
+
+void GrainCloud::beginAfterglow (Particle& p)
+{
+    int strays = 0;
+    for (int i = 0; i < particleCount; ++i)
+        if (particles[(size_t) i].stray)
+            ++strays;
+
+    const auto densityNorm = juce::jlimit (0.0f, 1.0f, paramNormalised (densityParam));
+    const auto strayChance = kStrayChanceBase + kStrayChanceSparse * (1.0f - densityNorm);
+
+    p.matched = false;
+    p.stray = strays < kMaxStrays && nextRandom() < strayChance;
+    p.afterglowLife = p.stray ? (kStrayGlowMin + nextRandom() * kStrayGlowJitter)
+                              : (kAfterglowMin + nextRandom() * kAfterglowJitter);
+    p.life = p.afterglowLife;
+
+    if (p.stray)
+    {
+        p.radius *= 1.35f;
+        p.energy = juce::jmin (p.energy, 0.42f);
+    }
+
+    // Release with a last breath: the ember keeps moving where the grain was.
+    p.vx += p.pan * 0.040f + nextSigned() * 0.030f;
+    p.vy -= 0.020f + 0.050f * activityHeat;
+}
+
+void GrainCloud::integrateParticles (float dt)
+{
+    if (particleCount <= 0)
+        return;
+
+    gust = juce::jmax (0.0f, gust - dt * 1.6f);
+    if (visual.outPeak > 0.45f && visual.outPeak > lastOutPeak + 0.05f)
+        gust = juce::jmin (1.0f, gust + 0.5f);
+    lastOutPeak = visual.outPeak;
+
+    flowPhase += dt * (0.35f + 0.90f * activityHeat);
+
+    const auto densityNorm = juce::jlimit (0.0f, 1.0f, paramNormalised (densityParam));
+    const auto lfoBias = juce::jlimit (-1.0f, 1.0f, sanitise (visual.lfo));
+    const auto scanBias = juce::jlimit (-1.0f, 1.0f, paramReal (scanParam));
+    const auto turbulence = kTurbulenceBase + kTurbulenceActivity * activityHeat
+                            + kTurbulenceGust * gust
+                            + 0.05f * densityNorm;
+
+    const auto steps = juce::jlimit (1, 3, (int) std::ceil (dt / 0.025f));
+    const auto h = dt / (float) steps;
+
+    for (int i = 0; i < particleCount; ++i)
+    {
+        auto& p = particles[(size_t) i];
+        p.age += dt;
+
+        float ax, ay;
+
+        if (p.matched)
+        {
+            // A live grain anchors its ember: the cluster cores are where the
+            // engine is actually reading, with a little thermal wobble.
+            ax = (p.homeX - p.x) * kMatchedSpring
+                 + std::sin (p.seed + p.age * 2.1f) * turbulence * 0.35f;
+            ay = (p.homeY - p.y) * kMatchedSpring
+                 + std::cos (p.seed * 1.3f + p.age * 1.7f) * turbulence * 0.25f;
+        }
+        else
+        {
+            // Released ember: buoyant, eddying flight.
+            const auto curlX = std::sin (p.y * 6.4f + flowPhase + p.seed)
+                             + 0.45f * std::sin (p.x * 3.1f - flowPhase * 1.6f + p.seed * 0.7f);
+            const auto curlY = std::cos (p.x * 5.3f - flowPhase * 0.8f + p.seed * 1.7f);
+            const auto buoyancy = kBuoyancyBase + kBuoyancyActivity * activityHeat
+                                + kPitchBuoyancy * (p.pitch / 24.0f);
+
+            ax = curlX * turbulence
+                 + p.pan * 0.10f
+                 + lfoBias * 0.045f
+                 + scanBias * 0.020f;
+            // A cooling layer near the top: embers slow down and spread instead
+            // of piling up against the edge.
+            const auto cooling = 0.10f * activityHeat
+                                 * juce::jmax (0.0f, 0.20f - p.y) * 5.0f;
+            ay = -buoyancy + curlY * turbulence * 0.35f + cooling;
+        }
+
+        for (int s = 0; s < steps; ++s)
+        {
+            p.vx += ax * h;
+            p.vy += ay * h;
+
+            const auto damp = std::exp (-kAfterglowDrag * h);
+            p.vx *= damp;
+            p.vy *= damp;
+
+            p.x += p.vx * h;
+            p.y += p.vy * h;
+        }
+
+        // A live grain's ember tracks its envelope; a released ember keeps the
+        // energy it had when the grain ended and fades out in drawParticles().
+        if (p.matched)
+            p.energy += ((0.10f + 0.55f * p.env) - p.energy)
+                        * juce::jmin (1.0f, dt * 12.0f);
+
+        if (! p.matched)
+            p.life -= dt;
+
+        // Embers dissolve at the edge rather than piling up there.
+        if (p.x < -0.10f || p.x > 1.10f || p.y < -0.10f || p.y > 1.10f)
+        {
+            if (p.matched)
+                beginAfterglow (p);
+            p.life = juce::jmin (p.life, 0.12f);
+        }
+
+        if (! p.matched && p.life < 0.0f)
+            p.life = 0.0f;
+    }
+
+    // Compact the pool: a matched ember survives, a released ember lives while
+    // its fade has anything left to show.
+    int write = 0;
+    for (int i = 0; i < particleCount; ++i)
+    {
+        const auto& p = particles[(size_t) i];
+
+        if (! p.matched && p.life <= 0.0f)
+            continue;
+
+        particles[(size_t) write++] = p;
+    }
+    particleCount = write;
+}
+
+void GrainCloud::drawParticles()
+{
+    particleLuminance = 0.0f;
+
+    if (particleCount <= 0 || ! phosphor.isReady())
+        return;
+
     const auto fw = fieldRect.getWidth();
     const auto fh = fieldRect.getHeight();
-    const auto sizeNorm = paramNormalised (sizeParam);
-    const auto num = juce::jlimit (0, VisualState::kMaxGrainViews, visual.numGrains);
+    auto energySum = 0.0f;
 
-    for (int i = 0; i < num; ++i)
+    // Mild crowd normalisation: density must read as density, not as a wash.
+    const auto crowd = 1.0f / std::sqrt (juce::jmax (1.0f, (float) particleCount / 70.0f));
+
+    for (int i = 0; i < particleCount; ++i)
     {
-        const auto& grain = visual.grains[(size_t) i];
+        const auto& p = particles[(size_t) i];
+        const auto fade = p.matched
+                              ? 1.0f
+                              : juce::jlimit (0.0f, 1.0f,
+                                              p.life / juce::jmax (0.001f, p.afterglowLife));
+        const auto energy = p.energy * (fade * fade * (3.0f - 2.0f * fade)) * crowd;
 
-        const auto pos = juce::jlimit (0.0f, 1.0f, sanitise (grain.pos, 0.5f));
-        const auto pan = juce::jlimit (-1.0f, 1.0f, sanitise (grain.pan));
-        const auto pitch = juce::jlimit (-24.0f, 24.0f, sanitise (grain.pitch));
-        const auto env = juce::jlimit (0.0f, 1.0f, sanitise (grain.env));
-        const auto brightness = juce::jlimit (0.0f, 1.0f, sanitise (grain.brightness, 0.5f));
+        if (energy < 0.004f)
+            continue;
 
-        const auto x = pos * fw + pan * 6.0f * uiScale;
-        const auto y = (1.0f - pitchToNorm (pitch)) * fh;
-        const auto radius = (0.9f + 2.6f * env) * (0.75f + 0.6f * sizeNorm);
-        const auto colour = pitchColour (pitch);
-        const auto energy = 0.15f + 0.55f * env;
+        const auto px = p.x * fw;
+        const auto py = p.y * fh;
 
-        phosphor.splat (x, y, radius * 2.3f, colour, energy * 0.20f);
-        phosphor.splat (x, y, radius, colour, energy * 0.55f);
-        phosphor.splat (x, y, radius * 0.55f, gold, energy * 0.28f);
+        if (px < -32.0f || px > fw + 32.0f || py < -32.0f || py > fh + 32.0f)
+            continue;
 
-        if (brightness > 0.35f)
-            phosphor.splat (x, y, radius * 0.40f, gold,
-                            energy * 0.18f * (brightness - 0.35f) / 0.65f);
+        const auto radius = p.radius * (p.matched ? 1.0f : 0.85f + 0.25f * fade);
+        const auto colour = pitchColour (p.pitch);
+        const auto flicker = 0.90f + 0.10f * std::sin (p.phase + p.age * (p.stray ? 0.7f : 1.4f));
+        const auto e = energy * flicker;
+
+        phosphor.splat (px, py, radius * 2.2f, colour, e * 0.14f);
+        phosphor.splat (px, py, radius, colour, e * 0.50f);
+        phosphor.splat (px, py, radius * 0.45f, gold,
+                        e * 0.22f * (0.35f + 0.65f * p.brightness));
+
+        drawParticleTrail (p);
+
+        energySum += e;
+    }
+
+    particleLuminance = juce::jlimit (0.0f, 1.0f, energySum / 24.0f);
+}
+
+void GrainCloud::drawParticleTrail (const Particle& p)
+{
+    const auto speed2 = p.vx * p.vx + p.vy * p.vy;
+
+    if (speed2 < 4.0e-6f)
+        return;
+
+    const auto speed = std::sqrt (speed2);
+    const auto trail = speed > 0.10f ? kTrailMax : (speed > 0.045f ? 2 : 1);
+    const auto fw = fieldRect.getWidth();
+    const auto fh = fieldRect.getHeight();
+    const auto colour = pitchColour (p.pitch);
+    const auto fade = p.matched
+                          ? 1.0f
+                          : juce::jlimit (0.0f, 1.0f,
+                                          p.life / juce::jmax (0.001f, p.afterglowLife));
+    const auto energy = p.energy * fade;
+    const auto radius = juce::jmax (0.7f, p.radius * 0.85f);
+
+    for (int t = 1; t <= trail; ++t)
+    {
+        const auto back = kTrailStep * (float) t;
+        const auto px = (p.x - p.vx * back) * fw;
+        const auto py = (p.y - p.vy * back) * fh;
+
+        if (px < -32.0f || px > fw + 32.0f || py < -32.0f || py > fh + 32.0f)
+            continue;
+
+        const auto e = energy * (0.24f / (float) (t + 1));
+        phosphor.splat (px, py, radius * (1.0f - 0.12f * (float) t), colour, e * 0.30f);
     }
 }
 
-void GrainCloud::drawGhostGrains()
+GrainCloud::ParticleStats GrainCloud::particleStatsForTest() const noexcept
 {
-    // Only used for offscreen previews: gives the still frame a short trail
-    // without pretending to know the engine's history.
-    const auto fw = fieldRect.getWidth();
-    const auto fh = fieldRect.getHeight();
-    const auto num = juce::jlimit (0, 96, visual.numGrains);
+    ParticleStats stats;
 
-    for (int i = 0; i < num; ++i)
+    double speedSum = 0.0, travelSum = 0.0, ageSum = 0.0, trackSum = 0.0;
+
+    for (int i = 0; i < particleCount; ++i)
     {
-        const auto& grain = visual.grains[(size_t) i];
-        const auto pos = juce::jlimit (0.0f, 1.0f, sanitise (grain.pos, 0.5f));
-        const auto pan = juce::jlimit (-1.0f, 1.0f, sanitise (grain.pan));
-        const auto pitch = juce::jlimit (-24.0f, 24.0f, sanitise (grain.pitch));
-        const auto env = juce::jlimit (0.0f, 1.0f, sanitise (grain.env));
-        const auto colour = pitchColour (pitch);
+        const auto& p = particles[(size_t) i];
 
-        for (int g = 0; g < 6; ++g)
+        ++stats.live;
+
+        if (p.matched)
+            ++stats.matched;
+
+        if (p.life > 0.0f)
         {
-            const auto a = (float) (i * 7 + g * 13) * 1.7f;
-            const auto offsetX = std::sin (a) * 5.0f * uiScale;
-            const auto offsetY = std::cos (a * 1.3f) * 3.5f * uiScale;
-            const auto e = (0.25f + 0.5f * env) * (1.0f - (float) g / 7.0f);
+            ++stats.afterglow;
+            if (p.stray)
+                ++stats.stray;
+        }
 
-            phosphor.splat (pos * fw + pan * 6.0f * uiScale + offsetX,
-                            (1.0f - pitchToNorm (pitch)) * fh + offsetY,
-                            (1.4f + 2.2f * env) * uiScale, colour, e * 0.26f);
+        speedSum += (double) std::sqrt (p.vx * p.vx + p.vy * p.vy);
+        travelSum += (double) std::hypot (p.x - p.homeX, p.y - p.homeY);
+        ageSum += (double) p.age;
+        trackSum += (double) p.track;
+
+        if (! std::isfinite (p.x) || ! std::isfinite (p.y)
+            || ! std::isfinite (p.vx) || ! std::isfinite (p.vy)
+            || ! std::isfinite (p.energy))
+        {
+            stats.finite = false;
         }
     }
+
+    const auto n = (double) juce::jmax (1, stats.live);
+    stats.meanSpeed = (float) (speedSum / n);
+    stats.meanTravel = (float) (travelSum / n);
+    stats.meanAge = (float) (ageSum / n);
+    stats.meanTrack = (float) (trackSum / n);
+    stats.activity = activityHeat;
+    stats.luminanceProxy = particleLuminance;
+    return stats;
+}
+
+int GrainCloud::copyParticlePositionsForTest (juce::Point<float>* out, int maxOut) const noexcept
+{
+    if (out == nullptr || maxOut <= 0)
+        return 0;
+
+    const auto count = juce::jmin (maxOut, particleCount);
+
+    for (int i = 0; i < count; ++i)
+        out[i] = { particles[(size_t) i].x, particles[(size_t) i].y };
+
+    return count;
 }
 
 void GrainCloud::simulateWarmupFrames (int frames)
@@ -692,9 +1128,6 @@ void GrainCloud::simulateWarmupFrames (int frames)
     {
         phosphor.fade (kPrewarmFadeShift);
         drawDust (1.0f, 1.0f * (1.0f - 0.4f * dustActivity));
-
-        if (visual.numGrains > 0 && ! isShowing())
-            drawGhostGrains();
     }
 }
 
@@ -702,6 +1135,13 @@ void GrainCloud::resetForDeterministicPreview()
 {
     rng.seed (0x4e41474cu);
     motes.clear();
+    particles.fill ({});
+    particleCount = 0;
+    activityHeat = 0.0f;
+    flowPhase = 0.0f;
+    gust = 0.0f;
+    lastOutPeak = 0.0f;
+    particleLuminance = 0.0f;
     phosphor.clear();
     warmupFramesLeft = 0;
     smoothedInit = false;
@@ -768,10 +1208,19 @@ void GrainCloud::tick (const VisualState& snapshot, double elapsedSeconds)
         const auto timeScale = juce::jlimit (0.4f, 2.5f, (float) (elapsedSeconds * 60.0));
 
         phosphor.fade (kLiveFadeShift);
-        drawDust (timeScale, 1.0f - 0.55f * dustActivity);
 
-        if (visual.numGrains > 0)
-            drawGrains();
+        // The particle field is stepped even when there is no audio: without
+        // new grain data no embers are born, the existing ones cool down and
+        // the field becomes quiet again (issue #32: room for silence).
+        updateParticles (visual, (float) elapsedSeconds);
+
+        // The cold ember bed is allowed to be there before audio; when the
+        // instrument falls silent it dims and slows rather than carrying the
+        // same energy as a playing cloud (issue #32: room for silence).
+        const auto idleBed = 0.42f + 0.58f * activityHeat;
+        drawDust (timeScale * (0.65f + 0.35f * activityHeat),
+                  (1.0f - 0.55f * dustActivity) * idleBed);
+        drawParticles();
     }
 
     if (screen != nullptr)
