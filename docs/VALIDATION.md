@@ -118,10 +118,12 @@ plug-in uses in a host.
 
 Renders the real `AudioProcessorEditor` offscreen to `docs/ui-preview.png`
 (2360 × 1360, i.e. 1180 × 680 at 2×) after loading a factory preset and feeding
-the engine audio, so the snapshot shows the live grain field. The editor advanced
-a fixed number of frames with the wall-clock timer stopped, the dust generator's
-fixed seed and pinned visualiser phases, so the PNG is **byte-reproducible for a
-given build and platform**; CI renders it twice on the runner and compares hashes.
+the engine audio, so the snapshot shows the live grain field. The wall-clock timer
+is stopped and the frame is advanced deterministically while audio is fed in fixed
+chunks (`advanceForPreview(0)` followed by 40 × (0.1 s chord + six 1/60 s
+frames)), with the dust generator's fixed seed and pinned visualiser phases. The
+PNG is therefore **byte-reproducible for a given build and platform**; CI renders
+it twice on the runner and compares hashes.
 
 ### Grain-field phosphor soak
 
@@ -140,6 +142,38 @@ byte as well as the colour, so the opaque phosphor screen became translucent and
 the field washed out; independently, additive splats clipped bright channels to
 white discs. It prints `SOAK PASS`; reverting the decay prints `alphaOk=0` /
 `SOAK FAIL`, and the loose colour cap prints `clippedRatio=0.00038` / `SOAK FAIL`.
+
+### Grain-field motion QA
+
+```
+./build/nagl_preview_artefacts/Release/nagl_preview --motion
+```
+
+Deterministic PASS/FAIL checks for the Sintel particle layer (issue #32), using
+only the public `GrainCloud` QA hooks and a fixed 60 fps dt. It asserts that
+embers actually move while the engine plays (mean speed, nearest-neighbour
+displacement, matching continuity), that the **rendered field pixels** change
+frame to frame (a render guard against the macOS native-image freeze, independent
+of particle state), that the ember population **decays from the dense playing
+peak** when digital silence follows on the same pipeline (no state reset), that
+dense material has clearly more matched embers than sparse, that two fresh
+editor pipelines produce identical frame hashes, that dense-phase tick + paint
+cost stays inside one 60 Hz frame, and that particle state stays finite,
+in-field and resize-safe. It prints `MOTION PASS`; the baseline renderer prints
+`MOTION SKIP` because the hooks did not exist yet.
+
+### Deterministic before/after frame capture
+
+```
+./build/nagl_preview_artefacts/Release/nagl_preview --frames /tmp/issue32-after
+```
+
+Runs the fixed 8-second evidence scenario (dense → sparse → near silence →
+return) one audio chunk and one visual frame at a time, writes field/UI frames,
+2× stills and a per-frame `metrics.csv` (mean luminance, bright-pixel centroid,
+frame delta, coverage). The same harness runs on the old renderer, which is how
+the issue #32 before/after evidence was produced; see
+[issue-32/evidence/EVIDENCE.md](issue-32/evidence/EVIDENCE.md).
 
 ### Editor refresh in a host-style mount
 
@@ -175,8 +209,8 @@ One command reproduces everything above, provided pluginval is present in
 ```
 
 GitHub Actions CI (`.github/workflows/ci.yml`) builds the AU/VST3/Standalone
-targets, runs the suite, validates the AU, runs the CI-safe `--headless-host` and
-`--soak` regressions (the windowed `--embedded` variant needs a desktop window
+targets, runs the suite, validates the AU, runs the CI-safe `--headless-host`,
+`--soak` and `--motion` regressions (the windowed `--embedded` variant needs a desktop window
 server and stays local), checks the hero is byte-identical across two renders on
 the runner, and runs pluginval strictness 10 on VST3 and AU; it runs on every `v*`
 tag (and on demand). A tag run is not cited by number here because it changes with

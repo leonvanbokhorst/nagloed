@@ -1,0 +1,7 @@
+frames: field 557 x 280 logical px, ui 1180 x 680, 480 frames @ 60 fps (8.00 s of scenario)
+frames: dense   meanLum=0.0596 meanAbsDelta=0.00047 medianDelta=0.000000 p95Delta=0.000000 staticFrac=0.979 coverage=0.1586 activeCoverage=0.0033 meanGrains=37.2
+frames: sparse  meanLum=0.0548 meanAbsDelta=0.00026 medianDelta=0.000000 p95Delta=0.000000 staticFrac=0.983 coverage=0.1491 activeCoverage=0.0024 meanGrains=5.2
+frames: silence meanLum=0.0505 meanAbsDelta=0.00011 medianDelta=0.000000 p95Delta=0.000000 staticFrac=0.983 coverage=0.1416 activeCoverage=0.0014 meanGrains=0.3
+frames: return  meanLum=0.0501 meanAbsDelta=0.00035 medianDelta=0.000000 p95Delta=0.000000 staticFrac=0.979 coverage=0.1320 activeCoverage=0.0026 meanGrains=32.5
+frames: harness wall time 29.39 s (61.24 ms/frame, includes PNG output)
+frames: wrote /tmp/issue32-before

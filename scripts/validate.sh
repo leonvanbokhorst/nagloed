@@ -49,6 +49,10 @@ echo "== grain-field phosphor soak (8 s) =="
 ./build/nagl_preview_artefacts/Release/nagl_preview --soak
 
 echo
+echo "== grain-field motion QA (deterministic, issue #32) =="
+./build/nagl_preview_artefacts/Release/nagl_preview --motion
+
+echo
 echo "== Apple AU validation =="
 AU_SRC="$ROOT/build/NAGLOED_artefacts/Release/AU/NAGLOED.component"
 AU_DEST="$HOME/Library/Audio/Plug-Ins/Components/NAGLOED.component"
