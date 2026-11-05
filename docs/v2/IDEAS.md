@@ -293,3 +293,15 @@ Alles in dit bestand is hypothese of uitnodiging. Geen enkel idee is een v1-vere
 contract, een parameter of een release-criterium. Wie hier iets van wil uitproberen, doet dat
 in een los experiment buiten de plugin, met een eigen kleine test, en pas na expliciete
 activering door Lonn.
+
+## Reviewnoot (na onafhankelijke review)
+
+De onafhankelijke review vond #2 (**het vergeetboek**) en #3 (**de kunst van het
+negeren**) de sterkste en meest toetsbare ideeën; die twee zijn de aangewezen
+kandidaten voor een tweede experiment. #5 (de verveelde lamp), #10 (de
+bijna-gebeurtenis) en #8 (aanwezigheid zonder beelden) werden als zwakker
+beoordeeld: #5 en #10 als effect-trucs, #8 omdat de sensing onbetrouwbaar en
+privacygevoelig is terwijl het sterkste deel — de kaart op tafel als ritueel —
+geen sensing nodig heeft. Dat is een notitie, geen schrapping: de ideeën blijven
+uitnodigingen, maar ze zijn nu geprioriteerd. Zie
+[REVIEWS.md](REVIEWS.md).

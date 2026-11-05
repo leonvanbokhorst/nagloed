@@ -98,9 +98,9 @@ expliciete, gewaarschuwde handeling.
 | # | Regel |
 |---|---|
 | R1 | **Standaard geen herhaalde flikkering.** Kleur- en helderheidsveranderingen zijn traag; standaard luminantiemodulatie onder 1 Hz. |
-| R2 | **Nooit meer dan drie flitsen in één seconde** (WCAG-niveau), en geen aanhoudende modulatie in 3–30 Hz. Dit is een harde encoderlimiet, niet een UI-advies. |
-| R3 | **Helderheidsplafond:** kleurkanalen maximaal 25 % van de referentie, standaard 6,25 % (zie `SPECTRASTROBE.md` §6). Het plafond gaat vóór artistieke wens. |
-| R4 | **Gladde envelopes:** attack/release ≥ 20 ms hard, ≥ 50 ms voor artistieke events. Gladde envelopes maken herhaling in 3–30 Hz niet veilig; R2 blijft gelden. |
+| R2 | **Nooit meer dan drie flitsen in één seconde** (WCAG-niveau), en geen aanhoudende modulatie in 3–30 Hz. Dit is een harde encoderlimiet, niet een UI-advies. De voorgeschreven 10–50 Hz-panning van de **referentiedrager** valt hier niet onder: die is geen zichtbare kleurmodulatie, mits de referentie niet in de kleurkanalen lekt. Dat lek is meetpunt M5/M6 en een stopcriterium. |
+| R3 | **Helderheidsplafond:** kleurkanalen maximaal 25 % van de referentie **per kleurdrager**, standaard 6,25 % (zie `SPECTRASTROBE.md` §6). Het plafond gaat vóór artistieke wens. De som van de drie kleuren in één oor kan hoger uitkomen; die wordt apart bewaakt. |
+| R4 | **Gladde envelopes:** attack/release ≥ 20 ms hard, ≥ 50 ms voor artistieke events. Een eenmalige, geïsoleerde extinctie van 20 ms is toegestaan; herhaalde snelle modulatie niet. Gladde envelopes maken herhaling in 3–30 Hz niet veilig; R2 blijft gelden. |
 | R5 | **Geen sprong van zwart naar vol.** Elke lichtgebeurtenis start en eindigt op een tussenwaarde; fade-in bij aanvang, fade-out bij einde. |
 | R6 | **Rood is extra voorzichtig:** geen verzadigde roodflitsen; rood krijgt een lager plafond dan groen/blauw. |
 | R7 | **Referentiedrager is geen artistiek kanaal.** De 10–50 Hz-panning van de referentie mag niet als zichtbaar effect worden gebruikt of versterkt. |
@@ -108,10 +108,12 @@ expliciete, gewaarschuwde handeling.
 | R9 | **Kinderen en jongeren:** extra terughoudendheid; fotosensitiviteit komt bij hen vaker voor. Begeleiding door een volwassene is voorwaarde. |
 | R10 | **Pauzes en volume:** maximaal ongeveer een uur aaneengesloten, daarna pauze; waarschuw voor gehoorschade bij koptelefoon, in lijn met de leverancierswaarschuwing. |
 | R11 | **Noodmaatregel bij ongemak:** bril af of één oog bedekken dempt het effect sterk; de bediener moet dit kunnen instrueren. |
-| R12 | **Geen "veilig"-claim.** We communiceren "conservatief" en "met directe stop", nooit "veilig voor iedereen". |
+| R12 | **Geen "veilig"-claim.** We communiceren "conservatief" en "met directe stop", nooit "veilig voor iedereen". Waar het woord "veilig" toch valt, gaat het over **signaalintegriteit** ("signaalveilig bestand"), nooit over gezondheid. |
 
-Aanvullend: de licht-engine mag geen licht produceren op basis van een
-onbegrensde audio-reactive mapping. Elke mapping heeft een plafond, een
+Aanvullend: een **begrensde audio-reactieve mapping** is hoogstens één optionele
+modus, nooit de default en nooit het conceptuele model. De voorkeursrelatie is
+gebeurtenis/gebaar/herinnering, niet een continue afbeelding van audioniveau op
+helderheid. Waar een mapping wordt gebruikt, heeft ze een plafond, een
 snelheidslimiet en een dode zone (geen licht bij stilte of lage niveaus), zodat
 de installatie niet continu flikkert. **[technische oplossing]**
 
@@ -121,10 +123,12 @@ de installatie niet continu flikkert. **[technische oplossing]**
 
 ### 4.1 Drie niveaus
 
-1. **Software-panic.** Een altijd bereikbare stop die alle dragers en
+1. **Software-panic (fase B).** Een altijd bereikbare stop die alle dragers en
    kleurgains binnen 50 ms naar nul brengt, klikvrij, zonder "laatste flits".
    De knop is zichtbaar in de GUI en heeft een sneltoets; hij is nooit achter
-   een menu of instelling verborgen.
+   een menu of instelling verborgen. Deze stop hoort bij de realtime encoder in
+   een latere fase; de **offline PoC heeft hem niet** en claimt hem niet. Daar
+   is de primaire stop menselijk (hardware + bril af).
 2. **Hardware.** Kasina-helderheid naar minimum, daarna uitschakelen; bril
    afkoppelen. De Kasina heeft aparte knoppen voor audio-volume en
    LED-helderheid. **[bewijs]** — Lumasonic Kasina-doc
@@ -154,6 +158,13 @@ de installatie niet continu flikkert. **[technische oplossing]**
   kan zijn, dat je direct stopt bij ongemak, en dat je de bril mag afzetten.
 - Geen gebruik door mensen die niet kunnen of willen instemmen (slapend,
   onder invloed, kinderen zonder begeleiding).
+- **Gehoor en niveau.** De dragers (18,2–19,7 kHz) zijn niet gegarandeerd
+  onhoorbaar; dat hangt af van leeftijd, gehoor, transducers en weergaveniveau
+  (U15). Speel op een vast, genoteerd niveau, niet "zo hard als nodig om het
+  programma te horen". Doe vóór de sessie een korte drager-only
+  comfortbeluistering (10 s) op het bedoelde niveau. Bij tinnitus, hyperacusis,
+  jonge oren of twijfel: lagere niveaus of niet deelnemen. Dit is een
+  comfort- en gehoorspreventiemaatregel, geen medische test.
 
 ---
 

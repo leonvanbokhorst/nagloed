@@ -38,7 +38,7 @@ weergave uit en stuurt ze naar de LED-bril. **[bewijs]** —
 - De referentie moet **hard links/rechts alterneren** met een panning-LFO van
   10–50 cycli per seconde; voorgeschreven is een **sinus**, 20 Hz, offset 0 %,
   diepte 100 %. Square/pulse mag volgens de spec ook, maar geeft meer hoorbare
-  artefacten; de decoder is "enigsins vergevingsgezind". **[bewijs]** —
+  artefacten; de decoder is "enigszins vergevingsgezind". **[bewijs]** —
   Lumasonic-spec.
 - De 500 Hz-afstand tussen de dragers is de ruimte waarbinnen de decoder de
   banden scheidt. **[inferentie]** — de spec noemt geen filterparameters; de
@@ -165,19 +165,19 @@ worden gevalideerd. [open]
 | # | Meting | Methode | Doel / tolerantie |
 |---|---|---|---|
 | M1 | Dragerfrequenties | FFT ≥ 65.536 punten, Hann, parabolische interpolatie | 18.200 / 18.700 / 19.200 / 19.700 Hz, **±1 Hz** |
-| M2 | Absolute referentie | RMS van 18,2 kHz-band | **-30,0 dBFS ± 0,5 dB**, constant over het stuk |
+| M2 | Absolute referentie | **piekamplitude** van de 18,2 kHz-band (sample peak van de complexe envelope); band-RMS wordt apart gerapporteerd | **-30,0 dBFS ± 0,5 dB**, constant over het stuk |
 | M3 | Relatieve kanaalamplitude | RMS per kleurband t.o.v. referentie | volgt de score binnen **±0,5 dB**; max **25 %** (-12,04 dB) |
 | M4 | L/R-balans en isolatie | RMS L en R per kleurband | bij midden **±0,5 dB**; bij hard pannen isolatie **≥ 40 dB** |
 | M5 | Referentie-panmodulatie | envelope van 18,2 kHz in L en R | LFO **20 Hz ± 0,5 Hz**, diepte **≥ 99 %** (uit-fase ≥ 30 dB onder), geen restdrager in de "uit"-fase |
-| M6 | Crosstalk tussen kleuren | bandenergie op de andere dragers ± 100 Hz | **≤ -40 dB** t.o.v. de eigen drager |
-| M7 | Programmaleak in de controlebrand | programma-only render, FFT 17–20 kHz | **≤ -60 dBFS** in elke band |
+| M6 | Isolatie tussen kleuren | **één kleur tegelijk** renderen; meet de energie op de andere dragerfrequenties (niet de zijbanden van de eigen drager) | **≤ -40 dB** t.o.v. de eigen drager |
+| M7 | Programmaleak in de controlebrand | programma-only render, FFT 17–20 kHz; **plus een breedbandprobe** (ruis door dezelfde LPF) | **≤ -60 dBFS** in elke band voor de werkelijke mix; de breedbandprobe rapporteert de gemeten demping eerlijk als INFO/EXPECTED-DEGRADED, want een 8e-orde LPF haalt bij 17 kHz niet automatisch -60 dBFS |
 | M8 | Ruisvloer bij gedode kleuren | FFT van 18,7/19,2/19,7 kHz-band zonder kleursignaal | **≤ -80 dBFS** |
 | M9 | Piek / true peak | 4× oversampled true-peak, sample-peak | **≤ -6 dBTP**, geen clipping, geen non-finite samples |
 | M10 | Determinisme | twee renders, zelfde seed/platform/rate | **byte-identiek** |
 | M11 | Detectie op hardware | Kasina-display + visueel | **120 s** onafgebroken SpectraStr-detectie |
 | M12 | LED-uitgang (objectief) | fotodiode + audio-interface, FFT/autocorrelatie | geen periodieke luminantiemodulatie **3–30 Hz met ≥ 10 % diepte**; helderheid monotoon met de ladder |
 | M13 | Stop-latentie | gemeten audiosignaal + fotodiode | dragers volledig uit binnen **50 ms** na stopactie |
-| M14 | Corruptiematrix | bewust beschadigde varianten (§5.4) | elk geval gedocumenteerd als pass/fail, niet "waarschijnlijk goed" |
+| M14 | Corruptiematrix | bewust beschadigde varianten (§4.4), inclusief kleurkanalen (frequentie én amplitude) | elk geval gedocumenteerd als pass/expected-degraded/info, niet "waarschijnlijk goed"; adviserend tenzij `--strict-corruption` |
 
 Aanvullend: één **programma-only A/B-WAV** (zonder dragers) hoort bij elk
 render, zodat M7 en een subjectieve A/B altijd mogelijk zijn. Dat sluit aan bij
@@ -218,7 +218,9 @@ de uitvoer van `docs/v2/EXPERIMENT-01.md`.
    wit; relatieve amplitude 0, 1/64, 1/32, 1/16, 1/8, 1/4 van de referentie;
    10–15 s per trede, oplopend, 1 s fades, 5 s donker ertussen. Noteer per
    trede: detectie, zichtbare kleur, ongewenste kanalen, flikkering, comfort.
-   Bij twijfel of ongemak: direct terug naar 0 en stoppen.
+   Bij twijfel of ongemak: direct terug naar 0 en stoppen. Voor *Eerste Gloed*
+   levert de PoC twee extra varianten: **dim** (max 6,25 % = 1/16) en **mid**
+   (12,5 % = 1/8); de volledige score (20 % ≈ 1/5) is de derde trede.
 4. **T2 — idem op 48 kHz.** Zelfde ladder, zelfde Kasina-instellingen. Verschil
    in gedrag tussen 44,1 en 48 kHz is een bevinding, geen detail.
 5. **T3 — programma + dragers.** Mix met programma op -24, -18, -12 en -6 dBTP;
@@ -227,8 +229,11 @@ de uitvoer van `docs/v2/EXPERIMENT-01.md`.
 6. **T4 — DeepVision, ogen open.** Alleen als T1–T3 comfortabel en stabiel
    waren: dezelfde ladder bij **lagere** Kasina-helderheid, omdat DeepVision
    veel feller overkomt. [bewijs] — Lumasonic-apparatuurdoc
-7. **T5 — dynamiek en stop.** 1 s fade-in/out, 50 ms fade, harde cut;
-   panic-stop; meet M13. Controleer op klikken en op flitsartefacten.
+7. **T5 — dynamiek en stop.** 1 s fade-in/out, 50 ms fade, harde cut. Test de
+   **menselijke stop** (weergave stoppen, Kasina-helderheid naar minimum, bril
+   af); een echte encoder-panic van ≤ 50 ms hoort bij de realtime fase B en is
+   in een offline WAV niet beschikbaar. Meet M13 alleen als de fotodiode is
+   opgesteld; anders is dit een observatie, geen meting.
 8. **T6 — objectieve LED-meting.** Fotodiode-opname bij 25 %-maximum: M12.
 9. **T7 — corruptiematrix** (§4.4), alleen op lage helderheid en zo nodig met
    de bril losgekoppeld; observeer het Kasina-display als primaire indicator.
@@ -272,7 +277,7 @@ experiment. [technische oplossing]
 | LED's vallen weg bij luide muziek | licht dooft bij bas/dynamiek | onvoldoende referentie t.o.v. programma; decoder raakt referentie kwijt | T3; programma-/dragermarge |
 | Felle flits op bestandseinde | ruisburst + flits | WAV-metadata op oude firmware | metadata strippen, firmware bijwerken |
 | Onbedoelde helderheidssprongen | licht "pompt" mee met muziek | limiter/saturatie/OS-processing na encoder | §2.1, keten opschonen |
-| Verkeerde kleur of oog | rood/groen of L/R verwisseld | busrouting, kanaalvolgorde | M4, routingdtest |
+| Verkeerde kleur of oog | rood/groen of L/R verwisseld | busrouting, kanaalvolgorde | M4, routingtest |
 | Detectie traag bij start | eerste seconden geen licht | referentie start te laat of te zacht | ≥ 1 s referentie-lead-in |
 | Klikken/flitsen via USB | onregelmatige bursts | USB-driver, sample-mismatch | microSD-baseline, driver reset |
 | Licht te zwak bij 25 % | Ganzfeld blijft donker | Kasina-helderheid of LED-kalibratie | hardwarehelderheid verhogen, niet de dragers |
@@ -296,9 +301,12 @@ veiligheid of de detectie. [technische oplossing]
   standaard 20 Hz.
 - Kleuren: **18.700 / 19.200 / 19.700 Hz**, tolerantie **±1 Hz**.
 - Kleurkoppeling: amplitude ten opzichte van de referentie, **maximaal 25 %**
-  (-12,04 dB), **standaard 6,25 %** (-24,08 dB). Per oor apart, als directe
-  kanaalamplitude; **geen -3 dB center-pan law** (die zou de gedecodeerde
-  helderheid halveren). [inferentie]
+  (-12,04 dB) **per kleurdrager**, **standaard 6,25 %** (-24,08 dB). Per oor
+  apart, als directe kanaalamplitude; **geen -3 dB center-pan law** (die zou de
+  gedecodeerde helderheid halveren). [inferentie] De 25 % is een plafond per
+  drager, geen totaalplafond: de som van rood + groen + blauw in één oor kan
+  hoger uitkomen (in *Eerste Gloed* 29,5 % op de L1-piek). Daarom bewaakt de
+  PoC ook die som en blijft de totale true peak ≤ -6 dBTP.
 - Som van alle dragers: geen clipping; totale **true peak ≤ -6 dBTP**
   (4× oversampled gemeten), sample-peak ≤ -6 dBFS, geen non-finite samples.
 
@@ -319,9 +327,13 @@ veiligheid of de detectie. [technische oplossing]
 **Tijd en stop**
 
 - Envelopes per kleur/per oor: gladde attacks/releases, **≥ 20 ms**, geen
-  stappen of discontinuïteiten.
+  stappen of discontinuïteiten. De PoC valideert dit en faalt hard bij een
+  score die de grens overtreedt.
 - Stop/panic: dragers en referentie volledig uit binnen **50 ms**, klikvrij
-  (korte ramp ≤ 5 ms), daarna stilte. Geen "laatste flits" bij het stoppen.
+  (korte ramp ≤ 5 ms), daarna stilte. Dit is een eis voor de **realtime encoder
+  in fase B**; de offline PoC heeft geen panic-stop. Daar is de primaire stop
+  menselijk: weergave stoppen, Kasina-helderheid naar minimum, bril af. Die
+  menselijke stop is geen ramp van 50 ms en wordt ook niet als zodanig gemeten.
 - Duur en start: referentie eerst, daarna kleuren; geen detectie-afhankelijke
   opstarttrucs.
 
@@ -334,9 +346,16 @@ veiligheid of de detectie. [technische oplossing]
 
 **Veiligheid**
 
-- De encoder begrenst zichzelf, ook als de artistieke score meer vraagt:
-  max 25 % koppeling, geen herhaalde luminantiemodulatie in 3–30 Hz boven de
-  drempels uit `docs/v2/SAFETY-PRIVACY.md`, en een panic-stop die altijd werkt.
+- De encoder begrenst zichzelf, ook als de artistieke score meer vraagt: het
+  kleurplafond (25 % per kleurdrager), de minimale attack/release (≥ 20 ms), een
+  controle op plotselinge stappen en een bovengrens op het aantal
+  helderheidsovergangen per seconde. De PoC implementeert deze begrenzing en
+  faalt hard bij een onveilige score; een score die meer vraagt wordt geclampt.
+  De referentiepanning (20 Hz, 100 % diepte) is een formaatvereiste en geen
+  bedoelde luminantiemodulatie; lekkage naar de kleurkanalen is een meetpunt
+  (M5/M6) en een stopcriterium.
+- Een echte panic-stop van ≤ 50 ms hoort bij fase B (realtime); de offline
+  PoC claimt die niet.
 
 ---
 

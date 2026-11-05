@@ -19,15 +19,24 @@ bewaart die ontdekking: een wereld die *geborgen geluid* heet, naar het kind
 onder de tafel op een familiefeest. De stemmen om hem heen zijn vertrouwd,
 vreemd en voorbijgaand. De wereld gaat door, maar hij is er even anders in.
 
-Deze verkenning bouwt daarop voort, maar verandert de vraag. Niet: welke
+Deze verkenning bouwt daarop voort en **scherpt de vraag aan**. Niet: welke
 features kunnen we toevoegen? Wel: **hoe maken we van NAGLOED een omgeving
 waarin geluid, licht, machines en mensen elkaar werkelijk kunnen verrassen?**
+Die vraag is al de kern van issue #14; wat hier wordt toegevoegd is niet een
+nieuwe vraag, maar een scherpere uitwerking. Vier dingen zijn werkelijk nieuw:
+de dramaturgie van het niet-antwoorden (§8), geheugen en vergeten als
+compositorisch materiaal (§4.3), het aandachtsbudget in plaats van een duty
+cycle (§4.2), en de keuze om eerst offline te experimenteren voordat de
+plug-in wordt aangeraakt. De rest is ordening, verdieping of herhaling van wat
+er al stond.
 
 ## 2. De kern in één beweging
 
 NAGLOED wordt geen audiovisueel instrument dat geluid vertaalt naar licht. Het
-wordt een omgeving met een eigen geheugen en een eigen aandacht, waarin geluid
-en licht elkaar kunnen herinneren, imiteren, missen, negeren en vergeten.
+**wil** een omgeving worden met een eigen geheugen en een eigen aandacht,
+waarin geluid en licht elkaar kunnen herinneren, imiteren, missen, negeren en
+vergeten. Dat is een intentie en een onderzoeksrichting, geen bewezen
+eigenschap van de huidige software.
 
 De wereld is niet volledig gesloten. De echte kamer blijft poreus hoorbaar; het
 systeem hoeft geen kunstmatige always-on ambient passthrough te maken. Soms
@@ -131,7 +140,8 @@ richting is geen vast gegeven; ze is deel van de compositie.
 
 ## 7. De menselijke maat
 
-*Geborgen* betekent veilig en warm, niet klinisch en niet therapeutisch. Er
+*Geborgen* betekent warm en beschut, niet klinisch en niet therapeutisch; het
+woord is hier een artistieke en sociale kwaliteit, geen gezondheidsclaim. Er
 worden geen wellness-, meditatie- of entrainment-claims gedaan. Er is geen
 medische belofte en geen neurologische claim. Wat er is, is een artistieke
 situatie.
@@ -174,8 +184,11 @@ alleen een mechanisme.
 
 ## 10. Artistieke succescriteria
 
-Deze criteria zijn belangrijker dan feature-lijstjes. Ze zijn bedoeld voor het
-eerste experiment en daarna.
+Deze criteria zijn een **kompas, geen meetlat**. Ze zijn bewust kwalitatief en
+moeten per experiment worden geoperationaliseerd in waarneembare vragen,
+condities en beslissingsregels (zie
+[EXPERIMENT-01.md](EXPERIMENT-01.md) §5). Zonder die vertaling zijn ze
+richtinggevend, niet toetsbaar.
 
 1. **Het moment van vergeetachtigheid.** Je merkt even niet meer of het licht
    bij het geluid hoort of andersom.
@@ -184,9 +197,11 @@ eerste experiment en daarna.
 3. **Een herkenbare terugkeer.** Iets komt terug dat je kent, maar je kunt het
    niet precies plaatsen.
 4. **Contrast dat muzikaal werkt.** Dichtheid of leegte is een keuze met
-   gewicht, geen parameter die toevallig zo staat.
+   gewicht, geen parameter die toevallig zo staat. (Niet getest door *Eerste
+   Gloed*, dat bewust schaars is; vraagt een tweede, dichtere variant.)
 5. **Gedeelde agency.** Een performer of bezoeker kan iets veroorzaken zonder
-   dat het systeem verplicht antwoordt.
+   dat het systeem verplicht antwoordt. (Niet getest door *Eerste Gloed*, dat
+   een geschreven partituur is; vraagt een latere, interactieve opzet.)
 6. **Geen demo-gevoel.** Na afloop denk je niet "mooi effect", maar "wat was
    dat".
 

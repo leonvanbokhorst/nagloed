@@ -115,9 +115,12 @@ AES67 gebruikt doorgaans 1 ms packet time, 48 kHz en een PTP-profiel (IEEE 1588 
 - **Geen cloud.** Geen discovery-service, geen telemetrie, geen remote logging, geen accounts. Een installatie moet zonder internet volledig werken.
 - **DMX/Art-Net/sACN later alleen via een brug** op een geïsoleerd lighting-netwerk, nooit vanuit de plug-in en nooit op het publieke net. Art-Net (UDP 6454) en sACN (multicast) vervoeren DMX512-universes over IP. Het `priority`-veld in sACN is geen beveiliging. Als later auth nodig blijkt: pre-shared key plus HMAC op het telegram, niet in het eerste experiment.
 
-## 7. Later prototypen, nu expliciet niet bouwen
+## 7. Mogelijke onderzoeksvolgorde, nu expliciet niet bouwen
 
-**Later prototypen, in deze volgorde.**
+**Mogelijke onderzoeksvolgorde — geen backlog, geen fasering en geen commitment.**
+De volgorde is alleen een logische volgorde als dit ooit wordt opgepakt; ze is
+geen planning en geen releasecriterium. Eén stap tegelijk, en alleen na een
+expliciete artistieke vraag.
 1. Twee processen op één machine, loopback, met event-log, replay en injectie van verlies en duplicaten.
 2. Twee machines, bekabeld, event-only; meten welke vertraging en welk verlies een herinnering nog geloofwaardig maken.
 3. Drie ruimtes, star versus peer, met een telegram-viewer voor observatie.

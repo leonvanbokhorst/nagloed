@@ -84,6 +84,8 @@ architectuurkeuzes staan in `docs/v2/ARCHITECTURE-OPTIONS.md`.
 | U26 | `[T]` Een losse klok (PTP/NTP/Ableton Link) is voldoende; sample-accurate sync is niet vereist. | Hypothese | Volgt uit U02/U03, maar is niet gemeten; als U03 anders uitpakt, kan dit kantelen. | Jitter- en latentiemeting tussen twee nodes; luistertest met verschillende sync-fouten. | Midden | Open |
 | U27 | `[I/O]` Duplicaten, verlies en drift van events zijn artistiek acceptabel zolang ze begrensd zijn (intentionele drift). | Hypothese (intentie + onderzoek) | "Acceptabel" is een esthetisch oordeel dat per situatie verschilt; onbegrensde drift kan als fout klinken. | Chaos-test: pakketverlies 0/1/5/20%, duplicaten, vertraging; observeer en bevraag. | Midden | Open |
 | U28 | `[I/T]` Consent en privacy zijn niet onderhandelbaar: opnemen van bezoekers/milieu alleen met toestemming, lokaal, geen PII in telegrams, minimale retentie. | Hypothese (intentie + ontwerp) | De intentie staat vast, maar de technische handhaving (dataminimalisatie, logging, retentie, verwijderen) is nog niet uitgewerkt of getest. | Ontwerpchecklist + review tegen `docs/v2/SAFETY-PRIVACY.md`; inspectie van events en logs op PII. | Hoog | Open |
+| U30 | `[T]` A2 ("dezelfde score door de echte v1-processor") kan zonder wijziging aan `CMakeLists.txt` of `src/`. | Hypothese | Een nieuw tool-target vereist een CMake-wijziging, en die staat op de niet-aanrakenlijst; een apart buildproject is denkbaar maar ongetest. Ook kan A2 het A1-programma niet letterlijk herspelen, want v1 heeft andere bronnen. | Buildpad uitwerken (apart project of goedgekeurde uitzondering); A1-score vertalen naar v1-bronnen en opnieuw meten. | Midden | Open |
+| U31 | `[O]` De decoder leidt de helderheidsschaal af uit een 20 Hz-panned referentie op een manier die de 25 %-koppeling conservatief houdt. | Hypothese (open) | De referentie is per oor continu in amplitude gemoduleerd en op de uitersten nul; een per-oor-RMS-interpretatie maakt 25 % in de praktijk ~31,5 %. De decoderkarakteristiek is niet publiek. | Meting op hardware (fotodiode + vergelijkende kleurniveaus); anders de koppeling conservatiever kiezen. | Hoog | Open |
 
 ---
 
@@ -137,3 +139,12 @@ Dit register is een momentopname bij de start van de verkenning (november
 afgeronde toets hoort de status te wijzigen en de gebruikte meetopstelling te
 noemen. Openstaande punten zijn geen blocker voor v1.0.4 — ze zijn input voor
 de vraag of, en wanneer, Lonn de verkenning activeert.
+
+**Na de onafhankelijke reviews (5 november 2026).** De technische review heeft
+de signaalmetingen van de PoC grotendeels bevestigd, maar vond dat M2 (piek vs.
+RMS), M6 (zijbanden vs. inter-drager-isolatie), M7 (smalbandig programma) en
+M14 (onvolledige matrix) niet de bindende meting waren die ze zeiden te zijn.
+Die zijn gecorrigeerd in `SPECTRASTROBE.md` en de PoC; U30 en U31 zijn
+toegevoegd. De artistieke review vond dat *Eerste Gloed* een geschreven
+verwantschap test, geen systeem-autonomie of geheugen; dat staat nu expliciet
+in `EXPERIMENT-01.md`. Zie `REVIEWS.md`.

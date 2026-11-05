@@ -9,7 +9,9 @@ implementatievoorstel voor `src/`, `CMakeLists.txt`, presets of release.
 Leeswijzer: elke bewering is gemarkeerd als **[F] feit in deze checkout**,
 **[T] technische oplossing/hypothese**, **[I] artistieke intentie** of
 **[O] open onderzoeksvraag**. Aannames met een ID (U01, U02, …) staan uitgewerkt
-in `docs/v2/TECHNICAL-UNCERTAINTIES.md`.
+in `docs/v2/TECHNICAL-UNCERTAINTIES.md`. Dit document is een **bijlage** bij de
+verkenning, geen poort en geen backlog: alleen de artistieke visie, het
+experiment en het veiligheidsblad zijn nu leidend.
 
 ---
 
@@ -111,9 +113,12 @@ audio dat echt door v1 moet: dezelfde bronnen headless linken zoals
 `NAGLOED_HEADLESS` dat al doet (`PluginProcessor.cpp:57-64`).
 
 **[T] Wat zelfstandig wordt.** Een scoreformaat (declaratief, versioneerd), een
-event/gesture-engine, een licht-engine, een SpectraStrobe-encoder, een
-renderer en een verificatiestap — alles buiten de plugin, in een aparte map of
-tool. Geen nieuwe parameter-IDs, geen APVTS, geen presetwijziging.
+event/gesture-vocabulaire (hypothese), een SpectraStrobe-encoder, een renderer
+en een verificatiestap — alles buiten de plugin, in een aparte map of tool. Geen
+nieuwe parameter-IDs, geen APVTS, geen presetwijziging. **Wat er nog niet is:**
+een echte event/geheugen-engine en een zelfstandige licht-engine met eigen
+toestand. De eerste PoC dekt de signaalhelft (encoder + integriteit); de
+event-engine is een volgende stap, niet iets wat al gebouwd is.
 
 **[T] Grens/contract.** Bestandsgebaseerd en eenrichtingsverkeer: score in →
 WAV + `events.csv` + timeline uit. Eén seed per render. Geen gedeeld geheugen,
@@ -135,8 +140,8 @@ daarom is de hardwareverificatie een harde poort, niet een detail. Zie
 **Te toetsen aannames.** U05, U06, U12, U14, U22 (determinisme), plus de
 artistieke U02/U03.
 
-**Verdict.** Sterk aanbevolen. Dit is ook letterlijk de "suggested first
-experiment" uit issue #14 en het minste risico voor v1.0.4.
+**Verdict.** Ontwerpkeuze met het minste risico voor v1.0.4. Dit is ook
+letterlijk de "suggested first experiment" uit issue #14.
 
 ### 2.B In-plugin control-rate event-seam + zelfstandige licht-engine
 
@@ -243,18 +248,24 @@ Cross-ref: `docs/v2/DISTRIBUTED.md`.
 onaangetast:
 
 1. **A1 — losse offline renderer, zonder v1-code.** Een declaratieve score van
-   60–90 s, een eigen deterministische granular/ambient-renderer, een
-   licht-engine en een SpectraStrobe-encoder; uitvoer 48 kHz/24-bit stereo plus
-   een 44,1 kHz/16-bit variant, een program-only A/B-WAV, `events.csv` en een
-   tijdlijn. Inhoudelijk minimaal: één lichtkorrel met beweging en abrupte
-   extinctie, één auditieve respons met *niet-gelijke* envelope en bewuste
-   vertraging, één getransformeerde terugkeer veel later, en minimaal één
-   bewust onbeantwoord licht-event. Dit is de artistieke kern van issue #14.
+   60–90 s, een eigen deterministische renderer, een SpectraStrobe-encoder en
+   een verificatiestap; uitvoer 48 kHz/24-bit stereo plus een 44,1 kHz/16-bit
+   variant, dim-/mid-varianten voor de hardwareladder, een program-only
+   A/B-WAV, `events.csv` en een tijdlijn. Inhoudelijk minimaal: één lichtkorrel
+   met beweging en abrupte extinctie, één auditieve respons met *niet-gelijke*
+   envelope en bewuste vertraging, één getransformeerde terugkeer veel later, en
+   minimaal één bewust onbeantwoord licht-event. **A1 dekt in deze verkenning de
+   signaalhelft, niet de event-engine of het geheugenmodel:** een echte
+   scheduler met budgets, refractaire periodes en `remember`/`forget` is nog
+   niet gebouwd en is een volgende stap.
 2. **A2 — dezelfde score door de echte v1-processor.** Alleen als A1 slaagt:
    een headless render-tool in de geest van `tools/render_main.cpp` die v1
    audio produceert, zodat hetzelfde scoremateriaal met echt NAGLOED-materiaal
-   klinkt. Geen wijziging aan `src/`; hooguit een nieuw tool-bestand in de
-   verkenning.
+   klinkt. Geen wijziging aan `src/`; wel een apart buildproject of een
+   expliciet goedgekeurde CMake-uitzondering, want een nieuw target in
+   `CMakeLists.txt` botst met de bevriezing. A2 hergebruikt het A1-programma
+   niet letterlijk: v1 heeft andere bronnen (breedbandige noise/drone), wat de
+   M7-poort juist uitdagender maakt.
 
 De concrete invulling van A1 staat uitgewerkt in `docs/v2/EXPERIMENT-01.md`
 ("Eerste Gloed"); de uitvoerbare vorm hoort in `experiments/spectrastrobe-poc/`.
@@ -266,7 +277,8 @@ Harde poorten **[T]**:
   en toleranties: `docs/v2/SPECTRASTROBE.md`.
 - Deterministische rerender: byte-identieke WAV en `events.csv` bij gelijke
   seed, platform en samplerate (U22).
-- Anti-runaway-scenario's moeten aantoonbaar begrensd blijven (U19).
+- Anti-runaway-scenario's moeten aantoonbaar begrensd blijven (U19). Deze poort
+  is pas toetsbaar zodra er een event-engine bestaat; A1 dekt haar niet.
 - Als de carriers een host-bounce niet overleven of de hardwaredetectie
   onbetrouwbaar is: **stop**, en ga niet naar B.
 
@@ -290,10 +302,10 @@ aparte, gereviewde PR buiten deze documenten om.
 | `VisualState`, `GrainView`, `SnapshotChannel` | Displaycontract; mag niet als eventbus worden hergebruikt | `Contracts.h:27-57`, `Snapshot.h:9-32` |
 | Signaalvolgorde Sintel → Ruimte → EAR, latency 51 samples | Klank en hostcompensatie | `ARCHITECTURE.md:3-13`, `EngineDSP.cpp:600-664`, `VALIDATION.md:52-53` |
 | `CMakeLists.txt`, `CMakePresets.json`, `scripts/`, `.github/` | Build- en releasepoorten; tools compileren dezelfde bronnen | `CMakeLists.txt:70-143`, `README.md:140-163` |
-| `tests/`-drempels en harnesses | Bewijzen de realtime- en determinismeclaims | `tests/DspTests.cpp:699-735,1060-1119`, `preview_main.cpp:235-388` |
+| `tests/`-drempels en harnesses | Bewijzen de realtime- en determinismeclaims | `tests/DspTests.cpp:699-735,1060-1119`, `tools/preview_main.cpp:235-388` |
 | `Demo/`, `docs/ui-preview.png`, `docs/demo-spectrogram.png` | Release-artefacten met deterministische hero-claim | `README.md:144-168` |
 | `README.md`, `docs/ARCHITECTURE.md`, `.gitignore` | Alleen additief in `docs/v2/`; geen herschrijving | taakafspraak |
-| `main`, `release/1.0.4`, tag `v1.0.4` | v1 is de basis; de verkenning is een aparte branch | `CONTRIBUTING.md:6-15` |
+| `main`, `release/1.0.4`, tag `v1.0.4` | v1 is de basis; de verkenning is een aparte branch | `docs/CONTRIBUTING.md:6-15` |
 | GPL-3.0-or-later en de JUCE-licentievoorwaarden | Juridische basis van het project | `README.md:205-213` |
 
 ---
@@ -303,7 +315,10 @@ aparte, gereviewde PR buiten deze documenten om.
 > **Status: hypothese.** Dit is geen API, geen code en geen voorstel voor
 > `src/core/`. Het is een toetsbaar vocabulaire voor een offline experiment,
 > bedoeld om A en later B hetzelfde te laten praten. Alle getallen zijn
-> startwaarden, geen eisen.
+> **illustratief**, geen startwaarden en geen eisen. Minstens twee alternatieven
+> blijven expliciet open tot een luistertest beslist: (a) continu geheugen versus
+> event-geheugen, en (b) aandachtsbudget versus waarschijnlijkheid per
+> gebeurtenis.
 
 ### 5.1 Uitgangspunten
 

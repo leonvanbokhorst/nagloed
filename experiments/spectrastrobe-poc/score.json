@@ -3,12 +3,33 @@
     "title": "Eerste Gloed",
     "subtitle": "NAGLOED v2 — SpectraStrobe proof-of-concept",
     "status": "experiment",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "seed": 20261105,
     "duration_s": 72.0,
     "sample_rates_hz": [48000, 44100],
     "bit_depths": [24, 16],
-    "description": "Vier momenten, veel ruimte ertussen. Een amberkleurig lichtgrain drijft van links naar rechts en dooft abrupt. 180 ms later antwoordt een lage impact met een niet-identieke envelope en lange decay. Een zwak lichtgrain blijft opzettelijk onbeantwoord. Veel later keert het gebaar terug: omgekeerd, verlaagd en dimmer."
+    "sections": [
+      {"t0": 0.0, "t1": 8.0, "label": "kamer"},
+      {"t0": 8.0, "t1": 14.0, "label": "eerste gloed"},
+      {"t0": 14.0, "t1": 28.0, "label": "naleven"},
+      {"t0": 28.0, "t1": 46.0, "label": "terughoudendheid"},
+      {"t0": 46.0, "t1": 52.0, "label": "herinnering"},
+      {"t0": 52.0, "t1": 72.0, "label": "uitdoving"}
+    ],
+    "description": "Vier momenten, veel ruimte ertussen. Een amberkleurig lichtgrain drijft van links naar rechts en dooft in 20 ms. 180 ms later antwoordt een lage impact met een niet-identieke envelope en lange decay. Een zwak lichtgrain blijft opzettelijk onbeantwoord. Veel later keert het gebaar terug: omgekeerd, verlaagd en dimmer."
+  },
+  "exposures": {
+    "full": {"scale": 1.0, "max_colour_ratio": 0.20, "label": "volledig 20%"},
+    "mid": {"scale": 0.625, "max_colour_ratio": 0.125, "label": "midden 12,5%"},
+    "dim": {"scale": 0.3125, "max_colour_ratio": 0.0625, "label": "dim 6,25% (eerste hardware-exposure)"}
+  },
+  "envelope_rules": {
+    "min_attack_ms": 20.0,
+    "min_release_ms": 20.0,
+    "l1_release_ms_range": [20.0, 40.0],
+    "l2_fade_in_ms": 50.0,
+    "require_zero_start_end": true,
+    "note": "R4/R5 uit docs/v2/SAFETY-PRIVACY.md: attack/release ≥ 20 ms hard, ≥ 50 ms voor artistieke events. L1 heeft een eenmalige geïsoleerde extinctie van 20 ms; L2 start met een 50 ms fade-in."
   },
   "carriers": {
     "reference": {
@@ -29,7 +50,7 @@
     },
     "colour_pan_law": "linear_0db_center",
     "max_colour_ratio": 0.25,
-    "note": "Referentie = -30 dBFS piekamplitude, continu aanwezig; panning = gelijkvermogen-panlaw (totale dragerenergie constant). Kleuren = directe kanaalamplitude met lineaire 0-dB-middenpanning, zodat de gedecodeerde helderheid niet halveert. Kleurratio's zijn conservatief (max 0,20 in deze score)."
+    "note": "Referentie = -30 dBFS piekamplitude (bindend, M2), continu aanwezig; panning = gelijkvermogen-panlaw zodat de totale dragerenergie constant blijft. Kleuren = directe kanaalamplitude met lineaire 0-dB-middenpanning (geen -3 dB center law). Harde veiligheidsclamp in render.py: elk kleurkanaal ≤ 25% van de referentiepiek; som per oor wordt apart gerapporteerd (R3)."
   },
   "program": {
     "band_limit_hz": 15500.0,
@@ -65,7 +86,7 @@
           {"type": "lowpass", "hz": 260.0, "q": 0.707}
         ]},
         "role": "lage impact als antwoord",
-        "relation": "reactie op L1-extinctie, 180 ms later, andere decay (2,5 s) dan het licht (8 ms)"
+        "relation": "reactie op L1-extinctie, 180 ms later, andere decay (2,5 s) dan het licht (20 ms)"
       },
       {
         "id": "A2",
@@ -87,18 +108,18 @@
         "start_s": 8.0,
         "end_s": 14.0,
         "rgb": [0.20, 0.075, 0.02],
-        "env": [[0.0, 0.0], [1.2, 0.55], [3.5, 0.75], [5.4, 0.95], [5.992, 1.0], [6.0, 0.0]],
+        "env": [[0.0, 0.0], [1.2, 0.55], [3.5, 0.75], [5.4, 0.95], [5.98, 1.0], [6.0, 0.0]],
         "pan": [[0.0, -1.0], [0.9, -1.0], [6.0, 0.6]],
         "role": "amberkleurig lichtgrain: start hard links, drijft langzaam naar rechts, wordt iets helderder",
-        "extinction": "abrupt, 8 ms",
-        "relation": "de abrupte extinctie om 14,0 s is de aanleiding voor A1"
+        "extinction": "eenmalige geïsoleerde extinctie van 20 ms (R4)",
+        "relation": "de extinctie om 14,0 s is de aanleiding voor A1"
       },
       {
         "id": "L2",
         "start_s": 14.0,
         "end_s": 28.0,
         "rgb": [0.055, 0.018, 0.004],
-        "env": [[0.0, 0.35], [3.0, 0.6], [6.0, 0.4], [9.0, 0.7], [12.0, 0.45], [14.0, 0.0]],
+        "env": [[0.0, 0.0], [0.05, 0.35], [3.0, 0.6], [6.0, 0.4], [9.0, 0.7], [12.0, 0.45], [14.0, 0.0]],
         "pan": [[0.0, -0.5], [4.0, 0.5], [8.0, -0.4], [11.0, 0.45], [14.0, 0.0]],
         "role": "diffuus amberrood veld dat langzaam ademt en dooft; het licht overleeft het geluid",
         "extinction": "langzame fade",
@@ -129,16 +150,18 @@
     ]
   },
   "relations": [
-    {"id": "R1", "from": ["L1"], "to": ["A1"], "kind": "verwantschap, geen synchronie", "detail": "180 ms na de 8 ms-extinctie; audio-envelope 30 ms attack / 2,5 s decay, licht 1,2 s attack / 8 ms extinctie."},
+    {"id": "R1", "from": ["L1"], "to": ["A1"], "kind": "verwantschap, geen synchronie", "detail": "180 ms na de 20 ms-extinctie; audio-envelope 30 ms attack / 2,5 s decay, licht 1,2 s attack / 20 ms extinctie."},
     {"id": "R2", "from": ["A1"], "to": ["L2"], "kind": "licht overleeft geluid", "detail": "De diffuse amberrode gloed ademt door nadat de impact weg is; geen nieuw geluid."},
     {"id": "R3", "from": ["L3"], "to": [], "kind": "opzettelijk onbeantwoord", "detail": "Zwak lichtgrain om 38 s krijgt geen audio en geen latere echo."},
     {"id": "R4", "from": ["L1", "A1"], "to": ["L4", "A2"], "kind": "herinnering", "detail": "38 s later: L4 is een dimmere, tragere, omgekeerde echo; A2 is A1 omgekeerd en verlaagd (pitch 0,75), 400 ms na L4-aanvang."}
   ],
   "safety": {
-    "max_colour_ratio_used": 0.20,
+    "colour_clamp_ratio": 0.25,
+    "score_max_colour_ratio": 0.20,
     "reference_level_dbfs": -30.0,
     "target_true_peak_dbfs": -6.0,
-    "notes": "Conservatief eerste experiment: geen flikkering in 3-30 Hz, alleen langzame kleurovergangen; één 8 ms-extinctie. Alle lichtniveaus blijven onder 25% van de referentie. Direct stoppen = weergave stoppen en Kasina-helderheid naar minimum."
+    "stop": "Deze offline WAV heeft GEEN encoder-panic en GEEN geteste 50 ms-softwareramp. Primaire stop: weergave stoppen + Kasina-helderheid naar minimum + bril af (of één oog bedekken).",
+    "notes": "Conservatief eerste experiment: geen bedoelde luminantiemodulatie in de kleurkanalen; alleen langzame kleurovergangen en één geïsoleerde 20 ms-extinctie. Referentie-panning van 20 Hz is door het formaat voorgeschreven en blijft een open aanname (geen zichtbaar kanaal). Kleuren ≤ 25% per drager (score 20%; ladder 6,25/12,5/20%). Geen medische of wellness-claims."
   },
   "verify": {
     "reference_windows_s": [[20.0, 21.3656], [40.0, 41.3656], [60.0, 61.3656]],
@@ -151,6 +174,7 @@
     ],
     "hard_pan_probe": {"event": "L1", "t0": 8.5, "t1": 8.65},
     "silent_window_s": [29.0, 30.4],
-    "programme_window_s": [14.5, 15.8656]
+    "programme_window_s": [14.5, 15.8656],
+    "intercarrier_probe_s": [1.5, 2.8656]
   }
 }
