@@ -52,12 +52,6 @@ bool gloopHasGestureOf (const juce::Button& b)
     return (bool) b.getProperties().getWithDefault ("gloopHasGesture", false);
 }
 
-juce::Colour laneColourOf (const juce::Component& c)
-{
-    const auto argb = (juce::uint32) (int) c.getProperties().getWithDefault ("laneArgb", 0);
-    return argb != 0 ? juce::Colour (argb) : theme::ember;
-}
-
 juce::Point<float> polar (float cx, float cy, float radius, float angle)
 {
     return { cx + std::sin (angle) * radius, cy - std::cos (angle) * radius };
@@ -636,11 +630,10 @@ void AfterglowLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button
 
     if (role == "gloopMode")
     {
-        // Lane state palette: EMPTY/READY are quiet outline states, RECORD
-        // pulses, LOOP carries the lane colour, FADE withdraws.
+        // One Gloop identity, not eight lane colours: neutral chrome, blue for
+        // active looping/fading, and the single ember REC warning.
         const auto state = gloopStateOf (button);
         const auto hasGesture = gloopHasGestureOf (button);
-        const auto colour = laneColourOf (button);
         const auto enabled = button.isEnabled();
         const auto hot = (highlighted || down) ? 1.0f : 0.0f;
         const auto pulse = (float) (0.5 + 0.5 * std::sin (juce::Time::getMillisecondCounterHiRes() * 0.006));
@@ -662,19 +655,20 @@ void AfterglowLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button
         }
         else if (state == (int) gloop::Mode::Loop)
         {
-            fill = juce::Colour (0xff0b0f16).interpolatedWith (colour, 0.10f);
-            outline = colour;
-            outlineAlpha = 0.75f;
+            fill = juce::Colour (0xff0b0f16).interpolatedWith (theme::gloopMotion(), 0.08f);
+            outline = theme::gloopMotion();
+            outlineAlpha = 0.72f;
         }
         else if (state == (int) gloop::Mode::Fade)
         {
-            outline = theme::copperDim;
-            outlineAlpha = 0.7f;
+            outline = theme::gloopMotion().withMultipliedAlpha (0.55f);
+            outlineAlpha = 0.70f;
         }
         else if (hasGesture)
         {
-            outline = theme::copper;
-            outlineAlpha = 0.8f;
+            // READY: stored but silent; neutral, not a movement colour.
+            outline = theme::lineSoft;
+            outlineAlpha = 0.90f;
         }
 
         g.setColour (fill);
@@ -780,7 +774,6 @@ void AfterglowLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& 
     {
         const auto state = gloopStateOf (button);
         const auto hasGesture = gloopHasGestureOf (button);
-        const auto colour = laneColourOf (button);
 
         auto textColour = theme::muted.withAlpha (0.9f);
 
@@ -789,11 +782,11 @@ void AfterglowLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& 
         else if (state == (int) gloop::Mode::Record)
             textColour = theme::paleEmber;
         else if (state == (int) gloop::Mode::Loop)
-            textColour = colour.interpolatedWith (theme::paleEmber, 0.35f);
+            textColour = theme::gloopMotion();
         else if (state == (int) gloop::Mode::Fade)
-            textColour = theme::copperDim;
+            textColour = theme::gloopMotion().withMultipliedAlpha (0.60f);
         else if (hasGesture)
-            textColour = theme::copper.interpolatedWith (theme::text, 0.35f);
+            textColour = theme::text.withAlpha (0.82f);
 
         g.setFont (tickFont);
         g.setColour (textColour.withMultipliedAlpha (highlighted || down ? 1.0f : 0.92f));

@@ -46,7 +46,6 @@ GloopPanel::GloopPanel (juce::AudioProcessorValueTreeState& state,
 
         auto button = std::make_unique<juce::TextButton>();
         button->getProperties().set ("role", "gloopMode");
-        button->getProperties().set ("laneArgb", (int) theme::gloopLaneColour (lane).getARGB());
         button->getProperties().set ("gloopState", (int) gloop::Mode::Idle);
         button->getProperties().set ("gloopHasGesture", false);
         button->setTitle ("Gloop lane " + n + " state");
@@ -190,7 +189,6 @@ void GloopPanel::syncLaneControls()
             auto& props = button->getProperties();
             props.set ("gloopState", mode);
             props.set ("gloopHasGesture", hasGesture);
-            props.set ("laneArgb", (int) theme::gloopLaneColour (lane).getARGB());
 
             // Target, not parameter state, decides whether a lane can start.
             const auto label = modeLabel (targetOff ? (int) gloop::Mode::Idle : mode,
@@ -393,7 +391,7 @@ void GloopPanel::renderBackground (juce::Graphics& g, juce::Rectangle<float> bou
         drawMicroText (g, juce::String (lane + 1),
                        numberRects[idx].toFloat(),
                        monoFont (7.4f * fs, juce::Font::plain, 0.04f),
-                       theme::gloopLaneColour (lane).withAlpha (0.75f),
+                       theme::muted.withAlpha (0.75f),
                        juce::Justification::centredRight);
     }
 
@@ -454,10 +452,8 @@ void GloopPanel::paintLaneRing (juce::Graphics& g, int lane, juce::Rectangle<flo
     const auto idx = (size_t) lane;
     const auto& l = visual.lanes[idx];
     const auto mode = effectiveMode (lane);
-    const auto active = mode == (int) gloop::Mode::Record
-                        || mode == (int) gloop::Mode::Loop
-                        || mode == (int) gloop::Mode::Fade;
-    const auto colour = theme::gloopLaneColour (lane);
+    const auto loopish = mode == (int) gloop::Mode::Loop || mode == (int) gloop::Mode::Fade;
+    const auto recording = mode == (int) gloop::Mode::Record;
     const auto centre = area.getCentre();
     const auto radius = juce::jmax (2.0f, juce::jmin (area.getWidth(), area.getHeight()) * 0.5f
                                             - 1.6f * s);
@@ -468,67 +464,60 @@ void GloopPanel::paintLaneRing (juce::Graphics& g, int lane, juce::Rectangle<flo
     // a stepped preview frame is reproducible.
     const auto pulse = (float) (0.5 + 0.5 * std::sin ((double) tickCounter * 0.55));
 
-    // Seat: dim ring for empty / idle lanes.
+    // The lane circle is state/phase, not a second movement ring. Blue is used
+    // only while the lane is actually looping/fading; the one exception is the
+    // restrained ember REC warning. Idle/READY/empty stay neutral.
+    const auto phaseColour = recording ? theme::ember : theme::gloopMotion();
+
+    // Seat: neutral for empty / idle lanes, dim blue while looping.
     {
-        const auto alpha = active ? 0.55f : (l.hasGesture ? 0.40f : 0.24f);
-        const auto c = active ? colour : (l.hasGesture ? theme::copper : theme::line);
+        const auto alpha = loopish ? 0.42f : (l.hasGesture ? 0.30f : 0.20f);
+        const auto c = loopish ? theme::gloopMotion()
+                               : (recording ? theme::ember : theme::lineSoft);
 
         g.setColour (c.withAlpha (alpha));
         g.drawEllipse (centre.x - radius, centre.y - radius, radius * 2.0f, radius * 2.0f, stroke);
     }
 
-    if (active)
+    if (loopish)
     {
-        // Loop progress: from 12 o'clock to the playhead.
+        // Loop progress: from 12 o'clock to the playhead, in the Gloop blue.
         const auto phase = juce::jlimit (0.0f, 1.0f, l.phase);
         const auto dotAngle = startAngle + phase * kTwoPi;
 
         juce::Path progress;
         progress.addCentredArc (centre.x, centre.y, radius, radius, 0.0f,
                                 startAngle, dotAngle, true);
-        g.setColour (colour.withAlpha (mode == (int) gloop::Mode::Fade ? 0.35f : 0.80f));
+        g.setColour (phaseColour.withAlpha (mode == (int) gloop::Mode::Fade ? 0.30f : 0.62f));
         g.strokePath (progress, juce::PathStrokeType (juce::jmax (0.9f, 1.2f * s),
                                                       juce::PathStrokeType::curved,
                                                       juce::PathStrokeType::rounded));
 
-        // Current offset: the inner arc is how far the lane has moved the knob
-        // right now (normalised offset of the target range).
-        {
-            const auto innerR = radius * 0.52f;
-            const auto offset = juce::jlimit (-1.0f, 1.0f, l.offset);
-
-            if (std::abs (offset) > 0.01f)
-            {
-                juce::Path offsetArc;
-                offsetArc.addCentredArc (centre.x, centre.y, innerR, innerR, 0.0f,
-                                         startAngle, startAngle + offset * kTwoPi, true);
-
-                g.setColour (paleEmber.withAlpha (0.20f));
-                g.strokePath (offsetArc, juce::PathStrokeType (2.6f * s, juce::PathStrokeType::curved,
-                                                               juce::PathStrokeType::rounded));
-                g.setColour (emberRamp (0.35f + 0.45f * juce::jmin (1.0f, std::abs (offset)))
-                                 .withAlpha (0.9f));
-                g.strokePath (offsetArc, juce::PathStrokeType (1.2f * s, juce::PathStrokeType::curved,
-                                                               juce::PathStrokeType::rounded));
-            }
-        }
-
-        // Playhead: a dot that really moves with the phase.
+        // Playhead: a small dot that moves with the phase. It deliberately has
+        // no offset arc; audible movement belongs to the knob's blue ring.
         const auto dot = polar (centre, radius, dotAngle);
-        const auto dotR = (mode == (int) gloop::Mode::Record ? 1.6f + 0.5f * pulse : 1.5f) * s;
+        const auto dotR = 1.35f * s;
 
-        drawGlowDot (g, dot.x, dot.y, juce::jmax (1.0f, dotR * 0.8f), colour,
-                     0.55f + 0.45f * juce::jlimit (0.0f, 1.0f, l.amount), s);
-        g.setColour (colour.interpolatedWith (paleEmber, 0.35f)
-                          .withAlpha (mode == (int) gloop::Mode::Fade ? 0.55f : 1.0f));
+        drawGlowDot (g, dot.x, dot.y, juce::jmax (1.0f, dotR * 0.8f), phaseColour,
+                     0.45f + 0.25f * juce::jlimit (0.0f, 1.0f, l.amount), s);
+        g.setColour (phaseColour.withAlpha (mode == (int) gloop::Mode::Fade ? 0.55f : 0.90f));
         g.fillEllipse (dot.x - dotR, dot.y - dotR, dotR * 2.0f, dotR * 2.0f);
+    }
+    else if (recording)
+    {
+        // Recording: a restrained ember pulse at 12 o'clock, not a loop phase.
+        const auto dotR = (1.7f + 0.4f * pulse) * s;
+        drawGlowDot (g, centre.x, centre.y - radius, juce::jmax (1.0f, dotR * 0.8f),
+                     theme::ember, 0.55f + 0.35f * pulse, s);
+        g.setColour (theme::ember.withAlpha (0.75f + 0.25f * pulse));
+        g.fillEllipse (centre.x - dotR, centre.y - radius - dotR, dotR * 2.0f, dotR * 2.0f);
     }
     else if (l.hasGesture)
     {
-        // READY: a still, empty seat with a copper collar and a zero mark.
-        g.setColour (theme::copper.withAlpha (0.55f));
-        g.drawEllipse (centre.x - radius * 0.45f, centre.y - radius * 0.45f,
-                       radius * 0.9f, radius * 0.9f, juce::jmax (0.7f, 0.8f * s));
+        // READY: a neutral centre mark; the take is stored but contributes zero.
+        g.setColour (theme::muted.withAlpha (0.55f));
+        g.drawEllipse (centre.x - radius * 0.42f, centre.y - radius * 0.42f,
+                       radius * 0.84f, radius * 0.84f, juce::jmax (0.7f, 0.8f * s));
     }
 }
 

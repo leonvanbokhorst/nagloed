@@ -310,9 +310,11 @@ is the separate **light-blue arc** outside it: it follows the actual summed
 offset, so it is visible only when the lane is moving the value. The lane's
 mini-ring in the Gloop panel is the playback phase; that is deliberately not
 drawn on the parameter knob, so the blue arc cannot be mistaken for a playhead
-or for the physical knob being automated. Several lanes may target the same
-parameter; their offsets are summed into that one blue display and bounded by a
-smooth limiter.
+or for the physical knob being automated. The Gloop panel uses the same blue for
+active Gloop state and phase, neutral chrome for lanes and inactive states, and
+an ember accent only while recording; there is no separate colour per lane.
+Several lanes may target the same parameter; their offsets are summed into that
+one blue display and bounded by a smooth limiter.
 
 **RANDOMIZE** gently changes the depth and speed of the lanes that are already
 moving, gliding over several seconds. It never starts an idle lane, never

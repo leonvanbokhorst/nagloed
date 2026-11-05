@@ -145,10 +145,6 @@ Colour emberRamp (float t);
 /** Map a pitch in semitones to the cloud colour ramp. */
 Colour pitchColour (float semitones);
 
-/** Eight distinguishable Gloop lane colours, warm-biased so a lane ring still
-    reads as an ember rather than a rainbow: copper -> ember -> gold -> mint. */
-Colour gloopLaneColour (int lane) noexcept;
-
 /** Cool light-blue reserved for Gloop's relative movement around a knob. It is
     deliberately outside the warm ember palette so it reads as "Gloop is moving
     this" rather than as part of the live knob value. */

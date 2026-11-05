@@ -33,7 +33,9 @@ feedback; automated tests only establish the mechanics below.
   offset; when several lanes share a knob it is one combined display, not a
   pile of rings. Playback phase lives in the lane's mini-ring in the Gloop
   panel, never on the parameter knob. A separate Gloop panel shows all eight
-  lanes.
+  lanes with one restrained visual identity: neutral lane chrome, the same
+  light blue for active Gloop state/phase, and an ember accent only for the REC
+  warning. There are no per-lane colours to decode.
 * `RANDOMIZE` gently changes the depth and speed of lanes that are already
   moving, gliding over several seconds. It never starts an idle lane, never
   changes a target and never restarts a phase.
