@@ -1,8 +1,8 @@
-# NAGLOED 1.0.4 — validation report
+# NAGLOED 1.0.5 — validation report
 
-Everything below was produced on the release candidate on the build machine
-described here. The point is not a badge: it is that the numbers can be
-reproduced with the commands given.
+Everything below was produced on the **NAGLOED 1.0.5 release candidate
+(5 November 2026)** on the build machine described here. The point is not a
+badge: it is that the numbers can be reproduced with the commands given.
 
 ## Environment
 
@@ -27,6 +27,11 @@ build/NAGLOED_artefacts/Release/Standalone/NAGLOED.app
 
 AU identity: type `aufx`, subtype `Nagl`, manufacturer `MLLW`. The build copies
 AU and VST3 into `~/Library/Audio/Plug-Ins/{Components,VST3}`.
+
+Version metadata in the 1.0.5 bundles: `CFBundleShortVersionString` and
+`CFBundleVersion` are `1.0.5` for AU and VST3 (`PROJECT_VERSION`, rendered from
+`CMakeLists.txt` and `src/core/Version.h`). AU/VST3 plug-in identity and the state
+format are unchanged from 1.0.4, so existing sessions load normally.
 
 ## Automated checks
 
@@ -162,6 +167,27 @@ cost stays inside one 60 Hz frame, and that particle state stays finite,
 in-field and resize-safe. It prints `MOTION PASS`; the baseline renderer prints
 `MOTION SKIP` because the hooks did not exist yet.
 
+Measured on the 1.0.5 release build (dense phase, preset 07, 1180 × 680):
+
+```
+[PASS] motion      meanSpeed=0.1124 fw/s  medianNN=1.09 px/frame  continuity=1.00
+                   meanTrack=0.16 s  matched=37.5
+[PASS] render      dense field frames: 60 distinct (floor 54), 59/59 consecutive differ
+[PASS] silence     dense peak live=174 afterglow=138 proxy=1.000;
+                   after 2.33 s silence: live=1, afterglow=1, matched=0, proxy=0.001
+[PASS] density     dense matched=37.0 vs sparse 1.1 = 32.63x
+[PASS] cost        tick mean 1.76 ms / p95 1.94 ms, paint 1.70 ms,
+                   tick+paint 3.46 ms (caps 8 / 20 / 16.7 ms)
+[PASS] determinism runA = runB = baf8b4e3c0e843fb
+[PASS] stability   finite, in-field, 900×520 / 1400×800 / 1180×680
+MOTION PASS
+```
+
+Timing varies by a few hundredths of a millisecond between runs; frame content is
+deterministic. The render check exists because the field was frozen on macOS in
+1.0.2–1.0.4 (see [SINTEL-MOTION.md](SINTEL-MOTION.md)); reverting the
+`SoftwareImageType` fix makes it fail.
+
 ### Deterministic before/after frame capture
 
 ```
@@ -240,6 +266,18 @@ every release.
 - **Focused-grain position at maximum Focus with default Spray** averages 0.94
   rather than 1.0; the spray window is clamped at the newest edge on purpose.
   The suite asserts 0.004 / 0.500 / 0.996 at Focus 0 / 0.5 / 1 without spray.
+- **Retina paint cost is estimated, not profiled at the cap.** The phosphor is
+  software-backed now (necessary for correct animation on macOS), so each paint
+  builds a CGImage from the buffer. Measured paint ~1.5–1.7 ms at 1180 × 680;
+  the phosphor is capped at 4.5 MP, which projects to roughly ~2 ms. A profile on
+  a large Retina window remains a sensible follow-up, not a 1.0.5 blocker.
+- **High-density worst case is bounded, not exercised.** The motion QA dense
+  phase reaches 37 matched / 174 live particles. The engine itself bounds
+  concurrency (density ≤ 200 g/s, grain size ≤ 500 ms ⇒ ≈100 voices) and the
+  particle pool is a hard 360; worst-case matcher cost is ≤ 256 × 360 score
+  comparisons, and rendering is bounded by three core + two trail splats per
+  particle. No unbounded path was found; a dedicated max-density soak is a
+  possible follow-up.
 
 ## Not covered by automation
 
@@ -248,3 +286,7 @@ every release.
   and both formats are already validated by the host-agnostic validators above.
 - Subjective sound quality. The numbers prove stability, range and CPU, not
   taste; the demo and the preset library are the listening evidence.
+- Subjective motion feel. The owner accepted the living Sintel grain field for
+  issue #32 on 5 November 2026; the automated checks prove motion, render
+  integrity, silence, density contrast, determinism and cost — not whether it
+  *feels* alive.

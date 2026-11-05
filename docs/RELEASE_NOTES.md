@@ -1,8 +1,57 @@
-# NAGLOED 1.0.4 — release notes
+# NAGLOED 1.0.5 — release notes
 
-Released 4 November 2026 · Master Lonn & Little Wan · macOS 12+ · AU / VST3 / Standalone
+Released 5 November 2026 · Master Lonn & Little Wan · macOS 12+ · AU / VST3 / Standalone
 
 > *nagloed* (Dutch, n.) — the light that stays in the room after the source is gone.
+
+## 1.0.5 — 5 November 2026
+
+**UI experience release: living Sintel grain motion, plus the fix for a frozen
+grain field on macOS. No sound, DSP, parameter, preset or state-format changes.**
+
+Issue #32 asked why Sintel looked static and for a first playable version where
+grains emerge, move, cluster, scatter and fade. The investigation found **two
+independent causes**, both fixed:
+
+- **The field was literally frozen on macOS since 1.0.2.** The phosphor buffer was
+  created as a CoreGraphics-backed (`NativeImageType`) image and written through a
+  persistent `BitmapData`. CoreGraphics caches its `CGImage` on first draw and does
+  not invalidate it for later raw pixel writes, so the editor kept blitting one
+  stale frame. Measured on the old renderer: ~98% of consecutive frames were
+  pixel-identical under a deterministic, audio-fed scenario. The phosphor image is
+  now software-backed (`SoftwareImageType`), so what the UI writes is what the
+  screen shows.
+- **There was no motion model.** Each `GrainView` was projected to a fixed pixel
+  for its whole life; `progress` and `env` only affected size and energy, and the
+  phosphor integrated the repeated splats into a stationary glow. The only real
+  movement was decorative dust.
+
+The grain field now has a UI-only particle layer: every grain becomes a living
+ember, born where the grain actually reads in the capture buffer, at its real
+pitch and colour. It clusters with its neighbours while the grain is alive, flies
+on release (buoyancy, turbulence, pan/LFO/scan bias) and cools into the
+afterglow. Sparse material leaves isolated embers and the occasional stray; dense
+material becomes a hot, turbulent cloud; silence decays to stillness. Grain
+identity is approximated frame-to-frame (there are no grain ids; the engine
+contract is unchanged). There are no new parameters and no audio-thread work.
+
+Preset loading, state recall, audio behaviour, latency and AU/VST3 identity are
+unchanged, so existing projects open as before (the 1.0.3 AU/VST3 identity
+change for sessions saved with 1.0.0–1.0.2 still applies as documented there).
+The AU, VST3 and Standalone bundles report version **1.0.5**.
+
+Documentation: [SINTEL-MOTION.md](SINTEL-MOTION.md) describes the motion model,
+what is data versus artistic interpretation, the continuity approximation and its
+limits; [issue-32/evidence/EVIDENCE.md](issue-32/evidence/EVIDENCE.md) holds the
+before/after measurements, stills and GIFs. The new `nagl-preview --motion`
+regression harness runs in CI and fails if the rendered field freezes, if silence
+does not decay, if density contrast disappears, or if particle state/determinism
+or frame cost regress.
+
+Verified: 167 checks / 0 failures, `MOTION PASS`, `SOAK PASS`, `HEADLESS-HOST
+PASS`, deterministic hero byte-identical across runs, AU/VST3/Standalone built,
+`auval -v aufx Nagl MLLW` PASS, pluginval strictness 10 SUCCESS on VST3 and AU,
+demo unchanged (sha256 `de987eed…`).
 
 ## 1.0.4 — 4 November 2026
 
