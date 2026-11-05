@@ -453,6 +453,11 @@ sparse material 48.3% of frames are still — late sparse material genuinely res
 between events (restraint, not a freeze). The motion and render regression checks
 run in the dense phase, where the guard belongs.
 
+The after capture and the hero were re-run on the **1.0.5 release build**: the
+field metrics stayed byte-identical, the hero stayed deterministic (new sha256,
+changed only by the 1.0.5 footer stamp). See the release re-check at the end of
+[EVIDENCE.md](issue-32/evidence/EVIDENCE.md).
+
 ### 7.2 Automated checks
 
 ```bash
@@ -482,8 +487,8 @@ Results (full output in [EVIDENCE.md](issue-32/evidence/EVIDENCE.md)):
 - `--headless-host`: **HEADLESS-HOST PASS** (timerRunning 1, cloudAnimates 1,
   curveChanged 1, lfoChanged 1).
 - Deterministic hero render: byte-identical across serial runs, sha256
-  `550a0ef9dbdb502afe5a35f52c7e78fb0307101b5b6ac263e2f3631da7f38297`,
-  1,862,593 bytes. The hero is fully timer-free (no wall-clock dispatch loop
+  `fa6ab2b2391ff3987fee2e7cdd4f0e9979ac09e37c8f81136d56b8208d357d3f`,
+  1,862,612 bytes. The hero is fully timer-free (no wall-clock dispatch loop
   before the capture), so it shows the playing instrument deterministically
   rather than depending on timer scheduling.
 

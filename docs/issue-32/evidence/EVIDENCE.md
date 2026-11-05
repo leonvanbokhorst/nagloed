@@ -255,14 +255,26 @@ What the checks mean:
 - `--headless-host`: **HEADLESS-HOST PASS** — timerRunning 1, cloudAnimates 1,
   curveChanged 1, lfoChanged 1 (`after/headless-host.log`).
 - Deterministic hero (`nagl-preview`, run **serially** twice): byte-identical both
-  times, sha256 `550a0ef9dbdb502afe5a35f52c7e78fb0307101b5b6ac263e2f3631da7f38297`,
-  1,862,593 bytes (`docs/ui-preview.png`). The hero is fully timer-free: the old
+  times, sha256 `fa6ab2b2391ff3987fee2e7cdd4f0e9979ac09e37c8f81136d56b8208d357d3f`,
+  1,862,612 bytes (`docs/ui-preview.png`). The hero is fully timer-free: the old
   wall-clock `runDispatchLoopUntil(700)` before the deterministic advance was
   removed, and the hero uses the audio-fed path (40 x 0.1 s chord + 6 fixed
   1/60 s frames per chunk after `advanceForPreview(0)`), so it shows the
   instrument playing rather than a frozen `VisualState`. Removing the dispatch
   loop changed 0.0045% of pixels vs the pipelined hero (PSNR 57.7 dB), i.e. the
   image is visually unchanged but no longer depends on timer scheduling.
+
+## Release re-check (NAGLOED 1.0.5, 5 November 2026)
+
+The after capture, the motion QA, soak, headless host-mount check, unit suite,
+AU validation and pluginval strictness 10 were re-run on the **1.0.5 release
+build** (the same renderer plus the version stamp). The after capture stayed
+byte-identical (`metrics.csv` sha256
+`66f9c8494a75ed734956562852220b979aaf50ea09b90aa2701a006476f689d0`), the hero
+stayed byte-identical across serial runs (new sha256 `fa6ab2b2…`, 1,862,612
+bytes; it changed only because the footer now reads 1.0.5), and the full-UI
+stills were re-rendered with the 1.0.5 stamp. The field frames and GIFs are
+unchanged: the renderer did not change.
 
 ## Interpretation
 
