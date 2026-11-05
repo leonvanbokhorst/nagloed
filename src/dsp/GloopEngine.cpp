@@ -33,7 +33,12 @@ inline int clampMode (int mode) noexcept
 
 inline int clampTarget (int target) noexcept
 {
-    return std::max (0, std::min (target, gloop::kNumTargets - 1));
+    return std::max (0, std::min (target, gloop::kNumTargetChoices - 1));
+}
+
+inline int clampConcreteTarget (int target) noexcept
+{
+    return std::max (1, std::min (target, gloop::kNumTargets - 1));
 }
 } // namespace
 
@@ -41,11 +46,20 @@ inline int clampTarget (int target) noexcept
 // Lifecycle
 // =============================================================================
 
+GloopEngine::GloopEngine()
+    : lanes ((size_t) gloop::kNumLanes),
+      slots ((size_t) kQueueSlots)
+{
+    // The lane buffers and the hand-off queue are large (a full four-track
+    // take is ~48 KB per lane), so they live on the heap and are allocated here
+    // on the message thread. prepare() and the audio thread only touch them.
+}
+
 void GloopEngine::prepare (double sr) noexcept
 {
-    // Nothing to allocate: the queue and every gesture buffer are members. The
-    // sample rate is only informational because every glide and fade is driven
-    // by the dt the caller passes to processFrame().
+    // Nothing to allocate here: the queue and every gesture buffer were created
+    // in the constructor. The sample rate is informational because every glide
+    // and fade is driven by the dt the caller passes to processFrame().
     sampleRate = (sr > 0.0 && std::isfinite (sr)) ? sr : 48000.0;
     lastDtSeconds = 0.0;
     lastSmoothing = -1.0f;   // force a coefficient refresh on the next frame
@@ -61,7 +75,11 @@ void GloopEngine::reset() noexcept
         lane.phase = 0.0;
         lane.offset = 0.0f;
         lane.rawOffset = 0.0f;
+        lane.centreNorm = 0.0f;
         lane.effectiveAmount = 0.0f;
+        lane.rawTrack.fill (0.0f);
+        lane.offsetTrack.fill (0.0f);
+        lane.centreTrack.fill (0.0f);
         lane.amountScale = lane.amountScaleTarget = 1.0f;
         lane.randomSpeed = lane.randomSpeedTarget = 1.0f;
         lane.speedInitialised = false;      // re-snap to the parameter speed
@@ -83,20 +101,14 @@ void GloopEngine::reset() noexcept
 // Message thread -> audio thread hand-off
 // =============================================================================
 
-bool GloopEngine::publish (int lane, const float* offsets, int count,
-                           float durationSeconds) noexcept
+bool GloopEngine::publish (int lane, const gloop::Gesture& gesture) noexcept
 {
     if (lane < 0 || lane >= gloop::kNumLanes)
         return false;
 
-    if (count < 0 || count > gloop::kMaxGestureSamples)
+    if (gesture.count < 0 || gesture.count > gloop::kMaxGestureSamples
+        || gesture.numTracks < 0 || gesture.numTracks > gloop::kMaxTracksPerLane)
         return false;
-
-    if (count > 0 && offsets == nullptr)
-        return false;
-
-    if (! std::isfinite (durationSeconds) || durationSeconds < 0.0f)
-        durationSeconds = 0.0f;
 
     int start1 = 0, size1 = 0, start2 = 0, size2 = 0;
     fifo.prepareToWrite (1, start1, size1, start2, size2);
@@ -111,14 +123,47 @@ bool GloopEngine::publish (int lane, const float* offsets, int count,
 
     auto& slot = slots[(size_t) index];
     slot.lane = lane;
-    slot.count = count;
-    slot.durationSeconds = durationSeconds;
+    slot.gesture = gesture;
 
-    if (count > 0)
-        std::copy (offsets, offsets + count, slot.offsets.begin());
+    if (! std::isfinite (slot.gesture.durationSeconds)
+        || slot.gesture.durationSeconds < 0.0f)
+        slot.gesture.durationSeconds = 0.0f;
 
     fifo.finishedWrite (1);
     return true;
+}
+
+bool GloopEngine::publish (int lane, const float* offsets, int count,
+                           float durationSeconds) noexcept
+{
+    // Compatibility helper for QA harnesses: one offset track using the lane's
+    // current target. The processor always uses the full-gesture overload.
+    if (lane < 0 || lane >= gloop::kNumLanes)
+        return false;
+
+    if (count < 0 || count > gloop::kMaxGestureSamples)
+        return false;
+
+    if (count > 0 && offsets == nullptr)
+        return false;
+
+    gloop::Gesture gesture;
+    gesture.count = count;
+    gesture.durationSeconds = durationSeconds;
+    gesture.numTracks = count >= 2 ? 1 : 0;
+
+    if (count > 0)
+    {
+        int target = clampTarget (settings.gloopLanes[(size_t) lane].target);
+
+        if (target <= (int) gloop::Target::Off || target >= gloop::kNumTargets)
+            target = (int) gloop::Target::Focus;
+
+        gesture.tracks[0].target = target;
+        std::copy (offsets, offsets + count, gesture.tracks[0].offsets.begin());
+    }
+
+    return publish (lane, gesture);
 }
 
 void GloopEngine::drainGestures() noexcept
@@ -145,40 +190,56 @@ void GloopEngine::installFromSlot (const Slot& slot) noexcept
         return;
 
     auto& lane = lanes[(size_t) slot.lane];
+    const auto& incoming = slot.gesture;
 
-    if (slot.count < kMinSamples)
+    if (incoming.count < kMinSamples || incoming.numTracks <= 0)
     {
         // Empty take: the lane stays valid but has nothing to play.
         lane.gesture.count = 0;
         lane.gesture.durationSeconds = 0.0f;
+        lane.gesture.numTracks = 0;
         lane.gestureDuration = 0.0;
         lane.seamSeconds = 0.0;
         lane.loopPeriod = 0.0;
         lane.hasGesture = false;
         lane.phase = 0.0;
+        lane.fadeGain = 0.0f;
+        lane.rawTrack.fill (0.0f);
+        lane.offsetTrack.fill (0.0f);
+        lane.centreTrack.fill (0.0f);
+        lane.rawOffset = lane.offset = lane.centreNorm = 0.0f;
+        lane.effectiveAmount = 0.0f;
         refreshActualMode (lane);
         return;
     }
 
-    const int count = std::min (slot.count, gloop::kMaxGestureSamples);
-
-    float peak = 0.0f;
-    for (int i = 0; i < count; ++i)
-    {
-        const float value = sanitiseOffset (slot.offsets[(size_t) i]);
-        lane.gesture.offsets[(size_t) i] = value;
-        peak = std::max (peak, std::abs (value));
-    }
+    const int count = std::min (incoming.count, gloop::kMaxGestureSamples);
+    const int numTracks = std::min (incoming.numTracks, gloop::kMaxTracksPerLane);
 
     lane.gesture.count = count;
+    lane.gesture.numTracks = numTracks;
+
+    for (int t = 0; t < numTracks; ++t)
+    {
+        const auto& source = incoming.tracks[(size_t) t];
+        auto& destination = lane.gesture.tracks[(size_t) t];
+
+        // The processor should never send an invalid target, but a corrupt
+        // state blob must not be able to write outside the target table.
+        destination.target = clampConcreteTarget (source.target);
+
+        for (int i = 0; i < count; ++i)
+            destination.offsets[(size_t) i] = sanitiseOffset (source.offsets[(size_t) i]);
+    }
 
     const double fallbackDuration = (double) count / (double) gloop::kGestureSampleRate;
-    double duration = slot.durationSeconds > 0.0f ? (double) slot.durationSeconds
-                                                  : fallbackDuration;
+    double duration = incoming.durationSeconds > 0.0f
+                          ? (double) incoming.durationSeconds
+                          : fallbackDuration;
     duration = clampSeconds (duration, 1.0e-3, 600.0);
 
     // Crossfade the last seam into the first seam: the loop period shrinks by the
-    // seam length, which is exactly what keeps the wrap continuous (see readLane).
+    // seam length, which is exactly what keeps the wrap continuous (see readTrack).
     const double seam = std::min ((double) kSeamSeconds, duration * 0.25);
 
     lane.gesture.durationSeconds = (float) duration;
@@ -189,8 +250,11 @@ void GloopEngine::installFromSlot (const Slot& slot) noexcept
     lane.hasGesture = true;
     lane.phase = 0.0;          // a new take starts at its own beginning
     lane.fadeGain = 1.0f;      // and enters at full influence; no fade-in on REC
+    lane.rawTrack.fill (0.0f);
+    lane.offsetTrack.fill (0.0f);
+    lane.centreTrack.fill (0.0f);
+    lane.rawOffset = lane.offset = lane.centreNorm = 0.0f;
 
-    (void) peak;               // a motionless take is valid and simply yields 0
     refreshActualMode (lane);
 }
 
@@ -244,9 +308,24 @@ void GloopEngine::beginBlock (const EngineParams& params) noexcept
             refreshActualMode (lane);
         }
 
-        lane.centreNorm = lane.target > (int) gloop::Target::Off
-                              ? gloopTargetNorm (params, lane.target)
-                              : 0.0f;
+        // Each recorded track lives around its own knob's live centre; a lane
+        // selected as Multi still has concrete per-track targets.
+        for (int t = 0; t < gloop::kMaxTracksPerLane; ++t)
+        {
+            if (t >= lane.gesture.numTracks)
+            {
+                lane.centreTrack[(size_t) t] = 0.0f;
+                continue;
+            }
+
+            const int target = lane.gesture.tracks[(size_t) t].target;
+            lane.centreTrack[(size_t) t] =
+                target > (int) gloop::Target::Off && target < gloop::kNumTargets
+                    ? gloopTargetNorm (params, target)
+                    : 0.0f;
+        }
+
+        lane.centreNorm = lane.centreTrack[0];
     }
 }
 
@@ -297,7 +376,8 @@ void GloopEngine::processFrame (double dtSeconds) noexcept
                                  || lane.actualMode == (int) gloop::Mode::Fade);
 
         // --- phase ------------------------------------------------------------
-        // One period per lane, no shared clock: the lanes drift apart on purpose.
+        // One period per lane, no shared clock: all tracks of a lane share this
+        // playhead, while the lanes drift apart on purpose.
         if (playing && lane.loopPeriod > 1.0e-6)
         {
             // Randomize may nudge the effective playback time, but the lane's
@@ -315,39 +395,62 @@ void GloopEngine::processFrame (double dtSeconds) noexcept
             lane.phase -= std::floor (lane.phase);
         }
 
-        // --- offset -----------------------------------------------------------
-        const bool contributing = playing && lane.target > (int) gloop::Target::Off;
+        // A concrete target gates the gesture's tracks: an Off lane is silent
+        // even if it still holds a take, and a single-target lane cannot leak a
+        // track aimed at another knob. Multi (kAutoTarget) plays all tracks.
+        const bool targetAllowsTracks = lane.target > (int) gloop::Target::Off
+                                        && (lane.target == gloop::kAutoTarget
+                                            || lane.gesture.numTracks > 0);
 
-        if (contributing)
+        lane.effectiveAmount = (playing && targetAllowsTracks)
+                                   ? dsp::clamp (lane.amountParam * lane.amountScale
+                                                     * lane.fadeGain,
+                                                 0.0f, 1.0f)
+                                   : 0.0f;
+
+        // --- per-track offsets ------------------------------------------------
+        for (int t = 0; t < gloop::kMaxTracksPerLane; ++t)
         {
-            lane.effectiveAmount = dsp::clamp (lane.amountParam * lane.amountScale
-                                                   * lane.fadeGain,
-                                               0.0f, 1.0f);
-            lane.rawOffset = dsp::clamp (readLane (lane) * lane.effectiveAmount,
-                                         -1.0f, 1.0f);
+            const bool hasTrack = t < lane.gesture.numTracks;
+            const auto& track = lane.gesture.tracks[(size_t) t];
+            const bool targetMatches = lane.target == gloop::kAutoTarget
+                                       || (track.target == lane.target);
+            const bool contributing = playing && targetAllowsTracks && hasTrack
+                                      && targetMatches
+                                      && track.target > (int) gloop::Target::Off
+                                      && track.target < gloop::kNumTargets;
+
+            float raw = 0.0f;
+
+            if (contributing)
+                raw = dsp::clamp (readTrack (lane, track) * lane.effectiveAmount,
+                                  -1.0f, 1.0f);
+
+            float& offset = lane.offsetTrack[(size_t) t];
+            offset += (raw - offset) * offsetCoeff;
+            offset = dsp::flushDenormal (offset);
+            offset = dsp::clamp (offset, -1.0f, 1.0f);
+
+            // An idle/empty track withdraws through the smoother and then sits at
+            // hard zero, so it can never leave residual modulation behind.
+            if (raw == 0.0f && std::abs (offset) < 1.0e-6f)
+                offset = 0.0f;
+
+            lane.rawTrack[(size_t) t] = raw;
+
+            if (contributing && offset != 0.0f)
+                sums[(size_t) track.target] += offset;
         }
-        else
-        {
-            lane.effectiveAmount = 0.0f;
-            lane.rawOffset = 0.0f;
-        }
 
-        lane.offset += (lane.rawOffset - lane.offset) * offsetCoeff;
-        lane.offset = dsp::flushDenormal (lane.offset);
-        lane.offset = dsp::clamp (lane.offset, -1.0f, 1.0f);
-
-        // An idle lane withdraws through the smoother and then sits at hard zero,
-        // so an empty lane can never leave a residual modulation behind.
-        if (lane.rawOffset == 0.0f && std::abs (lane.offset) < 1.0e-6f)
-            lane.offset = 0.0f;
-
-        if (contributing)
-            sums[(size_t) lane.target] += lane.offset;
+        // The legacy single-target/QA projection is the first track.
+        lane.rawOffset = lane.rawTrack[0];
+        lane.offset = lane.offsetTrack[0];
+        lane.centreNorm = lane.centreTrack[0];
     }
 
-    // Several lanes may orbit the same knob. They sum, then go through a limiter
-    // that is exactly linear below kOffsetLinear and smoothly bounded above it:
-    // no last-writer-wins, no hard clipping, no fighting.
+    // Several lanes (and several tracks) may orbit the same knob. They sum, then
+    // go through a limiter that is exactly linear below kOffsetLinear and
+    // smoothly bounded above it: no last-writer-wins, no hard clipping.
     for (int t = 0; t < gloop::kNumTargets; ++t)
         offsetByTarget[(size_t) t] = softLimitOffset (sums[(size_t) t]);
 }
@@ -356,6 +459,7 @@ void GloopEngine::clearLaneForRecording (Lane& lane) noexcept
 {
     lane.gesture.count = 0;
     lane.gesture.durationSeconds = 0.0f;
+    lane.gesture.numTracks = 0;
     lane.gestureDuration = 0.0;
     lane.seamSeconds = 0.0;
     lane.loopPeriod = 0.0;
@@ -363,8 +467,10 @@ void GloopEngine::clearLaneForRecording (Lane& lane) noexcept
     lane.phase = 0.0;
     lane.fadeGain = 0.0f;
     lane.effectiveAmount = 0.0f;
-    lane.rawOffset = 0.0f;
-    lane.offset = 0.0f;
+    lane.rawTrack.fill (0.0f);
+    lane.offsetTrack.fill (0.0f);
+    lane.centreTrack.fill (0.0f);
+    lane.rawOffset = lane.offset = lane.centreNorm = 0.0f;
 
     // A fresh take starts from the user's ribbon, not from a previous Randomize
     // transformation: the AMOUNT knob must represent the effective depth again.
@@ -425,8 +531,8 @@ void GloopEngine::randomiseTargets (std::uint32_t epoch) noexcept
             && lane.actualMode != (int) gloop::Mode::Fade)
             continue;
 
-        // Amount and speed only: target stays, phase keeps running, and the new
-        // values are reached by a slow glide, never by a jump.
+        // Amount and speed only: the recorded tracks and target ids stay, phase
+        // keeps running, and the new values are reached by a slow glide.
         lane.amountScaleTarget = random.range (0.35f, 1.0f);
         lane.randomSpeedTarget = random.range (0.60f, 1.40f);
     }
@@ -459,34 +565,7 @@ void GloopEngine::updateCoefficients (double dtSeconds) noexcept
 // Gesture reading
 // =============================================================================
 
-float GloopEngine::sampleAt (const gloop::Gesture& gesture, double duration,
-                             double seconds) noexcept
-{
-    if (gesture.count < kMinSamples || ! (duration > 0.0))
-        return 0.0f;
-
-    seconds = clampSeconds (seconds, 0.0, duration);
-
-    // The recorder stored `count` samples at 100 Hz; duration/count is the
-    // spacing, so a take keeps its musical length even if duration came from a
-    // different clock than the nominal 10 ms grid.
-    const double x = seconds * (double) gesture.count / duration;
-
-    int i0 = (int) x;
-    if (i0 < 0)
-        i0 = 0;
-    if (i0 > gesture.count - 1)
-        i0 = gesture.count - 1;
-
-    const int i1 = std::min (i0 + 1, gesture.count - 1);
-    const float frac = (float) (x - (double) i0);
-
-    const float a = gesture.offsets[(size_t) i0];
-    const float b = gesture.offsets[(size_t) i1];
-    return a + (b - a) * frac;
-}
-
-float GloopEngine::readLane (const Lane& lane) const noexcept
+float GloopEngine::readTrack (const Lane& lane, const gloop::Track& track) const noexcept
 {
     const auto& gesture = lane.gesture;
 
@@ -494,10 +573,29 @@ float GloopEngine::readLane (const Lane& lane) const noexcept
         || ! (lane.seamSeconds > 0.0))
         return 0.0f;
 
+    if (track.target <= (int) gloop::Target::Off || track.target >= gloop::kNumTargets)
+        return 0.0f;
+
+    const auto readAt = [&track, &gesture] (double seconds) noexcept
+    {
+        seconds = clampSeconds (seconds, 0.0, (double) gesture.durationSeconds);
+        const double x = seconds * (double) gesture.count
+                         / (double) gesture.durationSeconds;
+
+        int i0 = (int) x;
+        i0 = std::max (0, std::min (i0, gesture.count - 1));
+        const int i1 = std::min (i0 + 1, gesture.count - 1);
+        const float frac = (float) (x - (double) i0);
+
+        const float a = track.offsets[(size_t) i0];
+        const float b = track.offsets[(size_t) i1];
+        return a + (b - a) * frac;
+    };
+
     const double u = lane.phase * lane.loopPeriod;   // seconds into the loop period
     const double bodyPosition = u + lane.seamSeconds;
 
-    const float body = sampleAt (gesture, lane.gestureDuration, bodyPosition);
+    const float body = readAt (bodyPosition);
 
     // Seam crossfade. The body plays [seam, duration]; over the last `seam`
     // seconds the source tail fades out while the head [0, seam] fades in.
@@ -510,8 +608,7 @@ float GloopEngine::readLane (const Lane& lane) const noexcept
     {
         const double w = dsp::clamp ((float) ((u - crossfadeStart) / lane.seamSeconds),
                                      0.0f, 1.0f);
-        const float head = sampleAt (gesture, lane.gestureDuration,
-                                     bodyPosition - lane.loopPeriod);
+        const float head = readAt (bodyPosition - lane.loopPeriod);
         return body + (head - body) * (float) w;
     }
 
@@ -558,10 +655,38 @@ void GloopEngine::copyVisual (gloop::Visual& out, std::uint32_t frame) const noe
         v.mode = lane.actualMode;
         v.hasGesture = lane.hasGesture;
         v.phase = (float) lane.phase;
-        v.offset = lane.offset;
         v.amount = lane.effectiveAmount;
-        v.centreNorm = lane.centreNorm;
         v.durationSeconds = lane.gesture.durationSeconds;
+
+        // Show only tracks that the selected target allows. A concrete lane
+        // exposes its matching track (normally the only one); Multi exposes all;
+        // Off exposes none.
+        int visibleTracks = 0;
+
+        for (int t = 0; t < gloop::kMaxTracksPerLane; ++t)
+        {
+            auto& outTrack = v.tracks[(size_t) t];
+            outTrack.target = (int) gloop::Target::Off;
+            outTrack.offset = 0.0f;
+            outTrack.centreNorm = 0.0f;
+
+            if (t >= lane.gesture.numTracks || lane.target <= (int) gloop::Target::Off)
+                continue;
+
+            const auto& track = lane.gesture.tracks[(size_t) t];
+
+            if (lane.target != gloop::kAutoTarget && track.target != lane.target)
+                continue;
+
+            outTrack.target = track.target;
+            outTrack.offset = lane.offsetTrack[(size_t) t];
+            outTrack.centreNorm = lane.centreTrack[(size_t) t];
+            ++visibleTracks;
+        }
+
+        v.numTracks = visibleTracks;
+        v.offset = visibleTracks > 0 ? v.tracks[0].offset : 0.0f;
+        v.centreNorm = visibleTracks > 0 ? v.tracks[0].centreNorm : 0.0f;
     }
 
     out.frame = frame;
@@ -586,7 +711,9 @@ float GloopEngine::lanePhase (int lane) const noexcept
 
 float GloopEngine::laneOffset (int lane) const noexcept
 {
-    return (lane >= 0 && lane < gloop::kNumLanes) ? lanes[(size_t) lane].offset : 0.0f;
+    return (lane >= 0 && lane < gloop::kNumLanes)
+               ? lanes[(size_t) lane].offsetTrack[0]
+               : 0.0f;
 }
 
 float GloopEngine::laneEffectiveAmount (int lane) const noexcept
@@ -615,6 +742,34 @@ float GloopEngine::lanePlaybackRate (int lane) const noexcept
 float GloopEngine::laneFadeGain (int lane) const noexcept
 {
     return (lane >= 0 && lane < gloop::kNumLanes) ? lanes[(size_t) lane].fadeGain : 0.0f;
+}
+
+int GloopEngine::laneTrackCount (int lane) const noexcept
+{
+    return (lane >= 0 && lane < gloop::kNumLanes)
+               ? lanes[(size_t) lane].gesture.numTracks
+               : 0;
+}
+
+int GloopEngine::laneTrackTarget (int lane, int track) const noexcept
+{
+    if (lane < 0 || lane >= gloop::kNumLanes)
+        return (int) gloop::Target::Off;
+
+    const auto& l = lanes[(size_t) lane];
+
+    return track >= 0 && track < l.gesture.numTracks
+               ? l.gesture.tracks[(size_t) track].target
+               : (int) gloop::Target::Off;
+}
+
+float GloopEngine::laneTrackOffset (int lane, int track) const noexcept
+{
+    if (lane < 0 || lane >= gloop::kNumLanes
+        || track < 0 || track >= gloop::kMaxTracksPerLane)
+        return 0.0f;
+
+    return lanes[(size_t) lane].offsetTrack[(size_t) track];
 }
 
 } // namespace nagloed::dsp

@@ -144,9 +144,9 @@ void NagloedProcessor::startGloopRecording (int lane, double nowSeconds,
                                             const EngineParams& params)
 {
     const auto idx = (size_t) lane;
-    const int target = params.gloopLanes[idx].target;
+    const int selected = params.gloopLanes[idx].target;
 
-    if (target <= (int) gloop::Target::Off || target >= gloop::kNumTargets)
+    if (selected <= (int) gloop::Target::Off || selected >= gloop::kNumTargetChoices)
     {
         // An Off lane is allowed to be silent; it cannot record a gesture.
         gloopRequestedMode[idx].store ((int) gloop::Mode::Idle, std::memory_order_relaxed);
@@ -156,12 +156,28 @@ void NagloedProcessor::startGloopRecording (int lane, double nowSeconds,
     auto& gesture = gloopGestures[idx];
     gesture.count = 0;
     gesture.durationSeconds = 0.0f;
+    gesture.numTracks = 0;
 
     gloopGestureValid[idx] = false;
     gloopPublishPending[idx] = false;
-    gloopRecordingTarget[idx] = target;
-    gloopRecordingStartNorm[idx] = gloopTargetRange (target).convertTo0to1 (
-        gloopTargetValue (params, target));
+    gloopRecordingTarget[idx] = selected;
+
+    if (selected == gloop::kAutoTarget)
+    {
+        // Multi: remember where every possible target started. Tracks are
+        // created lazily when a knob actually moves, so sequential gestures are
+        // valid and a take with no movement stays empty.
+        for (int target = 1; target < gloop::kNumTargets; ++target)
+            gloopAutoStartNorm[idx][(size_t) target] = gloopTargetNorm (params, target);
+    }
+    else
+    {
+        // Existing single-target behaviour: one track from the first sample.
+        gloopRecordingStartNorm[idx] = gloopTargetNorm (params, selected);
+        gesture.numTracks = 1;
+        gesture.tracks[0].target = selected;
+    }
+
     gloopRecordingNextTime[idx] = nowSeconds;
     gloopRecordingActive[idx] = true;
 
@@ -170,19 +186,74 @@ void NagloedProcessor::startGloopRecording (int lane, double nowSeconds,
     captureGloopSamples (lane, nowSeconds, params);
 }
 
+void NagloedProcessor::appendGloopSample (int lane, const EngineParams& params)
+{
+    const auto idx = (size_t) lane;
+    auto& gesture = gloopGestures[idx];
+
+    if (gesture.count >= gloop::kMaxGestureSamples)
+        return;
+
+    const int selected = gloopRecordingTarget[idx];
+
+    if (selected == gloop::kAutoTarget)
+    {
+        for (int target = 1; target < gloop::kNumTargets; ++target)
+        {
+            const float norm = gloopTargetNorm (params, target);
+            const float offset = juce::jlimit (-1.0f, 1.0f,
+                                               norm - gloopAutoStartNorm[idx][(size_t) target]);
+
+            int trackIndex = -1;
+
+            for (int t = 0; t < gesture.numTracks; ++t)
+                if (gesture.tracks[(size_t) t].target == target)
+                    trackIndex = t;
+
+            if (trackIndex < 0
+                && std::abs (offset) > gloop::kAutoRecordThreshold
+                && gesture.numTracks < gloop::kMaxTracksPerLane)
+            {
+                trackIndex = gesture.numTracks++;
+                auto& track = gesture.tracks[(size_t) trackIndex];
+                track.target = target;
+
+                // The track starts at its first movement; earlier samples are
+                // zero so every track shares the lane's timeline.
+                for (int i = 0; i < gesture.count; ++i)
+                    track.offsets[(size_t) i] = 0.0f;
+            }
+
+            if (trackIndex >= 0)
+                gesture.tracks[(size_t) trackIndex].offsets[(size_t) gesture.count] = offset;
+        }
+    }
+    else
+    {
+        const float norm = gloopTargetNorm (params, selected);
+        const float offset = juce::jlimit (-1.0f, 1.0f,
+                                           norm - gloopRecordingStartNorm[idx]);
+
+        if (gesture.numTracks == 0)
+        {
+            gesture.numTracks = 1;
+            gesture.tracks[0].target = selected;
+        }
+
+        gesture.tracks[0].offsets[(size_t) gesture.count] = offset;
+    }
+
+    ++gesture.count;
+}
+
 void NagloedProcessor::captureGloopSamples (int lane, double nowSeconds,
                                             const EngineParams& params)
 {
     const auto idx = (size_t) lane;
     auto& gesture = gloopGestures[idx];
-    const int target = gloopRecordingTarget[idx];
 
     if (gesture.count >= gloop::kMaxGestureSamples)
         return;
-
-    const auto range = gloopTargetRange (target);
-    const float norm = range.convertTo0to1 (gloopTargetValue (params, target));
-    const float offset = juce::jlimit (-1.0f, 1.0f, norm - gloopRecordingStartNorm[idx]);
 
     double& next = gloopRecordingNextTime[idx];
 
@@ -201,7 +272,7 @@ void NagloedProcessor::captureGloopSamples (int lane, double nowSeconds,
            && gesture.count < gloop::kMaxGestureSamples
            && guard++ < 8)
     {
-        gesture.offsets[(size_t) gesture.count++] = offset;
+        appendGloopSample (lane, params);
         next += period;
     }
 
@@ -219,22 +290,25 @@ void NagloedProcessor::finishGloopRecording (int lane, int requestedMode)
 
     auto& gesture = gloopGestures[idx];
 
-    if (requestedMode != (int) gloop::Mode::Idle && gesture.count >= 2)
+    if (requestedMode != (int) gloop::Mode::Idle && gesture.count >= 2
+        && gesture.numTracks > 0)
     {
         gesture.durationSeconds = (float) gesture.count / gloop::kGestureSampleRate;
         gloopGestureValid[idx] = true;
 
         if (! gloopEnginePrepared
-            || ! engine.publishGloopGesture (lane, gesture.offsets.data(),
-                                             gesture.count, gesture.durationSeconds))
+            || ! engine.publishGloopGesture (lane, gesture))
             gloopPublishPending[idx] = true;
     }
     else
     {
-        // A cancelled or too-short take has no motion to offer.
+        // A cancelled, too-short or entirely motionless Multi take has no
+        // tracks to offer. (A single-target take with a held knob is still a
+        // valid, motionless track and keeps the existing READY behaviour.)
         gloopGestureValid[idx] = false;
         gesture.count = 0;
         gesture.durationSeconds = 0.0f;
+        gesture.numTracks = 0;
 
         if (requestedMode == (int) gloop::Mode::Loop
             || requestedMode == (int) gloop::Mode::Fade)
@@ -304,8 +378,7 @@ void NagloedProcessor::gloopTick (double nowSeconds)
         if (gloopEnginePrepared && gloopPublishPending[idx] && gloopGestureValid[idx])
         {
             const auto& gesture = gloopGestures[idx];
-            if (engine.publishGloopGesture (lane, gesture.offsets.data(), gesture.count,
-                                            gesture.durationSeconds))
+            if (engine.publishGloopGesture (lane, gesture))
                 gloopPublishPending[idx] = false;
         }
     }
@@ -331,8 +404,7 @@ void NagloedProcessor::republishGloopGestures()
         }
 
         const auto& gesture = gloopGestures[idx];
-        if (! engine.publishGloopGesture (lane, gesture.offsets.data(), gesture.count,
-                                          gesture.durationSeconds))
+        if (! engine.publishGloopGesture (lane, gesture))
             gloopPublishPending[idx] = true;
     }
 }
@@ -347,6 +419,7 @@ void NagloedProcessor::clearGloopState()
         gloopPublishPending[idx] = false;
         gloopGestures[idx].count = 0;
         gloopGestures[idx].durationSeconds = 0.0f;
+        gloopGestures[idx].numTracks = 0;
         gloopRequestedMode[idx].store ((int) gloop::Mode::Idle, std::memory_order_relaxed);
     }
 }
@@ -356,19 +429,24 @@ juce::String NagloedProcessor::serialiseGloopState() const
     bool any = false;
 
     for (int lane = 0; lane < gloop::kNumLanes; ++lane)
-        any = any || gloopGestureValid[(size_t) lane];
+    {
+        const auto& gesture = gloopGestures[(size_t) lane];
+        any = any || (gloopGestureValid[(size_t) lane]
+                      && gesture.count >= 2 && gesture.numTracks > 0);
+    }
 
     if (! any)
         return {};
 
     juce::MemoryOutputStream out;
-    out.writeInt (1);   // version
+    out.writeInt (2);   // version 2: sparse per-parameter tracks
 
     for (int lane = 0; lane < gloop::kNumLanes; ++lane)
     {
         const auto idx = (size_t) lane;
         const auto& gesture = gloopGestures[idx];
-        const bool valid = gloopGestureValid[idx] && gesture.count >= 2;
+        const bool valid = gloopGestureValid[idx] && gesture.count >= 2
+                           && gesture.numTracks > 0;
 
         // REC and FADE are transient performance gestures. Persist only the
         // stable musical states: READY (Idle + gesture) or LOOP.
@@ -382,15 +460,22 @@ juce::String NagloedProcessor::serialiseGloopState() const
         out.writeInt (valid ? 1 : 0);
         out.writeInt (valid ? gesture.count : 0);
         out.writeFloat (valid ? gesture.durationSeconds : 0.0f);
+        out.writeInt (valid ? gesture.numTracks : 0);
 
         if (valid)
         {
-            for (int i = 0; i < gesture.count; ++i)
+            for (int t = 0; t < gesture.numTracks; ++t)
             {
-                const int quantised = juce::jlimit (-32767, 32767,
-                                                    juce::roundToInt (gesture.offsets[(size_t) i]
-                                                                      * 32767.0f));
-                out.writeShort ((short) quantised);
+                const auto& track = gesture.tracks[(size_t) t];
+                out.writeInt (track.target);
+
+                for (int i = 0; i < gesture.count; ++i)
+                {
+                    const int quantised = juce::jlimit (
+                        -32767, 32767,
+                        juce::roundToInt (track.offsets[(size_t) i] * 32767.0f));
+                    out.writeShort ((short) quantised);
+                }
             }
         }
     }
@@ -413,10 +498,16 @@ bool NagloedProcessor::deserialiseGloopState (const juce::String& text)
 
     juce::MemoryInputStream in (decoded.getData(), decoded.getDataSize(), false);
 
-    if (in.readInt() != 1)
+    const int version = in.readInt();
+
+    if (version != 1 && version != 2)
         return false;
 
     clearGloopState();
+
+    // The APVTS has already been restored, so a version-1 blob can recover the
+    // lane's single target from the target parameter.
+    const auto params = readParams (apvts);
 
     for (int lane = 0; lane < gloop::kNumLanes; ++lane)
     {
@@ -426,8 +517,26 @@ bool NagloedProcessor::deserialiseGloopState (const juce::String& text)
         const int count = in.readInt();
         const float duration = in.readFloat();
 
+        int numTracks = 1;
+
+        if (version == 2)
+        {
+            numTracks = in.readInt();
+
+            if (numTracks < 0 || numTracks > gloop::kMaxTracksPerLane)
+            {
+                clearGloopState();
+                return false;
+            }
+        }
+
+        const auto payloadBytes = version == 1
+                                      ? (juce::int64) count * 2
+                                      : (juce::int64) numTracks
+                                            * (4 + (juce::int64) count * 2);
+
         if (count < 0 || count > gloop::kMaxGestureSamples
-            || in.getNumBytesRemaining() < (juce::int64) count * 2)
+            || (payloadBytes > 0 && in.getNumBytesRemaining() < payloadBytes))
         {
             clearGloopState();
             return false;
@@ -436,11 +545,66 @@ bool NagloedProcessor::deserialiseGloopState (const juce::String& text)
         auto& gesture = gloopGestures[idx];
         gesture.count = count;
         gesture.durationSeconds = duration;
+        gesture.numTracks = 0;
 
-        for (int i = 0; i < count; ++i)
-            gesture.offsets[(size_t) i] = (float) in.readShort() / 32767.0f;
+        if (valid != 0 && count >= 2 && duration > 0.0f && std::isfinite (duration)
+            && numTracks > 0)
+        {
+            gesture.numTracks = numTracks;
 
-        gloopGestureValid[idx] = valid != 0 && count >= 2 && duration > 0.0f;
+            for (int t = 0; t < numTracks; ++t)
+            {
+                auto& track = gesture.tracks[(size_t) t];
+
+                if (version == 1)
+                {
+                    // Old single-track take: its target is the lane's restored
+                    // target parameter.
+                    track.target = juce::jlimit (1, gloop::kNumTargets - 1,
+                                                 params.gloopLanes[idx].target);
+                }
+                else
+                {
+                    track.target = in.readInt();
+
+                    if (track.target <= (int) gloop::Target::Off
+                        || track.target >= gloop::kNumTargets)
+                    {
+                        clearGloopState();
+                        return false;
+                    }
+                }
+
+                for (int i = 0; i < count; ++i)
+                    track.offsets[(size_t) i] = (float) in.readShort() / 32767.0f;
+            }
+
+            gloopGestureValid[idx] = true;
+        }
+        else
+        {
+            gloopGestureValid[idx] = false;
+            gesture.count = 0;
+            gesture.durationSeconds = 0.0f;
+            gesture.numTracks = 0;
+
+            // Both layouts still carry the payload even when the lane is marked
+            // invalid; consume it so the next lane starts aligned.
+            if (version == 2)
+            {
+                for (int t = 0; t < numTracks; ++t)
+                {
+                    (void) in.readInt();
+
+                    if (count > 0)
+                        in.skipNextBytes ((int) ((juce::int64) count * 2));
+                }
+            }
+            else if (count > 0)
+            {
+                in.skipNextBytes ((int) ((juce::int64) count * 2));
+            }
+        }
 
         // Only stable states survive; REC/FADE never start automatically on load.
         gloopRequestedMode[idx].store (

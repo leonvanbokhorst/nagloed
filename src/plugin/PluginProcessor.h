@@ -83,6 +83,7 @@ private:
     void republishGloopGestures();
     void startGloopRecording (int lane, double nowSeconds, const EngineParams& params);
     void captureGloopSamples (int lane, double nowSeconds, const EngineParams& params);
+    void appendGloopSample (int lane, const EngineParams& params);
     void finishGloopRecording (int lane, int requestedMode);
     void clearGloopState();
     juce::String serialiseGloopState() const;
@@ -101,6 +102,7 @@ private:
     std::array<bool, gloop::kNumLanes> gloopRecordingActive {};
     std::array<int, gloop::kNumLanes> gloopRecordingTarget {};
     std::array<float, gloop::kNumLanes> gloopRecordingStartNorm {};
+    std::array<std::array<float, gloop::kNumTargets>, gloop::kNumLanes> gloopAutoStartNorm {};
     std::array<double, gloop::kNumLanes> gloopRecordingNextTime {};
     std::atomic<std::uint32_t> gloopRandomizeCounter { 0 };
     bool gloopEnginePrepared = false;

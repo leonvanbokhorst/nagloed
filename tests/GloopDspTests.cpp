@@ -130,7 +130,23 @@ struct Harness
 
     bool publish (int lane, const std::vector<float>& take, float durationSeconds)
     {
-        return gloop.publish (lane, take.data(), (int) take.size(), durationSeconds);
+        nagloed::gloop::Gesture gesture;
+        gesture.count = (int) take.size();
+        gesture.durationSeconds = durationSeconds;
+        gesture.numTracks = take.size() >= 2 ? 1 : 0;
+
+        if (! take.empty())
+        {
+            int target = params.gloopLanes[(size_t) lane].target;
+
+            if (target <= asInt (Target::Off) || target >= nagl::gloop::kNumTargets)
+                target = asInt (Target::Focus);
+
+            gesture.tracks[0].target = target;
+            std::copy (take.begin(), take.end(), gesture.tracks[0].offsets.begin());
+        }
+
+        return gloop.publish (lane, gesture);
     }
 
     void begin() { gloop.beginBlock (params); }
@@ -1052,6 +1068,79 @@ void testGloopNoAllocation()
 // 13. Bounded CPU: eight lanes are cheap (no per-sample work in Gloop).
 // =============================================================================
 
+// =============================================================================
+// 16. Multi-parameter tracks: one lane timebase, several knobs.
+// =============================================================================
+
+void testGloopMultiTrack()
+{
+    info ("Gloop: multi-parameter tracks");
+
+    {   // Multi lane: two tracks share one phase and move two knobs.
+        Harness h;
+        auto& lp = h.params.gloopLanes[0];
+        lp.target = nagl::gloop::kAutoTarget;
+        lp.amount = 1.0f;
+        lp.speed = 1.0f;
+        lp.mode = asInt (Mode::Loop);
+
+        nagl::gloop::Gesture gesture;
+        gesture.count = 200;
+        gesture.durationSeconds = 2.0f;
+        gesture.numTracks = 2;
+        gesture.tracks[0].target = asInt (Target::Focus);
+        gesture.tracks[1].target = asInt (Target::Spray);
+
+        for (int i = 0; i < gesture.count; ++i)
+        {
+            gesture.tracks[0].offsets[(size_t) i] = 0.5f;
+            gesture.tracks[1].offsets[(size_t) i] = 0.3f;
+        }
+
+        check (h.gloop.publish (0, gesture), "multi: a two-track take is accepted");
+        h.run (600);
+
+        check (h.gloop.laneTrackCount (0) == 2, "multi: both tracks are installed");
+        check (h.gloop.laneTrackTarget (0, 0) == asInt (Target::Focus),
+               "multi: first track target is Focus");
+        check (h.gloop.laneTrackTarget (0, 1) == asInt (Target::Spray),
+               "multi: second track target is Spray");
+        check (h.gloop.offsetFor (Target::Focus) > 0.3f,
+               "multi: Focus track contributes");
+        check (h.gloop.offsetFor (Target::Spray) > 0.2f,
+               "multi: Spray track contributes");
+
+        const auto v = h.visual (0);
+        check (v.numTracks == 2, "multi: the visual exposes both tracks");
+        check (v.tracks[0].target == asInt (Target::Focus)
+                   && v.tracks[1].target == asInt (Target::Spray),
+               "multi: the visual carries the concrete track targets");
+    }
+
+    {   // A concrete single-target lane must not replay a mismatched track
+        // (this protects old sessions and a target changed in the host).
+        Harness h;
+        setLane (h.params, 0, Target::Focus, 1.0f, 1.0f, Mode::Loop);
+
+        nagl::gloop::Gesture gesture;
+        gesture.count = 100;
+        gesture.durationSeconds = 1.0f;
+        gesture.numTracks = 1;
+        gesture.tracks[0].target = asInt (Target::Spray);
+
+        for (int i = 0; i < gesture.count; ++i)
+            gesture.tracks[0].offsets[(size_t) i] = 0.5f;
+
+        check (h.gloop.publish (0, gesture), "multi: a mismatched take is accepted");
+        h.run (300);
+
+        check (h.gloop.offsetFor (Target::Focus) == 0.0f,
+               "multi: a concrete Focus lane ignores a Spray track");
+        check (h.gloop.offsetFor (Target::Spray) == 0.0f,
+               "multi: a concrete lane does not leak the other target");
+    }
+}
+
 void testGloopCpu()
 {
     info ("Gloop: CPU with all eight lanes playing");
@@ -1114,6 +1203,7 @@ void runGloopDspTests()
     testGloopReset();
     testGloopVisual();
     testGloopIdleIsTransparent();
+    testGloopMultiTrack();
     testGloopNoAllocation();
     testGloopCpu();
 }

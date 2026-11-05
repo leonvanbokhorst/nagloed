@@ -296,8 +296,8 @@ every release.
 The Gloop feature branch adds eight independent gesture loopers. Its automated
 evidence, run on the branch before hand-over:
 
-- `nagl_tests`: **767 checks, 0 failures** (~4 s), including the existing DSP
-  suite, 15 Gloop engine suites and the processor/recorder suites.
+- `nagl_tests`: **800 checks, 0 failures** (~4 s), including the existing DSP
+  suite, 16 Gloop engine suites, the multi-parameter track suites and the processor/recorder suites.
 - Gloop engine evidence: silence for empty/Off/motionless/amount-0 lanes; amount
   linearity; speed 0.25x/2x ratio 8.00 and continuous mid-play speed changes;
   monotonic 2.5 s fade to Idle; seam wrap max per-frame step 0.0054 on a
@@ -308,16 +308,22 @@ evidence, run on the branch before hand-over:
   mode changes and Randomize; **~2.2 % of one core** at 48 kHz / 128 samples /
   stereo with all eight lanes playing a 64-grain cloud (pre-Gloop baseline in
   the same run: 1.93 %).
+- Multi-parameter evidence: two-track playback through one lane; a concrete
+  single-target lane ignoring a mismatched track; sequential Multi recording
+  (Focus then Spray) producing two tracks; a no-movement Multi take staying
+  empty; the four-track cap; version-2 state round-trip; and a version-1 legacy
+  blob loading as a single track.
 - Processor evidence: record/finalise, target-Off settling, mode transitions,
   and session state round-trip (including a restore before `prepareToPlay`).
 - `nagl_preview --gloop` writes `docs/gloop-preview.png`; `--soak`,
   `--headless-host` and `--motion` remain PASS with unchanged determinism
   (`MOTION-HASH baf8b4e3c0e843fb`).
 
-Not run locally on this branch: the AU/VST3 install step, `auval` and
-pluginval. The source, shared library and all tools link and run; the sandbox
-cannot write `~/Library/Audio/Plug-Ins`, so the bundle copy target fails after
-linking. CI (and the owner's normal build) runs those validators.
+The VST3 bundle was built with the copy step disabled, validated with
+pluginval at strictness 10 (**SUCCESS**), installed to
+`~/Library/Audio/Plug-Ins/VST3/NAGLOED.vst3` and loaded in Reaper for Lonn's
+first hands-on test. The AU install/`auval` step was not run locally; CI runs the
+full bundle validators.
 
 Artistic acceptance is Lonn's playing/listening feedback, not a claim from these
 checks.

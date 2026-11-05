@@ -82,8 +82,11 @@ void runGloopProcessorTests()
         nagloed::NagloedProcessor processor;
         auto& apvts = processor.getAPVTS();
 
-        check (nagloed::gloopTargetNames().size() == nagloed::gloop::kNumTargets,
-               "Gloop target choice list matches the target enum");
+        check (nagloed::gloopTargetNames().size() == nagloed::gloop::kNumTargetChoices,
+               "Gloop target choice list matches the target choices");
+        check (nagloed::gloopTargetNames()[nagloed::gloop::kAutoTarget]
+                   == "Multi",
+               "the Multi target is appended without shifting old choices");
 
         for (int lane = 0; lane < nagloed::gloop::kNumLanes; ++lane)
         {
@@ -327,6 +330,227 @@ void runGloopProcessorTests()
                "restored lane plays after prepareToPlay");
         check (restoredVisual.gloop.lanes[0].hasGesture,
                "restored visual reports the gesture");
+    }
+
+    // --- Multi: one REC captures several knobs, played back together ---------
+    {
+        nagloed::NagloedProcessor processor;
+        prepare (processor);
+
+        setReal (processor, nagloed::pid::focus, 0.50f);
+        setReal (processor, nagloed::pid::spray, 0.25f);
+        setReal (processor, nagloed::pid::gloopTarget[0],
+                 (float) nagloed::gloop::kAutoTarget);
+        setReal (processor, nagloed::pid::gloopAmount[0], 1.0f);
+        setReal (processor, nagloed::pid::gloopSpeed[0], 1.0f);
+
+        processor.setGloopMode (0, (int) nagloed::gloop::Mode::Record);
+        processor.gloopTick (600.0);
+
+        // Sequential gesture: Focus first, then (while holding Focus) Spray.
+        for (int i = 1; i <= 60; ++i)
+        {
+            setReal (processor, nagloed::pid::focus, 0.50f + 0.004f * (float) i);
+            processor.gloopTick (600.0 + (double) i * 0.01);
+        }
+
+        for (int i = 1; i <= 40; ++i)
+        {
+            setReal (processor, nagloed::pid::spray, 0.25f + 0.010f * (float) i);
+            processor.gloopTick (600.6 + (double) i * 0.01);
+        }
+
+        processor.setGloopMode (0, (int) nagloed::gloop::Mode::Loop);
+        processor.gloopTick (601.01);
+
+        check (processor.hasGloopGesture (0), "multi: the take is valid");
+        check (processor.getGloopMode (0) == (int) nagloed::gloop::Mode::Loop,
+               "multi: the lane loops after the take");
+
+        auto visual = processBlock (processor);
+        check (visual.gloop.lanes[0].target == nagloed::gloop::kAutoTarget,
+               "multi: the lane reports the Multi target");
+        check (visual.gloop.lanes[0].numTracks == 2,
+               "multi: two moved knobs produced two tracks");
+
+        bool sawFocus = false;
+        bool sawSpray = false;
+
+        for (int t = 0; t < visual.gloop.lanes[0].numTracks; ++t)
+        {
+            const auto& track = visual.gloop.lanes[0].tracks[(size_t) t];
+            sawFocus = sawFocus || track.target == (int) nagloed::gloop::Target::Focus;
+            sawSpray = sawSpray || track.target == (int) nagloed::gloop::Target::Spray;
+        }
+
+        check (sawFocus, "multi: the Focus movement is a track");
+        check (sawSpray, "multi: the Spray movement is a track");
+
+        // Both tracks share the lane phase and play together.
+        float maxFocusOffset = 0.0f;
+        float maxSprayOffset = 0.0f;
+
+        for (int block = 0; block < 160; ++block)
+        {
+            visual = processBlock (processor);
+
+            if (visual.gloop.lanes[0].numTracks == 2)
+            {
+                maxFocusOffset = std::max (maxFocusOffset,
+                                            std::abs (visual.gloop.lanes[0].tracks[0].offset));
+                maxSprayOffset = std::max (maxSprayOffset,
+                                            std::abs (visual.gloop.lanes[0].tracks[1].offset));
+            }
+        }
+
+        check (maxFocusOffset > 0.02f, "multi: Focus moves during playback");
+        check (maxSprayOffset > 0.02f, "multi: Spray moves during playback");
+
+        // Version-2 session state must carry both tracks.
+        juce::MemoryBlock saved;
+        processor.getStateInformation (saved);
+
+        nagloed::NagloedProcessor restored;
+        restored.setPlayConfigDetails (2, 2, kSampleRate, kBlockSize);
+        restored.setStateInformation (saved.getData(), (int) saved.getSize());
+        check (restored.hasGloopGesture (0), "multi: the take is recalled");
+        restored.prepareToPlay (kSampleRate, kBlockSize);
+
+        const auto restoredVisual = processBlock (restored);
+        check (restoredVisual.gloop.lanes[0].numTracks == 2,
+               "multi: both tracks are recalled from session state");
+    }
+
+    // --- Multi with no movement stays empty; the fourth-track cap holds -----
+    {
+        nagloed::NagloedProcessor silent;
+        prepare (silent);
+
+        setReal (silent, nagloed::pid::gloopTarget[0],
+                 (float) nagloed::gloop::kAutoTarget);
+        silent.setGloopMode (0, (int) nagloed::gloop::Mode::Record);
+        silent.gloopTick (700.0);
+
+        for (int i = 1; i <= 30; ++i)
+            silent.gloopTick (700.0 + (double) i * 0.01);   // no knob movement
+
+        silent.setGloopMode (0, (int) nagloed::gloop::Mode::Loop);
+        silent.gloopTick (700.31);
+
+        check (! silent.hasGloopGesture (0),
+               "multi: a take with no movement is empty, not invented");
+        check (silent.getGloopMode (0) == (int) nagloed::gloop::Mode::Idle,
+               "multi: an empty Multi take settles to Idle");
+    }
+
+    {
+        nagloed::NagloedProcessor cap;
+        prepare (cap);
+
+        setReal (cap, nagloed::pid::gloopTarget[0],
+                 (float) nagloed::gloop::kAutoTarget);
+        setReal (cap, nagloed::pid::gloopAmount[0], 1.0f);
+        setReal (cap, nagloed::pid::gloopSpeed[0], 1.0f);
+        cap.setGloopMode (0, (int) nagloed::gloop::Mode::Record);
+        cap.gloopTick (800.0);
+
+        const auto moveFor = [&cap] (const char* id, float from, float to,
+                                     double start, int steps)
+        {
+            for (int i = 1; i <= steps; ++i)
+            {
+                setReal (cap, id, from + (to - from) * (float) i / (float) steps);
+                cap.gloopTick (start + (double) i * 0.01);
+            }
+        };
+
+        moveFor (nagloed::pid::focus,  0.50f, 0.85f, 800.00, 20);
+        moveFor (nagloed::pid::spray,  0.25f, 0.85f, 800.20, 20);
+        moveFor (nagloed::pid::width,  0.50f, 0.90f, 800.40, 20);
+        moveFor (nagloed::pid::shape,  0.15f, 0.90f, 800.60, 20);
+        moveFor (nagloed::pid::tone,   0.50f, 0.90f, 800.80, 20);
+
+        cap.setGloopMode (0, (int) nagloed::gloop::Mode::Loop);
+        cap.gloopTick (801.01);
+
+        const auto visual = processBlock (cap);
+        check (visual.gloop.lanes[0].numTracks == 4,
+               "multi: the fourth-track cap is enforced");
+
+        bool sawTone = false;
+
+        for (int t = 0; t < visual.gloop.lanes[0].numTracks; ++t)
+            sawTone = sawTone || visual.gloop.lanes[0].tracks[(size_t) t].target
+                                     == (int) nagloed::gloop::Target::Tone;
+
+        check (! sawTone, "multi: the fifth moved target is ignored");
+    }
+
+    // --- Version-1 session blobs still load as a single track ---------------
+    {
+        nagloed::NagloedProcessor legacy;
+        setReal (legacy, nagloed::pid::gloopTarget[0], 1.0f);   // Focus
+
+        juce::MemoryOutputStream blob;
+        blob.writeInt (1);   // version 1
+
+        for (int lane = 0; lane < nagloed::gloop::kNumLanes; ++lane)
+        {
+            const bool hasTake = lane == 0;
+            blob.writeInt (hasTake ? 2 : 0);   // Loop / Idle
+            blob.writeInt (hasTake ? 1 : 0);   // valid
+            blob.writeInt (hasTake ? 100 : 0); // count
+            blob.writeFloat (hasTake ? 1.0f : 0.0f);
+
+            if (hasTake)
+            {
+                for (int i = 0; i < 100; ++i)
+                    blob.writeShort ((short) juce::roundToInt (0.25f * 32767.0f));
+            }
+        }
+
+        auto state = legacy.getAPVTS().copyState();
+        state.setProperty ("gloopState",
+                           juce::Base64::toBase64 (blob.getData(), blob.getDataSize()),
+                           nullptr);
+
+        juce::MemoryBlock saved;
+
+        if (auto xml = state.createXml())
+            legacy.copyXmlToBinary (*xml, saved);
+
+        nagloed::NagloedProcessor restored;
+        restored.setPlayConfigDetails (2, 2, kSampleRate, kBlockSize);
+        restored.setStateInformation (saved.getData(), (int) saved.getSize());
+
+        check (restored.hasGloopGesture (0),
+               "legacy: a version-1 take loads as a single track");
+        check (restored.getGloopMode (0) == (int) nagloed::gloop::Mode::Loop,
+               "legacy: the version-1 Loop state is recalled");
+
+        restored.prepareToPlay (kSampleRate, kBlockSize);
+
+        float maxOffset = 0.0f;
+        int   numTracks = 0;
+        int   trackTarget = (int) nagloed::gloop::Target::Off;
+
+        for (int block = 0; block < 40; ++block)
+        {
+            const auto visual = processBlock (restored);
+            numTracks = visual.gloop.lanes[0].numTracks;
+
+            if (numTracks > 0)
+            {
+                trackTarget = visual.gloop.lanes[0].tracks[0].target;
+                maxOffset = std::max (maxOffset,
+                                      std::abs (visual.gloop.lanes[0].tracks[0].offset));
+            }
+        }
+
+        check (numTracks == 1, "legacy: the old take has one track");
+        check (trackTarget == (int) nagloed::gloop::Target::Focus,
+               "legacy: the old take keeps the lane's target");
+        check (maxOffset > 0.05f, "legacy: the old take still moves the target");
     }
 
     // --- Randomize is gentle and leaves idle lanes alone ---------------------

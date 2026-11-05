@@ -62,6 +62,9 @@ public:
 
     /** Message thread: hand a finished Gloop take to the audio thread. Lock-free
         (SPSC); false means the queue was full and the caller should retry. */
+    bool publishGloopGesture (int lane, const gloop::Gesture& gesture) noexcept;
+
+    /** Compatibility/QA overload using the lane target in the current params. */
     bool publishGloopGesture (int lane, const float* offsets, int count,
                               float durationSeconds) noexcept;
 

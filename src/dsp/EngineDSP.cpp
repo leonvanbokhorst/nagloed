@@ -294,12 +294,37 @@ void EngineDSP::setParams (const EngineParams& p) noexcept
     }
 }
 
-bool EngineDSP::publishGloopGesture (int lane, const float* offsets, int count,
-                                     float durationSeconds) noexcept
+bool EngineDSP::publishGloopGesture (int lane, const gloop::Gesture& gesture) noexcept
 {
     // Message thread only. The GloopEngine queue is preallocated, so this copies
     // and publishes without allocating; a full queue is reported, never waited on.
-    return gloop.publish (lane, offsets, count, durationSeconds);
+    return gloop.publish (lane, gesture);
+}
+
+bool EngineDSP::publishGloopGesture (int lane, const float* offsets, int count,
+                                     float durationSeconds) noexcept
+{
+    if (lane < 0 || lane >= gloop::kNumLanes || count < 0
+        || count > gloop::kMaxGestureSamples || (count > 0 && offsets == nullptr))
+        return false;
+
+    gloop::Gesture gesture;
+    gesture.count = count;
+    gesture.durationSeconds = durationSeconds;
+    gesture.numTracks = count >= 2 ? 1 : 0;
+
+    if (count > 0)
+    {
+        int target = params.gloopLanes[(size_t) lane].target;
+
+        if (target <= (int) gloop::Target::Off || target >= gloop::kNumTargets)
+            target = (int) gloop::Target::Focus;
+
+        gesture.tracks[0].target = target;
+        std::copy (offsets, offsets + count, gesture.tracks[0].offsets.begin());
+    }
+
+    return gloop.publish (lane, gesture);
 }
 
 // =============================================================================
@@ -316,6 +341,22 @@ void EngineDSP::updateControlFrame() noexcept
     gloop.processFrame ((double) kControlInterval / sampleRate);
 
     const auto& p = params;
+
+    // Gloop is applied to the *raw* smoothed knob value (the "live centre" the
+    // UI ring starts from) before the macros and the LFO add their contribution.
+    // That keeps the ring and the audible centre in agreement, and it means an
+    // active lane can never clamp a macro-raised value back into the knob's
+    // range. gloopApplyOffset() returns its input untouched for a zero offset,
+    // so all-idle lanes stay bit-identical to the pre-Gloop engine.
+    const auto gloopOffset = [this] (gloop::Target target) noexcept
+    {
+        return gloop.offsetFor (target);
+    };
+
+    const auto gloopKnob = [&gloopOffset] (gloop::Target target, float knobValue) noexcept
+    {
+        return gloopApplyOffset ((int) target, knobValue, gloopOffset (target));
+    };
 
     // --- macros --------------------------------------------------------------
     // Mappings (all additive on top of the manual parameters):
@@ -334,7 +375,8 @@ void EngineDSP::updateControlFrame() noexcept
     const float macroSpace   = smooth.macroSpace.value();
 
     // --- modulation sources --------------------------------------------------
-    const float driftAmount = clamp01 (smooth.drift.value() + 0.8f * macroDrift);
+    const float driftAmount = clamp01 (gloopKnob (gloop::Target::Drift, smooth.drift.value())
+                                           + 0.8f * macroDrift);
     const float autoAmount  = clamp01 (smooth.autoMotion.value());
     modulation.update (smooth.lfoRate.value(), p.lfoShape, driftAmount, autoAmount);
 
@@ -367,29 +409,14 @@ void EngineDSP::updateControlFrame() noexcept
     // --- Sintel controls -----------------------------------------------------
     const float grainOffset = (macroGrain - 0.5f) * 2.0f;   // -1..1, 0 at centre
 
-    // Gloop orbits the *knob*: the offset is applied to the raw smoothed value
-    // (the "live centre" the UI ring starts from) before the macros and the LFO
-    // add their contribution. That keeps the ring and the audible centre in
-    // agreement, and it means an active lane can never clamp a macro-raised value
-    // back into the knob's range — e.g. Drive at 36 dB from a 0..30 knob, or Pitch
-    // pushed past its +/-24 knob range by drift/auto/LFO. gloopApplyOffset()
-    // returns its input untouched for a zero offset, so all-idle lanes stay
-    // bit-identical to the pre-Gloop engine.
-    const auto gloopOffset = [this] (gloop::Target target) noexcept
-    {
-        return gloop.offsetFor (target);
-    };
-
-    const auto gloopKnob = [&gloopOffset] (gloop::Target target, float knobValue) noexcept
-    {
-        return gloopApplyOffset ((int) target, knobValue, gloopOffset (target));
-    };
-
     const float density = dsp::clamp (gloopKnob (gloop::Target::Density, smooth.density.value())
                                           * std::pow (2.0f, grainOffset * 1.2f)
                                           * densityLfoMul,
                                       0.1f, 400.0f);
-    const float grainSeconds = dsp::clamp (smooth.sizeMs.value(), 5.0f, 500.0f) * 0.001f;
+    const float grainSeconds = dsp::clamp (gloopKnob (gloop::Target::Grain,
+                                                      smooth.sizeMs.value()),
+                                           5.0f, 500.0f)
+                               * 0.001f;
     const float spray   = clamp01 (gloopKnob (gloop::Target::Spray, smooth.spray.value())
                                        + 0.30f * mod.sprayAuto + 0.25f * grainOffset);
     const float focus   = clamp01 (gloopKnob (gloop::Target::Focus, smooth.focus.value())

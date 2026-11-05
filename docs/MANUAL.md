@@ -261,26 +261,42 @@ automation and preset authoring, and are reserved for the MPE update.
 
 ## Gloop — gesture loopers
 
-Gloop records what you do with a knob and lets that movement circulate around
-the knob's **live** value. It is not automation playback: the lanes have no
-shared clock, they drift against each other, and an empty or motionless lane
-contributes nothing. Open the panel with the **GLOOP** button over the grain
-field; the rest of the controls stay visible so you can watch the rings.
+Gloop records what you do with one or more knobs and lets that movement
+circulate around each knob's **live** value. It is not automation playback: the
+lanes have no shared clock, they drift against each other, and an empty or
+motionless lane contributes nothing. Open the panel with the **GLOOP** button
+over the grain field; the rest of the controls stay visible so you can watch the
+rings.
 
 Each of the eight lanes has:
 
 | Control | Range | Default | What it does |
 |---|---|---|---|
-| **Target** (`gloop.N.target`) | Off, Focus, Pitch, Cutoff, Space, Density, Spray, Width, Shape, Drive, Tone, Reso, Wow, Tape, Feedback, Spread | Off | The parameter this lane orbits. It can share a target with other lanes. |
+| **Target** (`gloop.N.target`) | Off, Focus, Pitch, Cutoff, Space, Density, Spray, Width, Shape, Drive, Tone, Reso, Wow, Tape, Feedback, Spread, Grain Size, Drift, **Multi** | Off | A specific target records one knob. **Multi** records every knob you move during REC, up to four tracks. A lane can share a target with other lanes. |
 | **Amount** (`gloop.N.amount`) | 0–100% | 50% | How strongly the recorded movement contributes, from barely perceptible to expressive. |
 | **Speed** (`gloop.N.speed`) | 0.25×–2× | 1× | Playback time of the recorded gesture. Changes glide in phase; they do not restart the loop or synchronise lanes. |
 | **Smooth** (`gloop.smooth`) | 0–100% | 35% | Global glide that turns abrupt gestures into graceful motion (~8–260 ms). |
 
+In the target list, **Grain Size** is Sintel's grain-size control and **Drift** is EAR's drift;
+the parameter ID is always unique even when a caption repeats elsewhere.
+
+**Multi — a gesture through the instrument.** Set a lane's target to **Multi**,
+press REC, and move different knobs at your own pace: for example Grain, then
+Drift, then Space. Each knob that moves more than about 1.5 % of its range becomes
+a track in that lane. Sequential movement is the normal case; several knobs
+moved at once (including by external control) are captured too. All tracks share
+the lane's duration, phase, speed, amount and fade, so the linked movements
+return together. Before a track's first movement it is silent (its offset is
+zero), so the timing of the original gesture is preserved. A lane holds up to
+**four** tracks; additional movements beyond that are ignored. If nothing moves,
+the lane stays EMPTY and silent — Gloop does not invent a gesture. A specific
+target remains the simple one-knob mode and is unchanged.
+
 The mode button walks the lane through its cycle:
 
-1. **REC** — move the target knob while recording. The gesture is captured
-   relative to the knob's position when REC started, so it is movement, not a
-   sequence of absolute values.
+1. **REC** — move the target knob (or any knobs, in Multi) while recording. The
+   gesture is captured relative to each knob's position when REC started, so it
+   is movement, not a sequence of absolute values.
 2. **STOP → LOOP** — the take loops indefinitely. The button now reads **LOOP**.
 3. **FADE** — click **LOOP** to withdraw that lane's influence over about
    2.5 seconds. The button reads **FADE…** while it withdraws. When it finishes

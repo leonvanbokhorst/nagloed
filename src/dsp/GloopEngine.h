@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <vector>
 
 #include <juce_core/juce_core.h>
 
@@ -49,7 +50,7 @@ namespace nagloed::dsp
 class GloopEngine
 {
 public:
-    GloopEngine() = default;
+    GloopEngine();
 
     // Message thread. GloopEngine owns no audio buffers, so this only stores the
     // sample rate; the queue and the gesture storage already exist.
@@ -64,10 +65,15 @@ public:
     //
     // A take is copied into a preallocated slot and queued. Returns false when
     // the queue is full, in which case the caller should retry later (the
-    // processor keeps the take and republishes). count < 2 means "empty" and
-    // clears the lane, which is also valid.
+    // processor keeps the take and republishes). count < 2 or numTracks == 0
+    // means "empty" and clears the lane, which is also valid.
     // -------------------------------------------------------------------------
-    bool publish (int lane, const float* offsets, int count, float durationSeconds) noexcept;
+    bool publish (int lane, const gloop::Gesture& gesture) noexcept;
+
+    /** Convenience for QA harnesses: wrap one offset track as a Gesture, using
+        the lane's current target (Focus if that is Off/Multi). */
+    bool publish (int lane, const float* offsets, int count,
+                  float durationSeconds) noexcept;
 
     // -------------------------------------------------------------------------
     // Audio thread.
@@ -88,11 +94,15 @@ public:
     int   laneMode (int lane) const noexcept;             // actual (not requested) mode
     bool  laneHasGesture (int lane) const noexcept;
     float lanePhase (int lane) const noexcept;            // 0..1 inside the loop
-    float laneOffset (int lane) const noexcept;           // effective normalised offset
+    float laneOffset (int lane) const noexcept;           // first track's effective offset
     float laneEffectiveAmount (int lane) const noexcept;  // amount * randomise * fade
     float laneAmountScale (int lane) const noexcept;      // randomise glide value
     float lanePlaybackRate (int lane) const noexcept;     // smoothed speed * randomise
     float laneFadeGain (int lane) const noexcept;
+
+    int   laneTrackCount (int lane) const noexcept;
+    int   laneTrackTarget (int lane, int track) const noexcept;
+    float laneTrackOffset (int lane, int track) const noexcept;
 
 private:
     // Empty gestures are a legitimate state, so count < 2 never plays.
@@ -133,16 +143,14 @@ private:
     struct Slot
     {
         int   lane = 0;
-        int   count = 0;
-        float durationSeconds = 0.0f;
-        std::array<float, gloop::kMaxGestureSamples> offsets {};
+        gloop::Gesture gesture {};
     };
 
     struct Lane
     {
         gloop::Gesture gesture {};
         bool  hasGesture = false;
-        int   target = (int) gloop::Target::Off;
+        int   target = (int) gloop::Target::Off;   // selected target or kAutoTarget
         int   actualMode = (int) gloop::Mode::Idle;
         int   lastRequested = -1;      // -1 = no block seen yet
 
@@ -162,9 +170,18 @@ private:
         bool  speedInitialised = false;
 
         float effectiveAmount = 0.0f;  // amount * amountScale * fadeGain
-        float rawOffset = 0.0f;        // pre-smoothing target
-        float offset = 0.0f;           // effective normalised offset
-        float centreNorm = 0.0f;       // live knob centre, 0..1 in target range
+
+        // Per-track playback/smoothing state. A lane can carry several sparse
+        // parameter tracks; each has its own offset smoother and live centre.
+        std::array<float, gloop::kMaxTracksPerLane> rawTrack {};
+        std::array<float, gloop::kMaxTracksPerLane> offsetTrack {};
+        std::array<float, gloop::kMaxTracksPerLane> centreTrack {};
+
+        // First-track projections retained for the existing single-target
+        // visual/QA surface.
+        float rawOffset = 0.0f;
+        float offset = 0.0f;
+        float centreNorm = 0.0f;
     };
 
     void drainGestures() noexcept;
@@ -174,18 +191,20 @@ private:
     void randomiseTargets (std::uint32_t epoch) noexcept;
     void updateCoefficients (double dtSeconds) noexcept;
 
-    static float sampleAt (const gloop::Gesture& gesture, double duration,
-                           double seconds) noexcept;
     static float softLimitOffset (float offset) noexcept;
-    float readLane (const Lane& lane) const noexcept;
+    float readTrack (const Lane& lane, const gloop::Track& track) const noexcept;
 
-    std::array<Lane, gloop::kNumLanes> lanes {};
+    // Heap-allocated so an EngineDSP constructed on a test/main-thread stack
+    // stays small: eight lanes x four 30 s tracks is ~384 KB, and the hand-off
+    // queue is another ~432 KB. Allocated once in the constructor (message
+    // thread), never on the audio thread.
+    std::vector<Lane> lanes;
+    std::vector<Slot> slots;
     std::array<float, (size_t) gloop::kNumTargets> offsetByTarget {};
 
     // Preallocated SPSC hand-off. slots[] is owned by the writer until
     // finishedWrite() and by the reader after, which is what makes the copy safe
     // without a lock.
-    std::array<Slot, kQueueSlots> slots {};
     juce::AbstractFifo fifo { kQueueSlots };
 
     EngineParams settings {};

@@ -57,8 +57,9 @@ moment and play what remains, read on.
 
 - Five gesture macros: Glow (tape warmth), Drift (instability), Grain (cloud
   shape), Space (room), Shimmer (octave sparkle).
-- Eight asynchronous **Gloop** gesture loopers: record a knob's movement, let it
-  orbit the knob's live value indefinitely, set per-lane amount and speed
+- Eight asynchronous **Gloop** gesture loopers: record one knob's movement, or
+  choose **Multi** and capture up to four knob movements in one gesture; let
+  them orbit each knob's live value indefinitely, set per-lane amount and speed
   (0.25×–2×), fade a lane out, and gently randomise the moving relationships.
   The target knob keeps its orange live-value ring and adds one light-blue arc
   for Gloop's current movement; empty or motionless lanes stay silent.
@@ -146,7 +147,7 @@ Disable them with `-DNAGLOED_BUILD_TOOLS=OFF` for a plug-in-only build.
 
 | Check | Command | Status |
 |---|---|---|
-| DSP + unit tests (767 checks) | `./build/nagl_tests_artefacts/Release/nagl_tests` | PASS |
+| DSP + unit tests (800 checks) | `./build/nagl_tests_artefacts/Release/nagl_tests` | PASS |
 | AU validation | `auval -v aufx Nagl MLLW` | PASS |
 | pluginval, strictness 10 (VST3 + AU) | `pluginval --strictness-level 10 --validate …` | PASS |
 | Offline render | `./build/nagl_render_artefacts/Release/nagl_render` | PASS — writes `Demo/Nagloed-Demo.wav` |

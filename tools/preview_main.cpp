@@ -1308,31 +1308,58 @@ int main (int argc, char** argv)
         // empty, one withdrawing.
         setParam (processor, nagloed::pid::gloopTarget[0], 3.0f);   // Cutoff
         setParam (processor, nagloed::pid::gloopTarget[1], 1.0f);   // Focus
-        setParam (processor, nagloed::pid::gloopTarget[2], 4.0f);   // Space
+        setParam (processor, nagloed::pid::gloopTarget[2],
+                  (float) nagloed::gloop::kAutoTarget);              // Multi
         setParam (processor, nagloed::pid::gloopTarget[3], 6.0f);   // Spray
         setParam (processor, nagloed::pid::gloopTarget[5], 2.0f);   // Pitch
 
         nagloed::gloop::Visual lanes;
 
-        const auto setLane = [&lanes] (int i, nagloed::gloop::Target target,
+        const auto setLane = [&lanes] (int i, int target,
                                        nagloed::gloop::Mode mode, bool hasGesture,
-                                       float phase, float offset, float amount)
+                                       float phase, float amount)
         {
             auto& l = lanes.lanes[(size_t) i];
-            l.target = (int) target;
+            l.target = target;
             l.mode = (int) mode;
             l.hasGesture = hasGesture;
             l.phase = phase;
-            l.offset = offset;
+            l.offset = 0.0f;
             l.amount = amount;
             l.durationSeconds = 2.4f;
+            l.numTracks = 0;
         };
 
-        setLane (0, nagloed::gloop::Target::Cutoff, nagloed::gloop::Mode::Loop,   true, 0.42f,  0.17f, 0.65f);
-        setLane (1, nagloed::gloop::Target::Focus,  nagloed::gloop::Mode::Record, true, 0.13f, -0.09f, 0.50f);
-        setLane (2, nagloed::gloop::Target::Space,  nagloed::gloop::Mode::Loop,   true, 0.78f,  0.06f, 0.80f);
-        setLane (3, nagloed::gloop::Target::Spray,  nagloed::gloop::Mode::Idle,   true, 0.00f,  0.00f, 0.40f);
-        setLane (5, nagloed::gloop::Target::Pitch,  nagloed::gloop::Mode::Fade,   true, 0.61f, -0.03f, 0.30f);
+        const auto setTrack = [&lanes] (int lane, int track, nagloed::gloop::Target target,
+                                        float offset)
+        {
+            auto& l = lanes.lanes[(size_t) lane];
+            l.tracks[(size_t) track].target = (int) target;
+            l.tracks[(size_t) track].offset = offset;
+            l.tracks[(size_t) track].centreNorm = 0.5f;
+            l.numTracks = juce::jmax (l.numTracks, track + 1);
+
+            if (track == 0)
+            {
+                l.offset = offset;
+                l.centreNorm = 0.5f;
+            }
+        };
+
+        setLane (0, (int) nagloed::gloop::Target::Cutoff, nagloed::gloop::Mode::Loop,   true, 0.42f, 0.65f);
+        setTrack (0, 0, nagloed::gloop::Target::Cutoff, 0.17f);
+
+        setLane (1, (int) nagloed::gloop::Target::Focus,  nagloed::gloop::Mode::Record, true, 0.13f, 0.50f);
+
+        setLane (2, nagloed::gloop::kAutoTarget,          nagloed::gloop::Mode::Loop,   true, 0.78f, 0.80f);
+        setTrack (2, 0, nagloed::gloop::Target::Space,  0.06f);
+        setTrack (2, 1, nagloed::gloop::Target::Drift, -0.12f);
+
+        setLane (3, (int) nagloed::gloop::Target::Spray,  nagloed::gloop::Mode::Idle,   true, 0.00f, 0.40f);
+        setTrack (3, 0, nagloed::gloop::Target::Spray, 0.00f);
+
+        setLane (5, (int) nagloed::gloop::Target::Pitch,  nagloed::gloop::Mode::Fade,   true, 0.61f, 0.30f);
+        setTrack (5, 0, nagloed::gloop::Target::Pitch, -0.03f);
 
         for (int chunk = 0; chunk < 24; ++chunk)
         {

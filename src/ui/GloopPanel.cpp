@@ -144,7 +144,8 @@ int GloopPanel::laneTarget (int lane) const
     // Before the engine has published a lane frame the visual target is still
     // Off; the host parameter is authoritative for what the lane may record.
     if (auto* raw = apvts.getRawParameterValue (pid::gloopTarget[lane]))
-        return juce::jlimit (0, gloop::kNumTargets - 1, juce::roundToInt (raw->load()));
+        return juce::jlimit (0, gloop::kNumTargetChoices - 1,
+                             juce::roundToInt (raw->load()));
 
     return (int) gloop::Target::Off;
 }
@@ -215,6 +216,17 @@ void GloopPanel::syncLaneControls()
                 tip << "gesture ready — click to record a new one";
             else
                 tip << "empty — click, then move the target knob";
+
+            // Multi takes get an unobtrusive per-lane summary in the tooltip;
+            // the knobs themselves carry the blue arcs.
+            if (l.numTracks > 1)
+            {
+                tip << "  [";
+                for (int t = 0; t < l.numTracks; ++t)
+                    tip << (t > 0 ? ", " : "")
+                        << gloopTargetName (l.tracks[(size_t) t].target);
+                tip << "]";
+            }
 
             button->setTooltip (tip);
         }

@@ -317,29 +317,34 @@ void ParamControlSet::applyGloopVisual (const gloop::Visual& visual)
         if (mode != gloop::Mode::Loop && mode != gloop::Mode::Fade)
             continue;
 
-        auto* slider = findKnob (gloopTargetParamId (l.target));
-
-        if (slider == nullptr)
-            continue;   // target without a knob in this panel
-
-        Influence* data = nullptr;
-
-        for (auto& entry : affected)
-            if (entry.first == slider)
-                data = &entry.second;
-
-        if (data == nullptr)
+        for (int t = 0; t < l.numTracks; ++t)
         {
-            affected.emplace_back (slider, Influence {});
-            data = &affected.back().second;
-        }
+            const auto& track = l.tracks[(size_t) t];
+            auto* slider = findKnob (gloopTargetParamId (track.target));
 
-        // LaneVisual::offset is already the *effective* normalised offset
-        // (gesture * amount * fade * random): sum it as-is. Scaling by amount
-        // here would apply the lane's gain twice. `amount` only drives the arc
-        // intensity.
-        data->offset += l.offset;
-        data->amount = juce::jmax (data->amount, juce::jlimit (0.0f, 1.0f, l.amount));
+            if (slider == nullptr)
+                continue;   // target without a knob in this panel
+
+            Influence* data = nullptr;
+
+            for (auto& entry : affected)
+                if (entry.first == slider)
+                    data = &entry.second;
+
+            if (data == nullptr)
+            {
+                affected.emplace_back (slider, Influence {});
+                data = &affected.back().second;
+            }
+
+            // LaneVisual::offset is already the *effective* normalised offset
+            // (gesture * amount * fade * random) for this track: sum it as-is.
+            // Scaling by amount here would apply the lane's gain twice. `amount`
+            // only drives the arc intensity.
+            data->offset += track.offset;
+            data->amount = juce::jmax (data->amount,
+                                       juce::jlimit (0.0f, 1.0f, l.amount));
+        }
     }
 
     // Knobs that dropped out of the active set lose their blue influence once.

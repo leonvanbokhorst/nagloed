@@ -109,12 +109,14 @@ inline juce::AudioParameterFloatAttributes attrs (const char* label)
 // used to normalise a recorded gesture, and for the parameter id the GUI draws
 // its ring around. The order MUST match gloop::Target.
 // -----------------------------------------------------------------------------
-inline constexpr std::array<const char*, (size_t) gloop::kNumTargets> kGloopTargetNames {
+inline constexpr std::array<const char*, (size_t) gloop::kNumTargetChoices> kGloopTargetNames {
     "Off", "Focus", "Pitch", "Cutoff", "Space", "Density", "Spray",
     "Width", "Shape", "Drive", "Tone", "Reso", "Wow", "Tape",
-    "Feedback", "Spread"
+    "Feedback", "Spread",
+    "Grain Size", "Drift",   // appended: existing choice indices keep their meaning
+    "Multi"             // the multi-parameter sentinel, always last
 };
-static_assert (kGloopTargetNames.size() == (size_t) gloop::kNumTargets,
+static_assert (kGloopTargetNames.size() == (size_t) gloop::kNumTargetChoices,
                "Gloop target name table and gloop::Target are out of sync");
 
 inline juce::StringArray gloopTargetNames()
@@ -129,15 +131,20 @@ inline juce::StringArray gloopTargetNames()
 
 inline const char* gloopTargetName (int target)
 {
-    if (target < 0 || target >= gloop::kNumTargets)
+    if (target < 0 || target >= gloop::kNumTargetChoices)
         return kGloopTargetNames[0];
 
     return kGloopTargetNames[(size_t) target];
 }
 
-// Parameter id whose knob should show the lane's moving ring, or nullptr for Off.
+// Parameter id whose knob should show the lane's moving ring, or nullptr for
+// Off and the Multi sentinel (Multi's concrete target tracks are visualised
+// individually in LaneVisual::tracks).
 inline const char* gloopTargetParamId (int target)
 {
+    if (target == gloop::kAutoTarget)
+        return nullptr;
+
     switch ((gloop::Target) target)
     {
         case gloop::Target::Focus:    return pid::focus;
@@ -155,6 +162,8 @@ inline const char* gloopTargetParamId (int target)
         case gloop::Target::Tape:     return pid::tape;
         case gloop::Target::Feedback: return pid::feedback;
         case gloop::Target::Spread:   return pid::spread;
+        case gloop::Target::Grain:    return pid::size;
+        case gloop::Target::Drift:    return pid::drift;
         case gloop::Target::Off:
         case gloop::Target::Count:
             break;
@@ -168,6 +177,9 @@ inline const char* gloopTargetParamId (int target)
 // moves (and a cutoff sweep stays a sweep in octaves, not in linear Hz).
 inline juce::NormalisableRange<float> gloopTargetRange (int target)
 {
+    if (target == gloop::kAutoTarget)
+        return juce::NormalisableRange<float> (0.0f, 1.0f);
+
     switch ((gloop::Target) target)
     {
         case gloop::Target::Focus:    return detail::makeRange (ranges::focus);
@@ -185,6 +197,8 @@ inline juce::NormalisableRange<float> gloopTargetRange (int target)
         case gloop::Target::Tape:     return detail::makeRange (ranges::tape);
         case gloop::Target::Feedback: return detail::makeRange (ranges::feedback);
         case gloop::Target::Spread:   return detail::makeRange (ranges::spread);
+        case gloop::Target::Grain:    return detail::makeRange (ranges::size);
+        case gloop::Target::Drift:    return detail::makeRange (ranges::drift);
         case gloop::Target::Off:
         case gloop::Target::Count:
             break;
@@ -195,6 +209,9 @@ inline juce::NormalisableRange<float> gloopTargetRange (int target)
 
 inline float gloopTargetValue (const EngineParams& p, int target)
 {
+    if (target == gloop::kAutoTarget)
+        return 0.0f;
+
     switch ((gloop::Target) target)
     {
         case gloop::Target::Focus:    return p.focus;
@@ -212,6 +229,8 @@ inline float gloopTargetValue (const EngineParams& p, int target)
         case gloop::Target::Tape:     return p.tape;
         case gloop::Target::Feedback: return p.feedback;
         case gloop::Target::Spread:   return p.pitchSpread;
+        case gloop::Target::Grain:    return p.sizeMs;
+        case gloop::Target::Drift:    return p.drift;
         case gloop::Target::Off:
         case gloop::Target::Count:
             break;
